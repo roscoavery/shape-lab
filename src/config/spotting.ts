@@ -28,9 +28,9 @@ export type SpottingMethod = {
   /** Credit line, where someone else originated the method. */
   credit?: string
   /** Local demo video (gym-hosted mp4) — replaces videoPlaceholder when set. */
-  demoVideo?: { url: string; caption: string }
+  demoVideo?: { url: string; caption?: string }
   /** Extra local demo videos (gym-hosted mp4s), e.g. multiple examples of one method. */
-  demoVideos?: { url: string; caption: string }[]
+  demoVideos?: { url: string; caption?: string }[]
   /** Shown when no tagged video exists yet. */
   videoPlaceholder?: string
 }
@@ -186,8 +186,6 @@ export const SPOTTING_METHODS: SpottingMethod[] = [
     demoVideos: [
       {
         url: '/videos/handspring-deconstruction-shirt-grab.mp4',
-        caption:
-          'Good example of the Coach Lain handspring deconstruction spotting method using bend fall reach push. Emphasize the shirt grab on the second half. To help the athlete off hands by replaying in slo mo and noting',
       },
     ],
     videoPlaceholder: 'Demo video coming. Tag a reference library item spotting-method:bhs-deconstruction and it will show up here.',

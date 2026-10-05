@@ -80,7 +80,7 @@ function MethodCard({
     .filter(Boolean)
   // Demo videos as fullscreen-player entries, in display order.
   // Videos hidden via Adjust mode are excluded from the card.
-  const demos: { url: string; caption: string }[] = [
+  const demos: { url: string; caption?: string }[] = [
     ...(method.demoVideo ? [method.demoVideo] : []),
     ...(method.demoVideos ?? []),
   ].filter((d) => adjApi?.get(d.url)?.hidden !== true)
@@ -165,9 +165,11 @@ function MethodCard({
                   ⤢ Fullscreen
                 </button>
               </div>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
-                {demo.caption}
-              </p>
+              {demo.caption ? (
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">
+                  {demo.caption}
+                </p>
+              ) : null}
             </div>
           ))}
           {videos.length === 0 && demos.length === 0 && method.videoPlaceholder ? (

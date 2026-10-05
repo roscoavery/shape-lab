@@ -13,7 +13,7 @@ export interface ProofVideo {
   who: string
   url: string
   /** What to watch for, in one line. */
-  watchFor: string
+  watchFor?: string
   /** Optional A/B loop points in seconds — only this segment plays. */
   startAt?: number
   endAt?: number

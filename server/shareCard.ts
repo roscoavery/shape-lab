@@ -37,7 +37,7 @@ export type ShareVideo = {
   /** Original page or file URL. */
   url: string
   who: string
-  watchFor: string
+  watchFor?: string
   platform: 'local' | 'youtube' | 'instagram' | 'tiktok' | 'facebook' | 'link'
   /** Direct playable URL (file or YouTube embed src). Null when unresolvable. */
   playUrl: string | null

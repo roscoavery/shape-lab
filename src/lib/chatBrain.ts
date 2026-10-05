@@ -445,7 +445,7 @@ export async function buildCorpus(): Promise<CorpusDoc[]> {
         id: `proof:${key}:${v.url}`,
         kind: 'proof',
         title: `${v.who}, ${skill?.name ?? key}`,
-        text: v.watchFor,
+        text: v.watchFor ?? '',
         link: skill ? { kind: 'skill', skillId: skill.id } : { kind: 'tab', tab: 'learn' },
       })
     }
