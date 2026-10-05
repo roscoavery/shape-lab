@@ -1292,7 +1292,7 @@ export default function App() {
         />
       )}
       {tab === 'today' && deskRole === 'athlete' && (
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4 px-5 pt-8 md:pt-4">
           <TourOfferButton onTakeTour={() => openTour(ATHLETE_HOME_TOUR)} label="✨ Tour this page" />
         <AthleteHome
           athlete={previewProfile}
@@ -1316,7 +1316,7 @@ export default function App() {
         </div>
       )}
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4 px-5 pt-8 md:pt-4">
           <TourOfferButton onTakeTour={() => openTour(TODAY_COACH_TOUR)} label="✨ Tour this page" />
           {activeProfile && isCoachProfile(activeProfile) && (
             <div id="tour-today-banners">

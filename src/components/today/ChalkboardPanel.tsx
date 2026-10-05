@@ -45,6 +45,13 @@ import {
 } from '../../lib/coachClasses'
 import { listDrills } from '../../lib/coachContentStore'
 import { listCollages } from '../../lib/collages'
+import {
+  getRegistrySkill,
+  guideSkillsInOrder,
+  searchSkills,
+  TRACK_LABELS,
+} from '../../lib/skillRegistry'
+import { guideCardColor, SkillGuideCardContent } from '../learn/SkillPathCards'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { CroppedStill } from '../CroppedStill'
 import { PortraitVideoPlayer } from '../PortraitVideoPlayer'
@@ -393,6 +400,12 @@ function ChalkboardBody({
   const drills = listDrills()
   const compact = size === 'compact'
   const [reelId, setReelId] = useState<string | null>(null)
+  const [skillQuery, setSkillQuery] = useState('')
+  const skillHits = useMemo(() => {
+    const q = skillQuery.trim()
+    if (q) return searchSkills(q, 8).map((hit) => hit.skill)
+    return guideSkillsInOrder().slice(0, 8)
+  }, [skillQuery])
   const clipItems = items
     .map((row) => row.item)
     .filter((item) => (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url))
@@ -639,6 +652,66 @@ function ChalkboardBody({
               </button>
             </div>
           )}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Pin a skill card
+            </p>
+            <input
+              value={skillQuery}
+              onChange={(e) => setSkillQuery(e.target.value)}
+              placeholder="Search skill cards, e.g. back handspring"
+              className="mt-1 h-10 w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-2 text-sm"
+            />
+            <ul className="mt-1 max-h-36 space-y-1 overflow-y-auto">
+              {skillHits.map((skill) => (
+                <li key={skill.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetOfferingId =
+                        athleteMode && selectedAthleteId
+                          ? athleteOfferingId(selectedAthleteId)
+                          : editTarget === 'type' && offering
+                            ? typeOfferingId(offering.name)
+                            : (offering?.id ?? '')
+                      if (!targetOfferingId || !board) return
+                      postToChalkboard({
+                        offeringId: targetOfferingId,
+                        boardId: board.id,
+                        createdById: viewer.id,
+                        createdByName: viewer.name,
+                        pinned: true,
+                        meetingId: inSession ? getActiveMeeting()?.id : undefined,
+                        draft: {
+                          kind: 'skill-card',
+                          title: skill.name,
+                          skillCardId: skill.id,
+                        },
+                      })
+                      onNotice(
+                        athleteMode
+                          ? `Pinned ${skill.name} on the athlete board.`
+                          : editTarget === 'type'
+                            ? `Pinned ${skill.name} on every ${offering?.name} chalkboard.`
+                            : `Pinned ${skill.name} on this hour only.`,
+                      )
+                    }}
+                    className="w-full rounded-md bg-[#121820] px-2 py-1 text-left text-xs text-[var(--muted)] hover:text-[var(--text)]"
+                  >
+                    {skill.name}
+                    <span className="ml-1 text-[10px] opacity-70">
+                      {TRACK_LABELS[skill.track]}
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {skillHits.length === 0 && (
+                <li className="px-2 py-1 text-xs text-[var(--muted)]">
+                  No skill cards match that search.
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
       )}
 
@@ -687,6 +760,40 @@ function ChalkboardBody({
   )
 }
 
+/** Icon-only glyphs for the chalkboard item chrome, same stroke language as the compare HUD. */
+function GlyphExpand() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+  )
+}
+
+function GlyphPin({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 17v5" />
+      <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z" />
+    </svg>
+  )
+}
+
+function GlyphTrash() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m3 0l-.8 12.2a1 1 0 01-1 .8H7.8a1 1 0 01-1-.8L6 7" />
+    </svg>
+  )
+}
+
+function GlyphPencil() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M17 3l4 4L8 20l-5 1 1-5L17 3z" />
+    </svg>
+  )
+}
+
 function ChalkboardCard({
   item,
   allowTools,
@@ -715,6 +822,41 @@ function ChalkboardCard({
   const [editing, setEditing] = useState(false)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const onScreen = useOnScreen(frameRef)
+  const [chromeOpen, setChromeOpen] = useState(true)
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  // Editing keeps the chrome up (the coach toolbar lives in it). Otherwise a
+  // tap on the media hides or shows the header and toolbars, reels-style.
+  const chromeVisible = chromeOpen || editing
+
+  // Tap recognizer for the media area, mirroring VideoWorkbench's
+  // tapTogglesChrome: a quick tap with almost no movement toggles the item
+  // chrome; when a markup tool is active the tap places a mark instead.
+  // Taps on buttons / inputs / links are left alone, and scrolls or the
+  // player's hold-to-scrub exceed the movement budget.
+  const handleMediaPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement | null
+    if (target?.closest('button, a, input, select, textarea')) return
+    tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+  }
+
+  const handleMediaPointerUp = (e: React.PointerEvent) => {
+    const start = tapStartRef.current
+    tapStartRef.current = null
+    if (!start) return
+    const target = e.target as HTMLElement | null
+    if (target?.closest('button, a, input, select, textarea')) return
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 14 || Date.now() - start.t > 500) {
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100)
+    const y = Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100)
+    if (allowTools && editing) {
+      setPlace({ x, y })
+    } else {
+      setChromeOpen((open) => !open)
+    }
+  }
   const drills = item.kind === 'drill-list' || item.kind === 'drill' ? listDrills() : []
   const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
   const overlays = item.overlays ?? []
@@ -797,14 +939,8 @@ function ChalkboardCard({
     <div
       ref={frameRef}
       className={`relative w-full touch-pan-y overflow-hidden bg-black ${playerH}`}
-      onClick={(e) => {
-        if (!allowTools || !editing) return
-        const rect = e.currentTarget.getBoundingClientRect()
-        setPlace({
-          x: Math.round(((e.clientX - rect.left) / Math.max(rect.width, 1)) * 100),
-          y: Math.round(((e.clientY - rect.top) / Math.max(rect.height, 1)) * 100),
-        })
-      }}
+      onPointerDown={handleMediaPointerDown}
+      onPointerUp={handleMediaPointerUp}
     >
       {clipPlayer}
       <OverlayLayer
@@ -827,46 +963,54 @@ function ChalkboardCard({
 
   return (
     <article className="overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218]">
-      <div className="flex flex-wrap items-start justify-between gap-2 px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug">{item.title}</p>
-          <p className="text-[11px] text-[var(--muted)]">
-            {sourceLabel ? `${sourceLabel} · ` : ''}
-            {kindLabel(item.kind)}
-            {item.pinned ? ' · pinned' : ''}
-            {item.createdByName ? ` · ${item.createdByName}` : ''}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
-          {isClip && onOpenReel && (
-            <button
-              type="button"
-              onClick={onOpenReel}
-              className="text-[11px] font-semibold text-[var(--accent)]"
-            >
-              Full screen
-            </button>
-          )}
-          {allowTools && (
-            <>
+      {chromeVisible && (
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-2">
+          <div className="min-w-0 flex-1 basis-32">
+            <p className="break-words text-sm font-semibold leading-snug">{item.title}</p>
+            <p className="text-[11px] text-[var(--muted)]">
+              {sourceLabel ? `${sourceLabel} · ` : ''}
+              {kindLabel(item.kind)}
+              {item.pinned ? ' · pinned' : ''}
+              {item.createdByName ? ` · ${item.createdByName}` : ''}
+            </p>
+          </div>
+          <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
+            {isClip && onOpenReel && (
               <button
                 type="button"
-                onClick={() => pinChalkboardItem(item.id, !item.pinned)}
-                className="text-[11px] font-semibold text-[var(--accent)]"
+                onClick={onOpenReel}
+                aria-label={`Open ${item.title} fullscreen`}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--accent)] transition-colors hover:bg-white/5 active:bg-white/10"
               >
-                {item.pinned ? 'Unpin' : 'Pin'}
+                <GlyphExpand />
               </button>
-              <button
-                type="button"
-                onClick={() => eraseChalkboardItem(item.id)}
-                className="text-[11px] font-semibold text-[var(--bad)]"
-              >
-                Erase
-              </button>
-            </>
-          )}
+            )}
+            {allowTools && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => pinChalkboardItem(item.id, !item.pinned)}
+                  aria-label={item.pinned ? 'Unpin from chalkboard' : 'Pin to chalkboard'}
+                  aria-pressed={item.pinned}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5 active:bg-white/10 ${
+                    item.pinned ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
+                  }`}
+                >
+                  <GlyphPin filled={item.pinned} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => eraseChalkboardItem(item.id)}
+                  aria-label="Erase from chalkboard"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--bad)] transition-colors hover:bg-white/5 active:bg-white/10"
+                >
+                  <GlyphTrash />
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       {isClip && commentAbove && commentBlock}
       {isClip && !hidePlayer && media}
       {isClip && hidePlayer && (
@@ -875,7 +1019,11 @@ function ChalkboardCard({
       {isClip && !commentAbove && commentBlock}
       {!isClip && commentBlock}
       {(item.kind === 'still' || item.kind === 'ig-still') && item.photoSrc && (
-        <div className="relative flex max-h-72 items-center justify-center bg-black">
+        <div
+          className="relative flex max-h-72 items-center justify-center bg-black"
+          onPointerDown={handleMediaPointerDown}
+          onPointerUp={handleMediaPointerUp}
+        >
           <CroppedStill
             src={item.photoSrc}
             stillId={item.stillId}
@@ -892,7 +1040,9 @@ function ChalkboardCard({
         </div>
       )}
       {item.kind === 'drill' && item.drillId && (
-        <DrillPreview drillId={item.drillId} />
+        <div onPointerDown={handleMediaPointerDown} onPointerUp={handleMediaPointerUp}>
+          <DrillPreview drillId={item.drillId} />
+        </div>
       )}
       {item.kind === 'drill-list' && (
         <ul className="space-y-1 px-3 pb-3">
@@ -907,7 +1057,11 @@ function ChalkboardCard({
         </ul>
       )}
       {item.kind === 'collage' && collage && (
-        <div className="px-2 pb-2">
+        <div
+          className="px-2 pb-2"
+          onPointerDown={handleMediaPointerDown}
+          onPointerUp={handleMediaPointerUp}
+        >
           <CollageStage
             collage={collage}
             nameForUrl={nameForUrl}
@@ -918,14 +1072,26 @@ function ChalkboardCard({
           />
         </div>
       )}
-      {allowTools && !compact && !editing && (
-        <div className="border-t border-white/5 px-3 py-2">
+      {item.kind === 'skill-card' && item.skillCardId && (
+        <SkillCardPreview
+          item={item}
+          coach={allowTools}
+          onMediaPointerDown={handleMediaPointerDown}
+          onMediaPointerUp={handleMediaPointerUp}
+        />
+      )}
+      {allowTools && !compact && !editing && chromeVisible && (
+        <div className="flex justify-end border-t border-white/5 px-3 py-1.5">
           <button
             type="button"
-            onClick={() => setEditing(true)}
-            className="text-[11px] font-semibold text-[var(--accent)]"
+            onClick={() => {
+              setChromeOpen(true)
+              setEditing(true)
+            }}
+            aria-label="Edit marks and notes"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--accent)] transition-colors hover:bg-white/5 active:bg-white/10"
           >
-            Edit marks and notes
+            <GlyphPencil />
           </button>
         </div>
       )}
@@ -1502,6 +1668,119 @@ function DrillPreview({ drillId }: { drillId: string }) {
   return (
     <div className="px-3 pb-3">
       <PortraitVideoPlayer src={drill.src} title={drill.title} size="thumb" />
+    </div>
+  )
+}
+
+/** A pinned Learn skill card on the board: compact preview, tap to open the full card. */
+function SkillCardPreview({
+  item,
+  coach,
+  onMediaPointerDown,
+  onMediaPointerUp,
+}: {
+  item: ChalkboardItem
+  coach: boolean
+  onMediaPointerDown: (e: React.PointerEvent) => void
+  onMediaPointerUp: (e: React.PointerEvent) => void
+}) {
+  const skill = getRegistrySkill(item.skillCardId)
+  const [openCard, setOpenCard] = useState(false)
+  const [cardSkill, setCardSkill] = useState(skill)
+  if (!skill) {
+    return (
+      <div className="px-3 pb-3">
+        <p className="text-xs text-[var(--muted)]">This skill card is no longer available.</p>
+      </div>
+    )
+  }
+  const color = skill.guideId ? guideCardColor(skill.guideId) : '#3a3f45'
+  return (
+    <div
+      className="px-3 pb-3"
+      onPointerDown={onMediaPointerDown}
+      onPointerUp={onMediaPointerUp}
+    >
+      <button
+        type="button"
+        onClick={() => {
+          setCardSkill(skill)
+          setOpenCard(true)
+        }}
+        aria-label={`Open the ${skill.name} skill card`}
+        className="block w-full overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[#0d1218] text-left"
+      >
+        <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+        <div className="p-3">
+          <p className="text-sm font-bold">{skill.name}</p>
+          <p className="mt-0.5 text-[11px] uppercase tracking-wider text-[var(--muted)]">
+            {TRACK_LABELS[skill.track]} · Skill card
+          </p>
+          {skill.guideNeeds && skill.guideNeeds.length > 0 && (
+            <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-[var(--text)]">
+              {skill.guideNeeds.slice(0, 3).map((need) => (
+                <li key={need}>{need}</li>
+              ))}
+            </ul>
+          )}
+          <span className="mt-2 inline-block text-[11px] font-semibold text-[var(--accent)]">
+            Open card
+          </span>
+        </div>
+      </button>
+      {openCard &&
+        cardSkill &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+            onClick={() => setOpenCard(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={cardSkill.name}
+          >
+            <div
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] pb-[max(2rem,env(safe-area-inset-bottom))] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="flex items-center justify-between px-4 py-3 text-base font-extrabold text-white"
+                style={{
+                  backgroundColor: cardSkill.guideId ? guideCardColor(cardSkill.guideId) : '#3a3f45',
+                }}
+              >
+                <span>{cardSkill.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setOpenCard(false)}
+                  aria-label="Close"
+                  className="rounded-full bg-black/25 px-3 py-1 text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+              {cardSkill.guideId ? (
+                <SkillGuideCardContent
+                  key={cardSkill.id}
+                  skill={cardSkill}
+                  color={guideCardColor(cardSkill.guideId)}
+                  coach={coach}
+                  canEdit={false}
+                  onSelectSkill={setCardSkill}
+                />
+              ) : (
+                <div className="space-y-3 p-4">
+                  <span className="inline-block rounded-full bg-neutral-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                    guide coming
+                  </span>
+                  <p className="text-sm opacity-80">
+                    This skill is on the map but its guide card is not written yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

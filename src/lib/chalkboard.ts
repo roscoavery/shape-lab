@@ -44,6 +44,7 @@ export type ChalkboardItemKind =
   | 'drill'
   | 'drill-list'
   | 'collage'
+  | 'skill-card'
 
 export type ChalkboardOverlayKind = 'sticker' | 'text'
 
@@ -78,6 +79,8 @@ export type ChalkboardItem = {
   drillId?: string
   drillIds?: string[]
   collageId?: string
+  /** Registry skill id for kind 'skill-card'. */
+  skillCardId?: string
   comment?: string
   commentPlacement?: ChalkboardCommentPlacement
   overlays?: ChalkboardOverlay[]
@@ -128,6 +131,8 @@ export type ChalkboardDraft = {
   drillId?: string
   drillIds?: string[]
   collageId?: string
+  /** Registry skill id for kind 'skill-card'. */
+  skillCardId?: string
 }
 
 const KEY = 'shape-lab.chalkboards.v1'
@@ -181,6 +186,7 @@ function normalizeItem(raw: Partial<ChalkboardItem>): ChalkboardItem | null {
     drillId: raw.drillId,
     drillIds: Array.isArray(raw.drillIds) ? raw.drillIds.filter((id) => typeof id === 'string') : undefined,
     collageId: raw.collageId,
+    skillCardId: raw.skillCardId,
     comment: typeof raw.comment === 'string' ? raw.comment : undefined,
     commentPlacement: raw.commentPlacement === 'above' ? 'above' : raw.commentPlacement === 'below' ? 'below' : undefined,
     overlays: Array.isArray(raw.overlays)
@@ -603,6 +609,7 @@ export function postToChalkboard(input: {
     drillId: input.draft.drillId,
     drillIds: input.draft.drillIds,
     collageId: input.draft.collageId,
+    skillCardId: input.draft.skillCardId,
     pinned: Boolean(input.pinned),
     createdById: input.createdById,
     createdByName: input.createdByName,
@@ -718,6 +725,8 @@ export function kindLabel(kind: ChalkboardItemKind): string {
       return 'Drill list'
     case 'collage':
       return 'Collage'
+    case 'skill-card':
+      return 'Skill card'
     default:
       return 'Clip'
   }

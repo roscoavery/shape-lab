@@ -838,7 +838,7 @@ export function AthleteProfileCard({
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {onOpenTour && (
-            <div className="mb-3 flex justify-end">
+            <div className="mb-3 flex justify-end pr-4 pt-8">
               <TourOfferButton onTakeTour={onOpenTour} label="✨ Tour this profile" />
             </div>
           )}
