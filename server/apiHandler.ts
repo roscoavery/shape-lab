@@ -169,8 +169,10 @@ function isMuseBearerPath(path: string): boolean {
     path === '/api/muse/roster/athletes' ||
     path === '/api/muse/classes' ||
     path === '/api/muse/athlete-notes' ||
+    path === '/api/muse/homework-logs' ||
     path === '/api/muse/stories' ||
     path === '/api/muse/drills' ||
+    path.startsWith('/api/muse/drills/') ||
     path === '/api/muse/skill-maps' ||
     path === '/api/muse/chalkboards' ||
     path.startsWith('/api/muse/chalkboards/') ||
