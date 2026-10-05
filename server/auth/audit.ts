@@ -24,6 +24,8 @@ export type AuditAction =
   | 'parent.link'
   | 'media.delete'
   | 'media.view'
+  | 'media.share'
+  | 'media.file'
   | 'role.change'
 
 export type AuditEvent = {

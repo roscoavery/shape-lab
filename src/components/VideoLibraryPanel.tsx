@@ -3,14 +3,16 @@
  * once the profile is unlocked.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   deleteAthleteVideo,
   formatVideoDay,
+  getFolderShare,
   groupVideosByDate,
   listAthleteVideos,
   listClassVideos,
   SOURCE_LABEL,
+  uploadAthleteVideo,
   type AthleteVideo,
 } from '../lib/athleteVideoStore'
 import { classLabel, loadOfferings, subscribeCoachClasses } from '../lib/coachClasses'
@@ -65,6 +67,48 @@ export function VideoLibraryPanel({
   const [flash, setFlash] = useState<string | null>(null)
   const [classId, setClassId] = useState<string | null>(null)
   const [offerings, setOfferings] = useState(() => loadOfferings())
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onPickUpload = (file: File | undefined) => {
+    if (!file || !athleteId) return
+    if (file.size > 48 * 1024 * 1024) {
+      setError('That video is over the 48MB upload limit.')
+      return
+    }
+    setUploading(true)
+    setError(null)
+    void uploadAthleteVideo({
+      athleteId,
+      blob: file,
+      name: file.name.replace(/\.[^.]+$/, '').trim() || 'Upload',
+      source: 'upload',
+    })
+      .then((v) => {
+        setVideos((prev) => [v, ...prev])
+        setFlash('Saved into the folder.')
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not upload that video.'))
+      .finally(() => setUploading(false))
+  }
+
+  const onCopyFolderLink = () => {
+    if (!athleteId) return
+    setError(null)
+    void getFolderShare(athleteId)
+      .then(({ path }) => {
+        const absolute = `${window.location.origin}${path}`
+        if (navigator.clipboard?.writeText) {
+          return navigator.clipboard
+            .writeText(absolute)
+            .then(() => setFlash('Folder link copied.'))
+            .catch(() => window.prompt('Copy this folder link:', absolute))
+        }
+        window.prompt('Copy this folder link:', absolute)
+        return undefined
+      })
+      .catch(() => setError('Could not make that folder link.'))
+  }
 
   useEffect(() => subscribeCoachClasses(() => setOfferings(loadOfferings())), [])
 
@@ -113,7 +157,54 @@ export function VideoLibraryPanel({
     <>
       {!embedded && (
         <>
-          <h3 className="text-lg font-semibold">Video library</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">Video library</h3>
+            {athleteId && !classId && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={(e) => {
+                    onPickUpload(e.target.files?.[0])
+                    e.target.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label={uploading ? 'Uploading video' : 'Upload a video into this folder'}
+                  title="Upload a video into this folder"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--text)] disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--muted)] border-t-transparent" />
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                      <path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Copy folder share link"
+                  title="Copy folder share link"
+                  onClick={onCopyFolderLink}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--text)]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M10 14a5 5 0 007.07 0l2.83-2.83a5 5 0 00-7.07-7.07L11.5 5.4" />
+                    <path d="M14 10a5 5 0 00-7.07 0L4.1 12.83a5 5 0 007.07 7.07l1.33-1.3" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
             {classId
               ? 'This class folder. Replay-cam saves land here while that class is running.'

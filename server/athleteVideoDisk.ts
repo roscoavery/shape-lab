@@ -4,6 +4,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { randomBytes } from 'node:crypto'
 import {
   isDirectHttpUrl,
   readBin,
@@ -28,6 +29,7 @@ export type AthleteVideoSource =
   | 'lesson'
   | 'collage'
   | 'story'
+  | 'upload'
 
 export type DiskAthleteVideo = {
   id: string
@@ -46,6 +48,8 @@ export type DiskAthleteVideo = {
   skillLabel?: string
   classId?: string
   className?: string
+  /** Original video id when this row was filed from a class video into an athlete folder. */
+  filedFrom?: string
 }
 
 export type DiskAthleteVideoLibrary = {
@@ -53,6 +57,8 @@ export type DiskAthleteVideoLibrary = {
   version: 1
   exportedAt: string
   videos: DiskAthleteVideo[]
+  /** athleteId -> unguessable share token for the athlete's video folder. */
+  folderTokens: Record<string, string>
 }
 
 const EMPTY: DiskAthleteVideoLibrary = {
@@ -60,6 +66,7 @@ const EMPTY: DiskAthleteVideoLibrary = {
   version: 1,
   exportedAt: '',
   videos: [],
+  folderTokens: {},
 }
 
 const SOURCES = new Set<AthleteVideoSource>([
@@ -71,6 +78,7 @@ const SOURCES = new Set<AthleteVideoSource>([
   'lesson',
   'collage',
   'story',
+  'upload',
 ])
 
 function safeId(id: string): string | null {
@@ -91,19 +99,24 @@ export async function readAthleteVideoMeta(): Promise<DiskAthleteVideoLibrary> {
   if (!data || data.kind !== 'shape-lab-athlete-videos' || !Array.isArray(data.videos)) {
     return { ...EMPTY }
   }
+  const folderTokens =
+    data.folderTokens && typeof data.folderTokens === 'object' && !Array.isArray(data.folderTokens)
+      ? (data.folderTokens as Record<string, string>)
+      : {}
   return {
     ...EMPTY,
     ...data,
     videos: data.videos.filter((v) => v && typeof v.id === 'string' && typeof v.file === 'string'),
+    folderTokens,
   }
 }
 
-async function writeMeta(videos: DiskAthleteVideo[]): Promise<DiskAthleteVideoLibrary> {
+async function writeMeta(meta: DiskAthleteVideoLibrary): Promise<DiskAthleteVideoLibrary> {
   const next: DiskAthleteVideoLibrary = {
+    ...meta,
     kind: 'shape-lab-athlete-videos',
     version: 1,
     exportedAt: new Date().toISOString(),
-    videos,
   }
   await writeJson(META, next)
   return next
@@ -140,7 +153,7 @@ async function rememberVideo(video: DiskAthleteVideo): Promise<DiskAthleteVideo>
   for (const drop of pruned) {
     await removeFile(blobRel(drop.file))
   }
-  await writeMeta([...kept.slice(0, MAX_PER_ATHLETE), ...rest])
+  await writeMeta({ ...meta, videos: [...kept.slice(0, MAX_PER_ATHLETE), ...rest] })
   return video
 }
 
@@ -275,7 +288,7 @@ export async function deleteAthleteVideo(id: string, athleteId?: string): Promis
   if (!found) return false
   if (athleteId && found.athleteId !== athleteId) return false
   await removeFile(blobRel(found.file))
-  await writeMeta(meta.videos.filter((v) => v.id !== sid))
+  await writeMeta({ ...meta, videos: meta.videos.filter((v) => v.id !== sid) })
   return true
 }
 
@@ -291,4 +304,102 @@ export async function sendAthleteVideoFile(id: string, res: ServerResponse): Pro
     found.mime || 'video/webm',
     found.publicUrl && isDirectHttpUrl(found.publicUrl) ? found.publicUrl : undefined,
   )
+}
+
+/** Unguessable share token for an athlete's video folder. Created on first request. */
+export async function getFolderToken(athleteId: string): Promise<string | null> {
+  const sid = safeId(athleteId)
+  if (!sid) return null
+  const meta = await readAthleteVideoMeta()
+  const existing = meta.folderTokens[sid]
+  if (existing && /^[a-f0-9]{32}$/.test(existing)) return existing
+  const token = randomBytes(16).toString('hex')
+  await writeMeta({ ...meta, folderTokens: { ...meta.folderTokens, [sid]: token } })
+  return token
+}
+
+/** Reverse lookup: which athlete does this folder token belong to? */
+export async function athleteIdForFolderToken(token: string): Promise<string | null> {
+  const t = token.trim()
+  if (!/^[a-f0-9]{32}$/.test(t)) return null
+  const meta = await readAthleteVideoMeta()
+  for (const [athleteId, tok] of Object.entries(meta.folderTokens)) {
+    if (tok === t) return athleteId
+  }
+  return null
+}
+
+export async function renameAthleteVideo(
+  id: string,
+  athleteId: string,
+  name: string,
+): Promise<DiskAthleteVideo | null> {
+  const sid = safeId(id)
+  const aid = safeId(athleteId)
+  const clean = name.trim().slice(0, 120)
+  if (!sid || !aid || !clean) return null
+  const meta = await readAthleteVideoMeta()
+  const found = meta.videos.find((v) => v.id === sid)
+  if (!found || found.athleteId !== aid) return null
+  const next = { ...found, name: clean }
+  await writeMeta({
+    ...meta,
+    videos: meta.videos.map((v) => (v.id === sid ? next : v)),
+  })
+  return next
+}
+
+/**
+ * File every video saved under a class (classId) into each attending
+ * athlete's folder. Copies are metadata rows sharing the original bytes
+ * (same Blob publicUrl); the copy's own file slot is never written, so
+ * deleting or pruning a copy never touches shared bytes. Dedupes on
+ * filedFrom so running this twice never double-files.
+ */
+export async function fileClassVideosToAthletes(
+  classId: string,
+  athleteIds: string[],
+): Promise<number> {
+  const cid = safeId(classId)
+  if (!cid) return 0
+  const targets = [...new Set(athleteIds.map((a) => safeId(a)).filter((a): a is string => Boolean(a)))]
+  if (targets.length === 0) return 0
+  const meta = await readAthleteVideoMeta()
+  const classVideos = meta.videos.filter((v) => v.classId === cid)
+  if (classVideos.length === 0) return 0
+  const videos = [...meta.videos]
+  let filed = 0
+  for (const src of classVideos) {
+    for (const athleteId of targets) {
+      if (athleteId === src.athleteId) continue
+      const already = videos.some(
+        (v) => v.athleteId === athleteId && v.filedFrom === src.id,
+      )
+      if (already) continue
+      const id = `vid_${randomBytes(8).toString('hex')}`
+      const dot = src.file.lastIndexOf('.')
+      const ext = dot >= 0 ? src.file.slice(dot) : '.mp4'
+      videos.unshift({
+        ...src,
+        id,
+        athleteId,
+        file: `${id}${ext}`,
+        filedFrom: src.id,
+      })
+      filed++
+    }
+  }
+  if (filed === 0) return 0
+  // Enforce the per-athlete cap on copies (their file slots were never
+  // written, so pruning here is metadata-only and cannot harm shared bytes).
+  const kept: DiskAthleteVideo[] = []
+  const seen = new Map<string, number>()
+  for (const v of videos) {
+    const n = seen.get(v.athleteId) ?? 0
+    if (n >= MAX_PER_ATHLETE) continue
+    seen.set(v.athleteId, n + 1)
+    kept.push(v)
+  }
+  await writeMeta({ ...meta, videos: kept })
+  return filed
 }

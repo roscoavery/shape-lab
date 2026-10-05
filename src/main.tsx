@@ -4,6 +4,7 @@ import { installLegacySafariShims } from './lib/legacySafari'
 import './index.css'
 import App from './App.tsx'
 import PublicSharePage from './components/share/PublicSharePage.tsx'
+import PublicFolderPage from './components/share/PublicFolderPage.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
 
 installLegacySafariShims()
@@ -28,13 +29,25 @@ applyAndroidShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {shareCardIdFromPath() ? (
+    {shareFolderTokenFromPath() ? (
+      <PublicFolderPage token={shareFolderTokenFromPath()!} />
+    ) : shareCardIdFromPath() ? (
       <PublicSharePage cardId={shareCardIdFromPath()!} />
     ) : (
       <App />
     )}
   </StrictMode>,
 )
+
+/** /share/folder/<token> renders the public no-account athlete video folder. */
+function shareFolderTokenFromPath(): string | null {
+  try {
+    const m = /^\/share\/folder\/([^/?#]+)/.exec(window.location.pathname)
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
 
 /** /share/<guideId|skillId> renders the public no-account card page. */
 function shareCardIdFromPath(): string | null {

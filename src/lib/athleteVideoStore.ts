@@ -11,6 +11,7 @@ export type AthleteVideoSource =
   | 'lesson'
   | 'collage'
   | 'story'
+  | 'upload'
 
 export type AthleteVideo = {
   id: string
@@ -38,6 +39,7 @@ export const SOURCE_LABEL: Record<AthleteVideoSource, string> = {
   lesson: 'Lesson',
   collage: 'Collage',
   story: 'Story',
+  upload: 'Upload',
 }
 
 export async function listAthleteVideos(athleteId: string): Promise<AthleteVideo[]> {
@@ -138,6 +140,50 @@ export async function deleteAthleteVideo(id: string, athleteId: string): Promise
     { method: 'DELETE', credentials: 'same-origin' },
   )
   if (!res.ok) throw new Error('Could not delete that video.')
+}
+
+export async function renameAthleteVideo(
+  id: string,
+  athleteId: string,
+  name: string,
+): Promise<AthleteVideo> {
+  const res = await markedFetch('/api/athlete-videos', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ id, athleteId, name }),
+  })
+  if (!res.ok) throw new Error('Could not rename that video.')
+  return (await res.json()) as AthleteVideo
+}
+
+/** Get (creating if needed) the shareable folder link for an athlete. */
+export async function getFolderShare(athleteId: string): Promise<{ token: string; path: string }> {
+  const res = await markedFetch('/api/athlete-videos/folder-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ athleteId }),
+  })
+  if (!res.ok) throw new Error('Could not make that folder link.')
+  return (await res.json()) as { token: string; path: string }
+}
+
+/** File every video saved under a class into each attending athlete's folder. */
+export async function fileClassVideos(classId: string, athleteIds: string[]): Promise<number> {
+  try {
+    const res = await markedFetch('/api/athlete-videos/file-class', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ classId, athleteIds }),
+    })
+    if (!res.ok) return 0
+    const data = (await res.json()) as { filed?: number }
+    return typeof data.filed === 'number' ? data.filed : 0
+  } catch {
+    return 0
+  }
 }
 
 export function groupVideosByDate(videos: AthleteVideo[]): { date: string; videos: AthleteVideo[] }[] {

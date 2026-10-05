@@ -52,6 +52,27 @@ import { ClassExtraPicker } from './ClassExtraPicker'
 import type { ClassExtraExercise } from '../../types'
 import { NoteAudiencePicker } from '../lesson/NoteAudiencePicker'
 import type { NoteAudience } from '../../lib/noteAudience'
+import { fileClassVideos } from '../../lib/athleteVideoStore'
+
+/**
+ * After a class ends, file every video saved under that class into each
+ * attending athlete's folder. Fire-and-forget: never blocks the UI, and
+ * the server dedupes so running it twice is harmless.
+ */
+async function fileEndedClassVideos(
+  meeting: ClassMeeting,
+  athletes: Athlete[],
+): Promise<void> {
+  try {
+    if (!meeting.offeringId) return
+    const people = resolveAttendeeAthletes(meeting, athletes)
+    const ids = people.map((p) => p.id).filter(Boolean)
+    if (ids.length === 0) return
+    await fileClassVideos(meeting.offeringId, ids)
+  } catch {
+    /* filing is best-effort; the class videos stay under the class folder */
+  }
+}
 
 type Props = {
   coach: Athlete
@@ -261,12 +282,14 @@ export function ClassSession({
               setEndAsk(false)
               setEnded(done)
               setScreen('assign')
+              if (done) void fileEndedClassVideos(done, athletes)
             }}
             onSkip={() => {
               const done = endClassMeeting(live.id, { logAttendance: false })
               setEndAsk(false)
               setEnded(done)
               setScreen('assign')
+              if (done) void fileEndedClassVideos(done, athletes)
             }}
             onStay={() => setEndAsk(false)}
           />

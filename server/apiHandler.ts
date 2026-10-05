@@ -79,8 +79,11 @@ import {
   addAthleteVideoFromUrl,
   athleteVideoClientUrl,
   deleteAthleteVideo,
+  fileClassVideosToAthletes,
   findAthleteVideo,
+  getFolderToken,
   readRequestBuffer,
+  renameAthleteVideo,
   sendAthleteVideoFile,
   videosForClient,
 } from './athleteVideoDisk.ts'
@@ -111,6 +114,11 @@ import {
 import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { handleShareCard } from './shareCard.ts'
+import {
+  handleShareFolder,
+  handleShareFolderFile,
+  handleShareFolderZip,
+} from './shareFolder.ts'
 import { authorizeRosterWrite, presentRosterForViewer } from './auth/rosterAccess.ts'
 import {
   applyConsentPatch,
@@ -236,6 +244,11 @@ const API_PATHS = new Set([
   '/api/coach-content',
   '/api/coach-systems',
   '/api/share/card',
+  '/api/share/folder',
+  '/api/share/folder-file',
+  '/api/share/folder-zip',
+  '/api/athlete-videos/folder-token',
+  '/api/athlete-videos/file-class',
   '/api/coach-media',
   '/api/coach-media-file',
   '/api/stories',
@@ -323,6 +336,19 @@ export async function handleShapeLabApi(
   // still goes through the gate below.
   if (path === '/api/share/card') {
     return handleShareCard(req, res, url)
+  }
+
+  // Public shareable athlete video folders — no sign-in required. The
+  // unguessable folder token is the only secret; every request validates
+  // it before serving anything. No upload, rename, or delete here.
+  if (path === '/api/share/folder') {
+    return handleShareFolder(req, res, url)
+  }
+  if (path === '/api/share/folder-file') {
+    return handleShareFolderFile(req, res, url)
+  }
+  if (path === '/api/share/folder-zip') {
+    return handleShareFolderZip(req, res, url)
   }
 
   const gate = await gateApiRequest(req, res, path)
@@ -1226,7 +1252,84 @@ export async function handleShapeLabApi(
       sendJson(res, 200, { ok: true })
       return true
     }
-    sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+    if (req.method === 'PATCH') {
+      let body: { id?: string; athleteId?: string; name?: string } = {}
+      try {
+        const raw = await readRequestBody(req)
+        body = raw ? (JSON.parse(raw) as typeof body) : {}
+      } catch {
+        sendJson(res, 400, { error: 'Could not rename that video.' })
+        return true
+      }
+      const id = body.id ?? url.searchParams.get('id') ?? ''
+      const found = await findAthleteVideo(id)
+      if (!found) {
+        sendJson(res, 404, { error: 'Video not found' })
+        return true
+      }
+      if (await denyUnlessAthleteAccess(res, viewer, found.athleteId, true)) return true
+      const renamed = await renameAthleteVideo(id, found.athleteId, body.name ?? '')
+      if (!renamed) {
+        sendJson(res, 400, { error: 'Could not rename that video.' })
+        return true
+      }
+      sendJson(res, 200, { ...renamed, url: athleteVideoClientUrl(renamed) })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, PATCH, or DELETE' })
+    return true
+  }
+  if (path === '/api/athlete-videos/folder-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { athleteId?: string } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    const athleteId = (body.athleteId ?? '').trim()
+    if (await denyUnlessAthleteAccess(res, viewer, athleteId, true)) return true
+    const token = await getFolderToken(athleteId)
+    if (!token) {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    await writeAudit('media.share', viewer, { athleteId, detail: 'folder-token' })
+    sendJson(res, 200, { token, path: `/share/folder/${token}` })
+    return true
+  }
+  if (path === '/api/athlete-videos/file-class') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { classId?: string; athleteIds?: string[] } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not file those videos.' })
+      return true
+    }
+    const classId = (body.classId ?? '').trim()
+    const athleteIds = Array.isArray(body.athleteIds)
+      ? body.athleteIds.filter((a): a is string => typeof a === 'string')
+      : []
+    if (!classId || athleteIds.length === 0) {
+      sendJson(res, 200, { filed: 0 })
+      return true
+    }
+    for (const athleteId of athleteIds) {
+      if (await denyUnlessAthleteAccess(res, viewer, athleteId, true)) return true
+    }
+    const filed = await fileClassVideosToAthletes(classId, athleteIds)
+    await writeAudit('media.file', viewer, { detail: classId })
+    sendJson(res, 200, { filed })
     return true
   }
   if (path === '/api/athlete-video-file') {
