@@ -506,10 +506,12 @@ function LocalAnalysisPlayer({
   url,
   onToggleChrome,
   swipeSuppressRef,
+  onAdjustingChange,
 }: {
   url: string
   onToggleChrome?: () => void
   swipeSuppressRef?: React.MutableRefObject<number>
+  onAdjustingChange?: (adjusting: boolean) => void
 }) {
   const ref = useRef<HTMLVideoElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
@@ -525,6 +527,11 @@ function LocalAnalysisPlayer({
   const [adjusting, setAdjusting] = useState(false)
   const [adjustTab, setAdjustTab] = useState<'trim' | 'crop' | 'slowmo' | 'text'>('trim')
   const [draft, setDraft] = useState<DraftAdj | null>(null)
+
+  // Let the outer carousel know when a crop-box drag owns the touch.
+  useEffect(() => {
+    onAdjustingChange?.(adjusting)
+  }, [adjusting, onAdjustingChange])
 
   // The adjustments in effect: the working draft while adjusting, else saved.
   const active: DraftAdj = useMemo(
@@ -990,6 +997,8 @@ export function ProofFullscreenPlayer({
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
+  // True while the inner player is in Adjust mode (crop box owns the touch).
+  const adjustingRef = useRef(false)
   const [entered, setEntered] = useState(false)
   // Chrome (header, arrows, caption) auto-hides so the video can be watched
   // clean; any tap brings it back for a few seconds.
@@ -1072,6 +1081,12 @@ export function ProofFullscreenPlayer({
     touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
   }
   const onTouchEnd = (e: React.TouchEvent) => {
+    // A crop-box drag in Adjust mode is not a swipe. The inner player
+    // reports it via onAdjustingChange.
+    if (adjustingRef.current) {
+      touchStart.current = null
+      return
+    }
     // A hold-scrub just ended on the video; don't treat its drag as a swipe.
     if (Date.now() < swipeSuppressRef.current) {
       swipeSuppressRef.current = 0
@@ -1152,6 +1167,9 @@ export function ProofFullscreenPlayer({
               url={video.url}
               onToggleChrome={toggleChromeVisibility}
               swipeSuppressRef={swipeSuppressRef}
+              onAdjustingChange={(v) => {
+                adjustingRef.current = v
+              }}
             />
           ) : (
             <div className="mx-auto h-full max-w-[560px]">
