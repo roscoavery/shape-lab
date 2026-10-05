@@ -250,3 +250,31 @@ export function IconShot() {
     </svg>
   )
 }
+
+export function IconDots() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden>
+      <circle cx="5" cy="12" r="1.9" />
+      <circle cx="12" cy="12" r="1.9" />
+      <circle cx="19" cy="12" r="1.9" />
+    </svg>
+  )
+}
+
+export function IconEye() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  )
+}
+
+export function IconEyeOff() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m4 4 16 16" />
+      <path d="M10.6 6.1c.5-.1.9-.2 1.4-.2 6 0 9.5 6.1 9.5 6.1a17.4 17.4 0 0 1-3.2 3.5M6.7 7A16.6 16.6 0 0 0 2.5 12S6 18.1 12 18.1c1.2 0 2.3-.2 3.3-.6" />
+    </svg>
+  )
+}

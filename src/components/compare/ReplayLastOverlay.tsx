@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
-import { IconSwap } from './CompareHud'
+import { IconDots, IconEye, IconEyeOff, IconSwap } from './CompareHud'
 import { hudAvoidPipRightClass, useCompareLayout } from './compareLayout'
 
 export function IconBack() {
@@ -171,12 +171,15 @@ function ReplayFilmstrip({
     onSeek(origin + x * span)
   }
 
+  const [grabbing, setGrabbing] = useState(false)
+
   return (
     <div
       ref={hostRef}
-      className="relative h-14 w-full overflow-hidden bg-black touch-none"
+      className="relative h-9 w-full overflow-hidden rounded-md bg-black touch-none"
       onPointerDown={(e) => {
         drag.current = true
+        setGrabbing(true)
         e.currentTarget.setPointerCapture(e.pointerId)
         fromEvent(e)
       }}
@@ -185,9 +188,11 @@ function ReplayFilmstrip({
       }}
       onPointerUp={() => {
         drag.current = false
+        setGrabbing(false)
       }}
       onPointerCancel={() => {
         drag.current = false
+        setGrabbing(false)
       }}
       role="slider"
       aria-label="Scrub replay"
@@ -200,10 +205,22 @@ function ReplayFilmstrip({
         className={`h-full w-full ${ready ? 'opacity-100' : 'opacity-50'}`}
         style={{ objectFit: 'fill' }}
       />
-      <div
-        className="pointer-events-none absolute top-0 z-10 h-full w-px"
-        style={{ left: `${at * 100}%`, background: GOLD }}
-      />
+      {/* Grabbable playhead knob: a visible handle that rides the scrub position. */}
+      <div className="pointer-events-none absolute top-0 z-10 h-full" style={{ left: `${at * 100}%` }}>
+        <div className="absolute inset-y-0 -translate-x-1/2" style={{ width: 2, background: GOLD }} />
+        <div
+          className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-black/85 transition-transform ${
+            grabbing ? 'scale-125 cursor-grabbing' : 'cursor-grab'
+          }`}
+          style={{ width: 22, height: 22, borderColor: GOLD, boxShadow: '0 1px 6px rgba(0,0,0,0.65)' }}
+        >
+          <span className="absolute inset-0 flex items-center justify-center gap-[3px]">
+            <span className="h-2 w-[2px] rounded-full" style={{ background: GOLD }} />
+            <span className="h-2 w-[2px] rounded-full" style={{ background: GOLD }} />
+            <span className="h-2 w-[2px] rounded-full" style={{ background: GOLD }} />
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -296,6 +313,28 @@ export function ReplayLastOverlay({
   const { focus, fullscreen, pipCorner } = useCompareLayout()
   const chipRight = hudAvoidPipRightClass(fullscreen, focus, pipCorner, 'cam')
   const step = (dir: -1 | 1) => onSeek(time + dir * FRAME)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [filmstripHidden, setFilmstripHidden] = useState(() => {
+    try {
+      return window.localStorage.getItem('sl-compare-filmstrip-hidden') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleFilmstrip = () => {
+    setFilmstripHidden((h) => {
+      const next = !h
+      try {
+        window.localStorage.setItem('sl-compare-filmstrip-hidden', next ? '1' : '0')
+      } catch {}
+      return next
+    })
+  }
+  const hasLibraryActions = Boolean(onUseAsReference || onSaveToDrill || onSaveToCollection)
+  const runLibraryAction = (fn?: () => void) => {
+    setMenuOpen(false)
+    if (fn) fn()
+  }
 
   return (
     <>
@@ -336,10 +375,10 @@ export function ReplayLastOverlay({
 
       {chromeOpen && (
         <div
-          className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black via-black/85 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8 text-white"
+          className="pointer-events-auto absolute inset-x-0 bottom-0 z-[30] bg-gradient-to-t from-black via-black/85 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-6 text-white"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="relative mb-1 h-4">
+          <div className="relative mb-1 flex h-7 items-center">
             <span
               className="absolute -translate-x-1/2 text-[11px] font-medium tabular-nums text-white"
               style={{
@@ -347,59 +386,94 @@ export function ReplayLastOverlay({
                   (windowLen ?? duration) > 0
                     ? ((time - windowStart) / (windowLen ?? duration)) * 100
                     : 0
-                }%, calc(100% - 1.7rem))`,
+                }%, calc(100% - 4.25rem))`,
               }}
             >
               {time.toFixed(3)}s
             </span>
-          </div>
-          {(onUseAsReference || onSaveToDrill || onSaveToCollection) && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {onUseAsReference ? (
-                <button
-                  type="button"
-                  disabled={libraryBusy}
-                  onClick={onUseAsReference}
-                  className="rounded-md bg-[var(--accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] disabled:opacity-40"
-                >
-                  Use as reference
-                </button>
-              ) : null}
-              {onSaveToDrill ? (
-                <button
-                  type="button"
-                  disabled={libraryBusy}
-                  onClick={onSaveToDrill}
-                  className="rounded-md bg-white/12 px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40"
-                >
-                  Save to drill library
-                </button>
-              ) : null}
-              {onSaveToCollection ? (
-                <button
-                  type="button"
-                  disabled={libraryBusy}
-                  onClick={onSaveToCollection}
-                  className="rounded-md bg-white/12 px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40"
-                >
-                  Save to collection
-                </button>
-              ) : null}
+            <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+              <button
+                type="button"
+                onClick={toggleFilmstrip}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-white/75 hover:bg-white/10"
+                aria-label={filmstripHidden ? 'Show scrub bar' : 'Hide scrub bar'}
+                title={filmstripHidden ? 'Show scrub bar' : 'Hide scrub bar'}
+              >
+                {filmstripHidden ? <IconEyeOff /> : <IconEye />}
+              </button>
+              {hasLibraryActions && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-white/75 hover:bg-white/10"
+                    aria-label="More actions"
+                    aria-expanded={menuOpen}
+                    title="More actions"
+                  >
+                    <IconDots />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Close menu"
+                        className="fixed inset-0 z-[44] cursor-default"
+                        onClick={() => setMenuOpen(false)}
+                      />
+                      <div className="absolute bottom-full right-0 z-[45] mb-2 w-56 overflow-hidden rounded-xl bg-[#1e1e20] shadow-2xl ring-1 ring-white/15">
+                        {onUseAsReference ? (
+                          <button
+                            type="button"
+                            disabled={libraryBusy}
+                            onClick={() => runLibraryAction(onUseAsReference)}
+                            className="flex w-full items-center px-4 py-3 text-left text-[13px] font-semibold text-[var(--accent)] active:bg-white/10 disabled:opacity-40"
+                          >
+                            Use as reference
+                          </button>
+                        ) : null}
+                        {onSaveToDrill ? (
+                          <button
+                            type="button"
+                            disabled={libraryBusy}
+                            onClick={() => runLibraryAction(onSaveToDrill)}
+                            className="flex w-full items-center border-t border-white/10 px-4 py-3 text-left text-[13px] font-medium text-white active:bg-white/10 disabled:opacity-40"
+                          >
+                            Save to drill library
+                          </button>
+                        ) : null}
+                        {onSaveToCollection ? (
+                          <button
+                            type="button"
+                            disabled={libraryBusy}
+                            onClick={() => runLibraryAction(onSaveToCollection)}
+                            className="flex w-full items-center border-t border-white/10 px-4 py-3 text-left text-[13px] font-medium text-white active:bg-white/10 disabled:opacity-40"
+                          >
+                            Save to collection
+                          </button>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </div>
           {libraryError ? (
             <p className="mb-1 rounded-md bg-[#2a1518] px-2 py-1 text-[11px] text-[#ff8a8a]">{libraryError}</p>
           ) : libraryNotice ? (
             <p className="mb-1 rounded-md bg-[#102820] px-2 py-1 text-[11px] text-[var(--accent)]">{libraryNotice}</p>
           ) : null}
-          <ReplayFilmstrip
-            src={src}
-            duration={duration}
-            windowStart={windowStart}
-            windowLen={windowLen}
-            time={time}
-            onSeek={onSeek}
-          />
+          {!filmstripHidden && (
+            <ReplayFilmstrip
+              src={src}
+              duration={duration}
+              windowStart={windowStart}
+              windowLen={windowLen}
+              time={time}
+              onSeek={onSeek}
+            />
+          )}
           <div className="mt-2 flex items-center justify-evenly">
             <button type="button" onClick={() => step(-1)} aria-label="Previous frame" className="text-white">
               <IconSkipBack />

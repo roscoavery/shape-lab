@@ -56,6 +56,7 @@ import {
   requestUserCamera,
   cameraPermissionMessage,
 } from '../../lib/delayCameraPipeline'
+import { IconSwap } from './CompareHud'
 import { IosDelayUnwind } from '../IosDelayUnwind'
 import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
 
@@ -1357,11 +1358,11 @@ export function CameraPane({
               <button
                 type="button"
                 onClick={() => setClipPickerOpen(true)}
-                className="absolute right-2 top-2 z-[40] rounded-full bg-black/60 px-3 py-2 text-xs font-bold text-white hover:bg-black/80"
+                className="absolute right-2 top-2 z-[40] flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
                 aria-label="Swap the replay clip"
                 title="Swap the replay clip"
               >
-                🎞 Swap clip
+                <IconSwap />
               </button>
             )}
             {replaySocialItem ? (
