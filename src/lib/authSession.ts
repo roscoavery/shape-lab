@@ -12,6 +12,8 @@ export type AuthSessionUser = {
   displayName: string
   rosterProfileId?: string
   linkedAthleteIds: string[]
+  gymId?: string
+  linkedAccountIds: string[]
   maxDevices?: number
   kiosk?: boolean
 }
