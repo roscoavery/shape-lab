@@ -155,6 +155,85 @@ export function ReferencePane({
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle')
   const [clipHudOpen, setClipHudOpen] = useState(false)
   const [clipHudAll, setClipHudAll] = useState(false)
+  /** Resizable clip-picker drawer size (null = default anchored size). Persisted. */
+  const HUD_SIZE_KEY = 'sl-compare-hud-size'
+  const HUD_MIN_W = 200
+  const HUD_MIN_H = 220
+  const [hudSize, setHudSize] = useState<{ w: number; h: number } | null>(() => {
+    try {
+      const raw = localStorage.getItem(HUD_SIZE_KEY)
+      if (raw) {
+        const p = JSON.parse(raw)
+        if (p && typeof p.w === 'number' && typeof p.h === 'number' && p.w > 0 && p.h > 0)
+          return { w: p.w, h: p.h }
+      }
+    } catch {
+      /* ignore */
+    }
+    return null
+  })
+  const hudSizeRef = useRef(hudSize)
+  hudSizeRef.current = hudSize
+  const hudPanelRef = useRef<HTMLDivElement | null>(null)
+  const hudResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null)
+  const hudBounds = () => {
+    const el = hudPanelRef.current
+    const parent = (el?.offsetParent as HTMLElement | null) ?? null
+    const pr = parent?.getBoundingClientRect()
+    const availW = pr ? pr.width : window.innerWidth
+    const availH = pr ? pr.height : window.innerHeight
+    return {
+      maxW: Math.max(HUD_MIN_W, availW - 16),
+      maxH: Math.max(HUD_MIN_H, availH - 56 - 16),
+    }
+  }
+  const beginHudResize = (e: PointerEvent<HTMLDivElement>) => {
+    const el = hudPanelRef.current
+    if (!el) return
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+    const r = el.getBoundingClientRect()
+    hudResizeRef.current = { startX: e.clientX, startY: e.clientY, startW: r.width, startH: r.height }
+  }
+  const moveHudResize = (e: PointerEvent<HTMLDivElement>) => {
+    const s = hudResizeRef.current
+    if (!s) return
+    const { maxW, maxH } = hudBounds()
+    const next = {
+      w: Math.round(Math.min(Math.max(HUD_MIN_W, s.startW + (e.clientX - s.startX)), maxW)),
+      h: Math.round(Math.min(Math.max(HUD_MIN_H, s.startH + (e.clientY - s.startY)), maxH)),
+    }
+    hudSizeRef.current = next
+    setHudSize(next)
+  }
+  const endHudResize = () => {
+    if (!hudResizeRef.current) return
+    hudResizeRef.current = null
+    try {
+      localStorage.setItem(HUD_SIZE_KEY, JSON.stringify(hudSizeRef.current))
+    } catch {
+      /* ignore */
+    }
+  }
+  // Clamp a persisted size to the current pane on open (e.g. after rotation).
+  useEffect(() => {
+    if (!clipHudOpen || !hudSizeRef.current) return
+    const { maxW, maxH } = hudBounds()
+    const cur = hudSizeRef.current
+    const next = {
+      w: Math.max(HUD_MIN_W, Math.min(cur.w, maxW)),
+      h: Math.max(HUD_MIN_H, Math.min(cur.h, maxH)),
+    }
+    if (next.w !== cur.w || next.h !== cur.h) {
+      hudSizeRef.current = next
+      setHudSize(next)
+    }
+  }, [clipHudOpen])
   const [showAllKeywords, setShowAllKeywords] = useState(false)
   const [savedClips, setSavedClips] = useState<RecordedClip[]>([])
   /** Which saved clip is playing up top (null when a library item is). */
@@ -1475,7 +1554,13 @@ export function ReferencePane({
         </button>
       )}
       {clipHudOpen && fill && !pip && (
-        <div className="pointer-events-auto absolute left-2 top-14 bottom-[5.75rem] z-[42] flex w-[min(16.75rem,46vw)] flex-col overflow-hidden rounded-2xl bg-[#0b0f14]/92 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/12 backdrop-blur-xl sm:bottom-24">
+        <div
+          ref={hudPanelRef}
+          className={`pointer-events-auto absolute left-2 top-14 z-[42] flex flex-col overflow-hidden rounded-2xl bg-[#0b0f14]/92 text-white shadow-[0_18px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/12 backdrop-blur-xl ${
+            hudSize ? '' : 'bottom-[5.75rem] w-[min(16.75rem,46vw)] sm:bottom-24'
+          }`}
+          style={hudSize ? { width: hudSize.w, height: hudSize.h } : undefined}
+        >
           <div className="flex items-center gap-2 px-3 pt-3">
             <p className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
               Clips{canEditCollection(activeCollection) ? ' · drag to reorder' : ''}
@@ -1720,6 +1805,30 @@ export function ReferencePane({
                 </div>
               ))
             )}
+          </div>
+          <div
+            role="separator"
+            aria-label="Resize clip picker"
+            onPointerDown={beginHudResize}
+            onPointerMove={moveHudResize}
+            onPointerUp={endHudResize}
+            onPointerCancel={endHudResize}
+            className="absolute bottom-0 right-0 z-[50] flex h-10 w-10 cursor-nwse-resize items-end justify-end p-2 text-white/40 hover:text-white/75 active:text-white"
+            style={{ touchAction: 'none' }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M13 9.5 9.5 13" />
+              <path d="M13 5.5 5.5 13" />
+            </svg>
           </div>
         </div>
       )}
