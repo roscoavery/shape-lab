@@ -108,6 +108,31 @@ export function withEventMembership(athlete: Athlete, eventId: string, on: boole
   return { ...athlete, eventIds: [...ids] }
 }
 
+/**
+ * Stamp a gym onto every listed athlete's class gyms. Used when athletes
+ * join a class roster or are marked present: that is what associates a
+ * profile with a gym for the gym owner's athlete list. Always records the
+ * association, even when it matches their home gym.
+ */
+export function associateAthletesWithGym(
+  athletes: Athlete[],
+  athleteIds: string[],
+  gym: string,
+): Athlete[] {
+  const set = new Set(athleteIds)
+  if (set.size === 0) return athletes
+  const gymName = normalizeGymName(gym)
+  let changed = false
+  const next = athletes.map((a) => {
+    if (!set.has(a.id)) return a
+    const extra = (a.classGyms ?? []).map(normalizeGymName)
+    if (extra.some((g) => sameGym(g, gymName))) return a
+    changed = true
+    return { ...a, classGyms: [...(a.classGyms ?? []), gymName] }
+  })
+  return changed ? next : athletes
+}
+
 export function scopeAthletes(
   athletes: Athlete[],
   viewer: Athlete | null,
