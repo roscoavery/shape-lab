@@ -652,6 +652,8 @@ export type HomeworkItem = {
   targetReps?: number
   /** Pull-up grip, or any grip the coach named. */
   grip?: string
+  /** Named variation of the drill (e.g. handstand push-up wall position). */
+  variation?: string
   /** Allow a weight field on the log (back extensions, glute bridges). */
   allowWeight?: boolean
 }
@@ -716,6 +718,8 @@ export type HomeworkLog = {
   /** Back-extension rep speed: 0 = fast, 100 = slow. */
   repSpeed?: number
   grip?: string
+  /** Named variation of the drill (e.g. handstand push-up wall position). */
+  variation?: string
   weightLb?: number
   /** 0–10 pain after this session (care / back-extension logs). */
   painLevel?: number

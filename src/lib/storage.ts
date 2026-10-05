@@ -789,6 +789,7 @@ export function updateHomeworkItem(
       | 'trackMode'
       | 'targetReps'
       | 'grip'
+      | 'variation'
       | 'allowWeight'
       | 'coachAssigned'
     >

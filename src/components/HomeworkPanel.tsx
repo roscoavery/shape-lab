@@ -1171,6 +1171,7 @@ export function HomeworkPanel({
       sets?: number
       holdSeconds?: number
       grip?: string
+      variation?: string
       weightLb?: number
       painLevel?: number
       journal?: string
@@ -1199,6 +1200,7 @@ export function HomeworkPanel({
       sets: input.sets && input.sets > 1 ? input.sets : undefined,
       quality: input.quality,
       grip: input.grip,
+      variation: input.variation,
       weightLb: input.weightLb,
       painLevel: input.painLevel,
       journal: input.journal,

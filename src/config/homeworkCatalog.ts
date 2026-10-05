@@ -27,6 +27,11 @@ export type HomeworkCatalogItem = {
   allowWeight?: boolean
   grips?: boolean
   wristPrep?: boolean
+  /**
+   * Named variation options for the drill (e.g. handstand push-up wall
+   * position). Shown as a Variation picker when assigning and logging.
+   */
+  variants?: { id: string; label: string }[]
   /** care = coach back-pain path; class = end-of-class stock; all = both. */
   audience?: HomeworkCatalogAudience
   notes: string
@@ -100,6 +105,27 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
       'Elbows in keeps the upper arm against the ribs. Wide hands open the chest.',
       'Piked and handstand versions load the shoulders more than the chest.',
       'Quality reps keep the same plank from the first to the last.',
+    ],
+  },
+  {
+    id: 'handstand_pushup',
+    name: 'Handstand push-ups',
+    trackMode: 'reps',
+    targetReps: 5,
+    wristPrep: true,
+    variants: [
+      { id: 'free_standing', label: 'Free standing' },
+      { id: 'back_to_wall', label: 'Back to wall' },
+      { id: 'chest_facing_wall', label: 'Chest facing wall' },
+    ],
+    notes:
+      'Pick the variation that matches the athlete. Free standing is the hardest. Back to wall and chest facing wall use the wall for balance. Warm wrists first.',
+    cues: [
+      'Warm the wrists before any handstand work.',
+      'Back to wall: kick up with the back toward the wall, heels rest lightly.',
+      'Chest facing wall: walk the feet up the wall until the chest faces it, nose near the wall.',
+      'Lower with control until the head lightly touches, then press back up.',
+      'Count a quality rep only when the full range is smooth.',
     ],
   },
   {

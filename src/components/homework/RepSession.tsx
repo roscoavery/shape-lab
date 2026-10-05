@@ -12,6 +12,7 @@ type Props = {
     qualityReps: number
     holdSeconds?: number
     grip?: string
+    variation?: string
     weightLb?: number
     painLevel?: number
     journal?: string
@@ -31,6 +32,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
   const [repSpeed, setRepSpeed] = useState(50)
   const [holdSec, setHoldSec] = useState('')
   const [grip, setGrip] = useState(item.grip ?? '')
+  const [variation, setVariation] = useState(item.variation ?? '')
   const [weight, setWeight] = useState('')
   const [pain, setPain] = useState('')
   const [journal, setJournal] = useState('')
@@ -86,6 +88,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
           : 0,
       holdSeconds: hasHold ? hold : undefined,
       grip: grip || undefined,
+      variation: variation || undefined,
       weightLb: w != null && Number.isFinite(w) ? w : undefined,
       painLevel: p != null && Number.isFinite(p) ? Math.min(10, Math.max(0, p)) : undefined,
       journal: journal.trim() || undefined,
@@ -230,6 +233,24 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
         </label>
       )}
 
+      {cat?.variants && (
+        <label className="text-xs text-[var(--muted)]">
+          Variation
+          <select
+            className="mt-1 h-11 w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm text-[var(--text)]"
+            value={variation}
+            onChange={(e) => setVariation(e.target.value)}
+          >
+            <option value="">Pick a variation…</option>
+            {cat.variants.map((v) => (
+              <option key={v.id} value={v.label}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       {(cat?.allowWeight || item.allowWeight) && (
         <label className="text-xs text-[var(--muted)]">
           Weight (lb, optional)
@@ -277,6 +298,7 @@ export function RepSession({ item, logs, onLog, onDone }: Props) {
             ? ` · ${last.repSpeed <= 33 ? 'fast' : last.repSpeed >= 67 ? 'slow' : 'steady'}`
             : ''}
           {last.grip ? ` · ${last.grip}` : ''}
+          {last.variation ? ` · ${last.variation}` : ''}
         </p>
       )}
 

@@ -30,6 +30,7 @@ export type HomeworkAssignDraft = {
   targetSeconds?: number
   targetReps?: number
   grip?: string
+  variation?: string
   coachExercises?: CoachExercise[]
 }
 
@@ -113,6 +114,7 @@ export function buildHomeworkItem(
     source: draft.source ?? 'coach',
     ...(trackMode ? { trackMode } : {}),
     ...(draft.grip ? { grip: draft.grip } : {}),
+    ...(draft.variation ? { variation: draft.variation } : {}),
     ...(draft.targetSeconds && draft.targetSeconds > 0 ? { targetSeconds: draft.targetSeconds } : {}),
     ...(draft.targetReps && draft.targetReps > 0
       ? { targetReps: draft.targetReps }

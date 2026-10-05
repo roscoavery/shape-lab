@@ -82,6 +82,7 @@ const HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
   ],
   split_squat: [{ id: 'elevated_front', label: 'Elevated front foot' }],
   wall_handstand: [
+    { id: 'back_to_wall', label: 'Back to wall' },
     { id: 'tucked', label: 'Tucked' },
     { id: 'l', label: 'L' },
     { id: 'piked', label: 'Piked' },

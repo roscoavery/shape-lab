@@ -42,6 +42,7 @@ export function AssignHomeworkBar({
   const [reps, setReps] = useState('')
   const [mode, setMode] = useState<HomeworkTrackMode | ''>('')
   const [grip, setGrip] = useState('')
+  const [variation, setVariation] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [libTick, setLibTick] = useState(0)
   const coachExercises = loadCoachExercises(coachId)
@@ -125,6 +126,7 @@ export function AssignHomeworkBar({
       createdAt: new Date().toISOString(),
       ...(trackMode ? { trackMode } : {}),
       ...(grip ? { grip } : {}),
+      ...(variation ? { variation } : {}),
       ...(Number.isFinite(target) && target > 0 ? { targetSeconds: target } : {}),
       ...(Number.isFinite(targetReps) && targetReps > 0
         ? { targetReps }
@@ -154,6 +156,7 @@ export function AssignHomeworkBar({
     setCatalogId('')
     setMode('')
     setGrip('')
+    setVariation('')
   }
 
   return (
@@ -294,6 +297,24 @@ export function AssignHomeworkBar({
             ))}
           </select>
         )}
+        {(() => {
+          const cat = catalogId ? getCatalogItem(catalogId) : undefined
+          if (!cat?.variants?.length && !variation) return null
+          return (
+            <select
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
+              value={variation}
+              onChange={(e) => setVariation(e.target.value)}
+            >
+              <option value="">Variation…</option>
+              {(cat?.variants ?? []).map((v) => (
+                <option key={v.id} value={v.label}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          )
+        })()}
         <textarea
           className="w-full rounded-lg border border-[var(--panel-border)] bg-[#121820] px-3 py-2 text-sm"
           rows={2}
