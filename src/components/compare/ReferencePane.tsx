@@ -75,7 +75,7 @@ import { CollapsibleSection } from '../CollapsibleSection'
 import { SegmentedTabs } from '../SegmentedTabs'
 import { useCompareLayout } from './compareLayout'
 import { LIBRARY_CHANGED_EVENT } from '../../lib/libraryEvents'
-import { HudCircle, IconClips, IconFlip, IconPip, IconSwap, CompareControlsButton } from './CompareHud'
+import { HudCircle, IconClips, IconPip, IconSwap, CompareControlsButton } from './CompareHud'
 import { collectionsFromSkillRefs, isVirtualCoachRefCollection } from '../../lib/coachSkillRefs'
 import { subscribeCoachContent } from '../../lib/coachContentStore'
 
@@ -1460,6 +1460,8 @@ export function ReferencePane({
         <VideoWorkbench
           src={activeItem.savedUrl}
           mirror={topFlipped}
+          flipActive={topFlipped}
+          onFlip={topCanFlip ? () => setTopFlipped((f) => !f) : undefined}
           allowAbLoop
           fill={fill}
           persistUrl={activeItem.url}
@@ -1509,6 +1511,8 @@ export function ReferencePane({
         <VideoWorkbench
           src={itemSrc}
           mirror={topFlipped}
+          flipActive={topFlipped}
+          onFlip={topCanFlip ? () => setTopFlipped((f) => !f) : undefined}
           allowAbLoop
           fill={fill}
           persistUrl={activeItem?.url}
@@ -1549,13 +1553,6 @@ export function ReferencePane({
               <CompareControlsButton />
             </div>
           ) : null}
-        </div>
-      )}
-      {topCanFlip && (
-        <div className="pointer-events-auto absolute left-3 top-16 z-[35] flex flex-col items-center gap-3">
-          <HudCircle label="Flip" active={topFlipped} onClick={() => setTopFlipped((f) => !f)}>
-            <IconFlip />
-          </HudCircle>
         </div>
       )}
       {pip && (

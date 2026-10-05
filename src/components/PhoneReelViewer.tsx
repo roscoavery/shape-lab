@@ -16,7 +16,7 @@ import { useFavorites } from '../lib/favorites'
 import { kindFromUrl, type RefItemKind } from '../lib/clipStore'
 import type { OrganizeEditor } from '../lib/organizeLibrary'
 import { prefetchNeighborClips } from '../lib/igCache'
-import { postedByFromUrl } from '../lib/socialUrls'
+import { postedByFromUrl, socialPlatform, youtubeEmbedSrc } from '../lib/socialUrls'
 import { useGymLibrary } from '../lib/gymLibrary'
 import { TOUR_CHROME_EVENT, tourChromeNeeded } from './homework/GlowTour'
 
@@ -100,6 +100,10 @@ const ReelSection = memo(function ReelSection({
   // IG-style chrome: hidden while scrolling, tap the video to show/hide.
   const [chrome, setChrome] = useState(false)
   const toggleChrome = useCallback(() => setChrome((c) => !c), [])
+  // Horizontal mirror for the current reel (direct video files only).
+  const [flipped, setFlipped] = useState(false)
+  useEffect(() => setFlipped(false), [clip.id])
+  const canFlip = !youtubeEmbedSrc(clip.url) && !socialPlatform(clip.url)
   // The guided tour can pin chrome open for steps that spotlight controls —
   // otherwise a stray tap closes chrome mid-tour and orphans every later target.
   const [chromePinned, setChromePinned] = useState(false)
@@ -127,6 +131,8 @@ const ReelSection = memo(function ReelSection({
             fill
             fit="contain"
             active={on}
+            mirror={flipped}
+            onFlip={canFlip ? () => setFlipped((f) => !f) : undefined}
             persistUrl={clip.url}
             loopA={clip.loopA}
             loopB={clip.loopB}

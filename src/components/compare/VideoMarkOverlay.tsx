@@ -13,7 +13,7 @@ import { createId } from '../../lib/storage'
 import type { ReferencePhoto } from '../../types'
 import { HScrollRow } from '../HScrollRow'
 import { useIgStillSave } from './IgStillContext'
-import { CompareControlsButton, HudCircle, IconArrow, IconDraw, IconLine, IconShot, IconX } from './CompareHud'
+import { CompareControlsButton, HudCircle, IconArrow, IconDraw, IconFlip, IconLine, IconShot, IconX } from './CompareHud'
 import { releasePointerCaptures, resetIosPageZoom } from '../../lib/iosPageZoom'
 
 export type MarkTool = 'line' | 'draw' | 'arrow' | 'crop'
@@ -144,6 +144,9 @@ type Props = {
   surfaceDisabled?: boolean
   /** Hide the markup tool buttons entirely (e.g. chrome hidden in a reel). */
   toolsHidden?: boolean
+  /** Show a Flip (mirror) circle at the top of the tool stack. */
+  flipActive?: boolean
+  onFlip?: () => void
 }
 
 export function VideoMarkOverlay({
@@ -155,6 +158,8 @@ export function VideoMarkOverlay({
   swipeSafe = false,
   surfaceDisabled = false,
   toolsHidden = false,
+  flipActive = false,
+  onFlip,
 }: Props) {
   const igSave = useIgStillSave()
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -747,6 +752,11 @@ export function VideoMarkOverlay({
 
   const toolHud = (
     <div id="tour-player-markup" className={`pointer-events-auto absolute z-20 flex flex-col items-center gap-2 ${hudOffsetClass}`}>
+      {onFlip ? (
+        <HudCircle label="Flip" active={flipActive} onClick={onFlip}>
+          <IconFlip />
+        </HudCircle>
+      ) : null}
       <span id="tour-player-line" className="inline-flex">
       <HudCircle label="Line" active={tool === 'line'} onClick={() => pickTool('line')}>
         <IconLine />

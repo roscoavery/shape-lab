@@ -96,6 +96,9 @@ type Props = {
    * swipe is mostly vertical, and it started on the video itself. Used by
    * the Compare panes to step through the clip list. */
   onSwipeVertical?: (direction: 'next' | 'prev') => void
+  /** Show a Flip (mirror) circle at the top of the markup tool stack. */
+  flipActive?: boolean
+  onFlip?: () => void
 }
 
 function fmt(t: number): string {
@@ -156,6 +159,8 @@ function VideoWorkbenchInner({
   playWhenVisible = false,
   onVideoElement,
   onSwipeVertical,
+  flipActive = false,
+  onFlip,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // Report the underlying <video> element so parents (Compare link) can
@@ -996,6 +1001,8 @@ function VideoWorkbenchInner({
             mirror={mirror}
             pinchPassthrough={pinchZoom}
             hud
+            flipActive={flipActive}
+            onFlip={onFlip}
             toolsHidden={tapTogglesChrome && !chromeOpen}
             surfaceDisabled={tapTogglesChrome && !chromeOpen}
             hudOffsetClass={

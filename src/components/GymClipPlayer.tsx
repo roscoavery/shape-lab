@@ -40,6 +40,10 @@ type Props = {
   fit?: 'cover' | 'contain'
   /** 9:16 cover / other contain. Off when `fit` is set. */
   smartFit?: boolean
+  /** Mirror the video horizontally (direct files only). */
+  mirror?: boolean
+  /** Show a Flip circle in the markup tool stack; hidden for embeds. */
+  onFlip?: () => void
 }
 
 export function GymClipPlayer({
@@ -68,6 +72,8 @@ export function GymClipPlayer({
   startUnmuted,
   fit,
   smartFit,
+  mirror = false,
+  onFlip,
 }: Props) {
   const objectFit = fit ?? (fill ? 'cover' : 'contain')
   const useSmartFit = smartFit ?? (fill && !fit)
@@ -156,6 +162,9 @@ export function GymClipPlayer({
   const bench = (
     <VideoWorkbench
       src={hosted || url}
+      mirror={mirror}
+      flipActive={mirror}
+      onFlip={onFlip}
       allowAbLoop
       autoPlay={active !== false}
       fill={fill}
