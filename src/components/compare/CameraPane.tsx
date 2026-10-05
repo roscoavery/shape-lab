@@ -59,6 +59,9 @@ import {
 import { IconSwap } from './CompareHud'
 import { IosDelayUnwind } from '../IosDelayUnwind'
 import { extractVideoRange, extractVideoTail } from '../../lib/trimVideo'
+import { ShareReference } from '../share/ShareReference'
+import { clipShareDraft } from '../../lib/shareReference'
+import { AddToSkillCardModal } from '../learn/CardVideoManager'
 
 type Mode = 'live' | 'delay' | 'replay'
 
@@ -94,6 +97,10 @@ type CameraPaneProps = {
   clipsOnly?: boolean
   /** Bumps to auto-open the clip picker (start-screen View clip entry). */
   openPickerTick?: number
+  /** Gym admin can file clips onto skill cards from the share sheet. */
+  gymEditor?: boolean
+  /** Coach profile id for the add-to-card modal. */
+  profileId?: string | null
 }
 
 export function CameraPane({
@@ -109,6 +116,8 @@ export function CameraPane({
   onVideoElement,
   clipsOnly = false,
   openPickerTick = 0,
+  gymEditor = false,
+  profileId = null,
 }: CameraPaneProps) {
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -167,6 +176,44 @@ export function CameraPane({
   const [replayTailSec, setReplayTailSec] = useState<number | null>(null)
   const [savingPhotos, setSavingPhotos] = useState(false)
   const [replayBusy, setReplayBusy] = useState(false)
+  const [addToCardItem, setAddToCardItem] = useState<{ url: string; who: string; watchFor: string } | null>(null)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const previewCacheRef = useRef<Map<string, string>>(new Map())
+
+  /** Close the clip picker and clear its transient search/preview state. */
+  const closeClipPicker = () => {
+    setClipPickerOpen(false)
+    setPickerQuery('')
+    setPreviewId(null)
+    setPreviewUrl(null)
+  }
+
+  /** Toggle inline preview for a picker row. Loads the video URL on demand. */
+  const togglePickerPreview = async (id: string, getUrl: () => Promise<string | null>) => {
+    if (previewId === id) {
+      setPreviewId(null)
+      setPreviewUrl(null)
+      return
+    }
+    setPreviewId(id)
+    setPreviewUrl(null)
+    const cached = previewCacheRef.current.get(id)
+    if (cached) {
+      setPreviewUrl(cached)
+      return
+    }
+    try {
+      const url = await getUrl()
+      if (url) {
+        previewCacheRef.current.set(id, url)
+        setPreviewUrl(url)
+      }
+    } catch {
+      // Leave the preview empty; the row still loads normally on tap.
+    }
+  }
   const replayWindowRef = useRef<{ start: number; end: number } | null>(null)
   const [delayTime, setDelayTime] = useState(0)
   const [delayDuration, setDelayDuration] = useState(0)
@@ -195,6 +242,28 @@ export function CameraPane({
       : null
   const replayVideoSrc = replaySocialItem ? null : clipSrc
   const hasReplayContent = Boolean(replayVideoSrc) || Boolean(replaySocialItem)
+
+  // Share sheet for the bottom pane: offer "Add to skill card" for reference
+  // items with a real URL (social/file/URL items from the library picker).
+  const shareItem = replayRefItem?.url ? replayRefItem : null
+  const shareDraft = shareItem?.url
+    ? clipShareDraft(shareItem.name, shareItem.url, shareItem.trimStart, shareItem.trimEnd)
+    : null
+  const camHudCorner =
+    gymEditor && shareDraft && shareItem ? (
+      <ShareReference
+        variant="story"
+        draft={shareDraft}
+        className="pointer-events-auto"
+        onAddToSkillCard={() =>
+          setAddToCardItem({
+            url: shareItem.savedUrl || shareItem.url!,
+            who: shareItem.postedBy || 'Reference library',
+            watchFor: shareItem.name,
+          })
+        }
+      />
+    ) : null
 
   const prevFullscreenRef = useRef(false)
   useEffect(() => {
@@ -1358,7 +1427,7 @@ export function CameraPane({
               <button
                 type="button"
                 onClick={() => setClipPickerOpen(true)}
-                className="absolute right-2 top-2 z-[40] flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                className="absolute right-2 top-[4.75rem] z-[40] flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
                 aria-label="Swap the replay clip"
                 title="Swap the replay clip"
               >
@@ -1374,6 +1443,7 @@ export function CameraPane({
                   postedBy={replaySocialItem.postedBy || postedByFromUrl(replaySocialItem.url!)}
                   fill
                   markup
+                  hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
                 />
               ) : (
@@ -1425,6 +1495,7 @@ export function CameraPane({
               onUseAsReference={() => void sendReplay('reference')}
               onSaveToDrill={() => void sendReplay('drill')}
               onSaveToCollection={() => void sendReplay('collection')}
+              hudCorner={camHudCorner}
               onVideoElement={onVideoElement}
             />
             )}
@@ -1547,10 +1618,24 @@ export function CameraPane({
           </span>
         </>
       )}
-      {clipPickerOpen && (
+      {clipPickerOpen &&
+        (() => {
+          const q = pickerQuery.trim().toLowerCase()
+          const matchesQ = (...texts: Array<string | null | undefined>) =>
+            !q || texts.some((t) => (t ?? '').toLowerCase().includes(q))
+          const filteredClips = clips.filter((c) => matchesQ(c.name))
+          const filteredCols = refCollections
+            .map((col) => ({
+              ...col,
+              items: col.items.filter((item) =>
+                matchesQ(item.name, item.postedBy, item.url ? postedByFromUrl(item.url) : null),
+              ),
+            }))
+            .filter((c) => c.items.length > 0)
+          return (
         <div
           className="fixed inset-0 z-[300] flex items-end justify-center bg-black/70 sm:items-center"
-          onClick={() => setClipPickerOpen(false)}
+          onClick={() => closeClipPicker()}
           role="dialog"
           aria-label="Pick a replay clip"
         >
@@ -1562,7 +1647,7 @@ export function CameraPane({
               <h3 className="text-base font-bold text-white">Replay clip</h3>
               <button
                 type="button"
-                onClick={() => setClipPickerOpen(false)}
+                onClick={() => closeClipPicker()}
                 className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
               >
                 Done
@@ -1571,11 +1656,21 @@ export function CameraPane({
             <p className="mb-3 text-xs text-white/60">
               Swap the bottom pane to any saved clip or reference video. Pick nothing to keep the live replay.
             </p>
+            <div className="mb-3">
+              <input
+                type="search"
+                value={pickerQuery}
+                onChange={(e) => setPickerQuery(e.target.value)}
+                placeholder="Search clips and references"
+                aria-label="Search clips and references"
+                className="w-full rounded-xl bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              />
+            </div>
             {running && (
               <button
                 type="button"
                 onClick={() => {
-                  setClipPickerOpen(false)
+                  closeClipPicker()
                   setClipSrc(null)
                   setActiveClipId(null)
                   setReplayRefItem(null)
@@ -1588,46 +1683,89 @@ export function CameraPane({
                 <span>Live replay — last {delaySec}s of buffer</span>
               </button>
             )}
-            {clips.length === 0 ? (
+            {filteredClips.length === 0 ? (
               <p className="rounded-xl bg-white/5 px-3 py-4 text-center text-sm text-white/50">
-                No saved clips yet. Record an attempt and it shows up here.
+                {q ? 'No clips match your search.' : 'No saved clips yet. Record an attempt and it shows up here.'}
               </p>
             ) : (
               <ul className="flex flex-col gap-1.5">
-                {clips.map((clip) => (
-                  <li key={clip.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setClipPickerOpen(false)
-                        void openClip(clip)
-                      }}
-                      className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm ${
-                        activeClipId === clip.id
-                          ? 'bg-[var(--accent)]/20 font-semibold text-white'
-                          : 'bg-white/5 text-white/80 hover:bg-white/10'
-                      }`}
-                    >
-                      <span aria-hidden>🎞</span>
-                      <span className="min-w-0 flex-1 truncate">{clip.name}</span>
-                      <span className="shrink-0 text-xs text-white/50">
-                        {clip.durationSec != null ? `${clip.durationSec}s` : ''}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {filteredClips.map((clip) => {
+                  const pid = `clip:${clip.id}`
+                  const previewing = previewId === pid
+                  return (
+                    <li key={clip.id}>
+                      <div
+                        className={`rounded-xl ${
+                          activeClipId === clip.id
+                            ? 'bg-[var(--accent)]/20'
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        <div className="flex w-full items-center gap-2 px-3 py-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeClipPicker()
+                              void openClip(clip)
+                            }}
+                            className={`flex min-w-0 flex-1 items-center gap-2 text-left text-sm ${
+                              activeClipId === clip.id
+                                ? 'font-semibold text-white'
+                                : 'text-white/80'
+                            }`}
+                          >
+                            <span aria-hidden>🎞</span>
+                            <span className="min-w-0 flex-1 truncate">{clip.name}</span>
+                            <span className="shrink-0 text-xs text-white/50">
+                              {clip.durationSec != null ? `${clip.durationSec}s` : ''}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void togglePickerPreview(pid, async () => {
+                                const blob = await getBlob(clip.id)
+                                return blob ? URL.createObjectURL(blob) : null
+                              })
+                            }
+                            aria-label={previewing ? 'Hide preview' : `Preview ${clip.name}`}
+                            title={previewing ? 'Hide preview' : 'Preview'}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm text-white hover:bg-white/20"
+                          >
+                            <span aria-hidden>{previewing ? '▾' : '▸'}</span>
+                          </button>
+                        </div>
+                        {previewing && (
+                          <div className="px-3 pb-3">
+                            {previewUrl ? (
+                              <video
+                                src={previewUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="aspect-video w-full rounded-lg bg-black"
+                              />
+                            ) : (
+                              <p className="py-4 text-center text-xs text-white/50">Loading preview…</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             )}
             <div className="mt-4 border-t border-white/10 pt-3">
               <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
                 Reference library
               </h4>
-              {refCollections.every((c) => c.items.length === 0) ? (
+              {filteredCols.every((c) => c.items.length === 0) ? (
                 <p className="rounded-xl bg-white/5 px-3 py-3 text-center text-sm text-white/50">
-                  No reference videos saved yet.
+                  {q ? 'No reference videos match your search.' : 'No reference videos saved yet.'}
                 </p>
               ) : (
-                refCollections
+                filteredCols
                   .filter((c) => c.items.length > 0)
                   .map((col) => (
                     <div key={col.id} className="mb-3">
@@ -1635,30 +1773,68 @@ export function CameraPane({
                         {col.name}
                       </p>
                       <ul className="flex flex-col gap-1.5">
-                        {col.items.map((item) => (
-                          <li key={item.id}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setClipPickerOpen(false)
-                                void openReferenceItem(item)
-                              }}
-                              className="flex w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10"
-                            >
-                              <span className="shrink-0 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
-                                {KIND_LABEL[item.kind]}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate">{item.name}</span>
-                                {(item.postedBy || (item.url && postedByFromUrl(item.url))) && (
-                                  <span className="block truncate text-[10px] text-white/45">
-                                    @{item.postedBy || postedByFromUrl(item.url!)}
-                                  </span>
+                        {col.items.map((item) => {
+                          const pid = `ref:${item.id}`
+                          const previewing = previewId === pid
+                          const previewSrc =
+                            item.savedUrl || (item.kind === 'file' || item.kind === 'url' ? item.url : null)
+                          return (
+                            <li key={item.id}>
+                              <div className="rounded-xl bg-white/5">
+                                <div className="flex w-full items-center gap-2 px-3 py-2.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      closeClipPicker()
+                                      void openReferenceItem(item)
+                                    }}
+                                    className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm text-white/80"
+                                  >
+                                    <span className="shrink-0 rounded bg-black/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                                      {KIND_LABEL[item.kind]}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate">{item.name}</span>
+                                      {(item.postedBy || (item.url && postedByFromUrl(item.url))) && (
+                                        <span className="block truncate text-[10px] text-white/45">
+                                          @{item.postedBy || postedByFromUrl(item.url!)}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </button>
+                                  {previewSrc ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void togglePickerPreview(pid, async () => previewSrc)
+                                      }
+                                      aria-label={previewing ? 'Hide preview' : `Preview ${item.name}`}
+                                      title={previewing ? 'Hide preview' : 'Preview'}
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm text-white hover:bg-white/20"
+                                    >
+                                      <span aria-hidden>{previewing ? '▾' : '▸'}</span>
+                                    </button>
+                                  ) : null}
+                                </div>
+                                {previewing && (
+                                  <div className="px-3 pb-3">
+                                    {previewUrl ? (
+                                      <video
+                                        src={previewUrl}
+                                        controls
+                                        playsInline
+                                        preload="metadata"
+                                        className="aspect-video w-full rounded-lg bg-black"
+                                      />
+                                    ) : (
+                                      <p className="py-4 text-center text-xs text-white/50">Loading preview…</p>
+                                    )}
+                                  </div>
                                 )}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
+                              </div>
+                            </li>
+                          )
+                        })}
                       </ul>
                     </div>
                   ))
@@ -1684,7 +1860,7 @@ export function CameraPane({
                 onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) {
-                    setClipPickerOpen(false)
+                    closeClipPicker()
                     openPhotoLibraryVideo(file)
                   }
                   e.target.value = ''
@@ -1693,6 +1869,15 @@ export function CameraPane({
             </div>
           </div>
         </div>
+          )
+        })()}
+      {addToCardItem && (
+        <AddToSkillCardModal
+          video={addToCardItem}
+          coachId={profileId}
+          isAdmin={gymEditor}
+          onClose={() => setAddToCardItem(null)}
+        />
       )}
     </section>
   )

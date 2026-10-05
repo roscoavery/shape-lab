@@ -648,7 +648,7 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
           gymAdmin={isAdmin}
           title="Reference scroll"
           onCopied={setFlash}
-          onAddToSkillCard={editor.profileId ? handleAddToCard : undefined}
+          onAddToSkillCard={isAdmin || editor.profileId ? handleAddToCard : undefined}
           onLinkToSpottingCard={isAdmin ? handleLinkSpotting : undefined}
           onCompareWithReference={onCompareWithReference}
         />

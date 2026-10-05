@@ -1245,7 +1245,21 @@ export function ReferencePane({
           </>
         ) : null}
         {shareDraft ? (
-          <ShareReference variant="story" draft={shareDraft} className="pointer-events-auto" />
+          <ShareReference
+            variant="story"
+            draft={shareDraft}
+            className="pointer-events-auto"
+            onAddToSkillCard={
+              gymEditor && activeItem?.url
+                ? () =>
+                    setAddToCardItem({
+                      url: activeItem.savedUrl || activeItem.url!,
+                      who: activeItem.postedBy || 'Reference library',
+                      watchFor: activeItem.name,
+                    })
+                : undefined
+            }
+          />
         ) : null}
       </>
     ) : null

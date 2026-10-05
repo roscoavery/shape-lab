@@ -80,7 +80,7 @@ export function CompareSplitDivider({
       onPointerCancel={end}
       className={
         vertical
-          ? 'relative z-[30] flex h-11 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-[#0b0f14]'
+          ? 'relative z-[30] flex h-14 shrink-0 cursor-ns-resize touch-none items-center justify-center bg-[#0b0f14]'
           : 'relative z-[30] flex w-11 shrink-0 cursor-ew-resize touch-none items-center justify-center bg-[#0b0f14]'
       }
     >

@@ -401,6 +401,8 @@ export function ComparePanel({
                   onVideoElement={onCamVideo}
                   clipsOnly={twoClips}
                   openPickerTick={pickerTick}
+                  gymEditor={gymEditor}
+                  profileId={athleteId}
                   onPlayAsReference={(_src, name, itemId) => {
                     setHandoffSrc(null)
                     setHandoffName(name)
