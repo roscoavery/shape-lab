@@ -1430,6 +1430,7 @@ export function ClassStopwatch({
               }}
               excludeIds={[]}
               placeholder="Search who hit this"
+              anyRole
             />
           )}
           {skillAthleteId && !sessionOpen && (
@@ -1703,6 +1704,7 @@ function LogWho({
           onPick={onAddPick}
           excludeIds={pool.map((a) => a.id)}
           placeholder={floorMode ? 'Search your name' : 'Search an athlete to log'}
+          anyRole
         />
       </div>
     )

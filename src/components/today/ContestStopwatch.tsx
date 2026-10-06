@@ -227,6 +227,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
               onPick={addAthlete}
               excludeIds={picked}
               placeholder="Search athletes…"
+              anyRole
             />
             <div className="mt-2 flex gap-2">
               <input

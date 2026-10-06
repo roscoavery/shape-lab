@@ -304,6 +304,91 @@ export function autoEndStaleMeetings(meetings: ClassMeeting[]): { meetings: Clas
   return { meetings: next, ended }
 }
 
+/** Auto-start and auto-end classes based on the schedule.
+ *
+ *  A class auto-starts at the beginning of its scheduled hour and auto-ends
+ *  at the end of the hour. The end still asks whether to log attendance for
+ *  everyone there. Manual start/stop outside scheduled hours still works.
+ */
+
+const AUTO_END_PROMPT_KEY = 'shapelab:auto-end-prompt'
+
+/** Returns the offering scheduled for the given time, if any. */
+export function offeringScheduledAt(
+  offerings: CoachClassOffering[],
+  at: Date = new Date(),
+): CoachClassOffering | null {
+  const weekday = WEEKDAYS[at.getDay()]
+  const minutes = at.getHours() * 60 + at.getMinutes()
+  for (const o of offerings) {
+    if (o.weekday !== weekday) continue
+    const start = parseClassTimeMinutes(o.time)
+    // Class runs for one hour starting at the scheduled time.
+    if (minutes >= start && minutes < start + 60) return o
+  }
+  return null
+}
+
+/** Returns true if the given time is past the end of the offering's hour. */
+export function isPastClassHour(offering: CoachClassOffering, at: Date = new Date()): boolean {
+  const weekday = WEEKDAYS[at.getDay()]
+  if (offering.weekday !== weekday) return true
+  const start = parseClassTimeMinutes(offering.time)
+  const minutes = at.getHours() * 60 + at.getMinutes()
+  return minutes >= start + 60
+}
+
+/** Check for auto-start/auto-end. Returns the meeting that was auto-ended, if any. */
+export function checkAutoClass(at: Date = new Date()): ClassMeeting | null {
+  const file = read()
+  const offerings = file.offerings
+  const scheduled = offeringScheduledAt(offerings, at)
+
+  // Auto-end: any live meeting whose scheduled hour has passed.
+  let autoEnded: ClassMeeting | null = null
+  for (const m of file.meetings) {
+    if (m.endedAt) continue
+    const offering = offerings.find((o) => o.id === m.offeringId)
+    if (!offering) continue
+    if (isPastClassHour(offering, at)) {
+      const ended = endClassMeeting(m.id, { logAttendance: false })
+      if (ended) {
+        autoEnded = ended
+        // Flag for the UI to show the "log attendance?" prompt.
+        try {
+          localStorage.setItem(AUTO_END_PROMPT_KEY, ended.id)
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
+  // Auto-start: if a class is scheduled now and none is live for it, start it.
+  if (scheduled) {
+    const live = file.meetings.find((m) => m.offeringId === scheduled.id && !m.endedAt)
+    if (!live) {
+      startClassMeeting(scheduled)
+    }
+  }
+
+  return autoEnded
+}
+
+/** Returns the meeting id waiting for an auto-end attendance prompt, if any. */
+export function pendingAutoEndPrompt(): string | null {
+  try {
+    return localStorage.getItem(AUTO_END_PROMPT_KEY)
+  } catch {
+    return null
+  }
+}
+
+/** Clears the auto-end prompt flag. */
+export function clearAutoEndPrompt(): void {
+  try {
+    localStorage.removeItem(AUTO_END_PROMPT_KEY)
+  } catch { /* ignore */ }
+}
+
 /** Profile Class nights — live “here tonight” and unlogged ends stay off. */
 export function attendeeCountsOnProfile(
   meeting: Pick<ClassMeeting, 'endedAt' | 'attendanceLogged'>,
@@ -770,6 +855,18 @@ export function endClassMeeting(
   }))
   closeOtherLiveMeetings(file, meeting.id)
   file.activeMeetingId = pickLiveMeetingId(file.meetings)
+  write(file)
+  return meeting
+}
+
+/** Log attendance for an already-ended meeting (e.g., after an auto-end).
+ *  Does not change endedAt. */
+export function logMeetingAttendance(id: string): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === id)
+  if (!meeting) return null
+  meeting.attendanceLogged = true
+  meeting.attendees = meeting.attendees.map((a) => ({ ...a, logged: true }))
   write(file)
   return meeting
 }

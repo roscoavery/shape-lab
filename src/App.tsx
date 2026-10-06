@@ -58,6 +58,7 @@ import { TourOfferButton } from './components/tour/TourOfferButton'
 import { TODAY_COACH_TOUR, LEARN_TOUR, SCROLL_TOUR, PROFILE_TOUR, ATHLETE_HOME_TOUR } from './config/surfaceTours'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
+import { EndClassPrompt } from './components/today/EndClassPrompt'
 import { NamesQuiz } from './components/coach/NamesQuiz'
 import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { CoachSetupWizard } from './components/coach/CoachSetupWizard'
@@ -199,12 +200,17 @@ import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateSkillPaths } from './lib/skillPaths'
 import { hydrateChalkboards } from './lib/chalkboard'
 import {
+  checkAutoClass,
   classLabel,
+  clearAutoEndPrompt,
   getActiveMeeting,
   getOffering,
   hydrateCoachClasses,
+  loadMeetings,
   loadOfferingsForCoach,
+  logMeetingAttendance,
   markClassAttendance,
+  pendingAutoEndPrompt,
   priorOfferingAthleteIds,
   subscribeCoachClasses,
 } from './lib/coachClasses'
@@ -307,6 +313,7 @@ export default function App() {
   } | null>(null)
   const [stationOpen, setStationOpen] = useState(false)
   const [classSessionOpen, setClassSessionOpen] = useState(false)
+  const [autoEndMeetingId, setAutoEndMeetingId] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [storyComposerOpen, setStoryComposerOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
@@ -479,6 +486,23 @@ export default function App() {
     })
     void hydrateCoachStills(loadReferencePhotos())
     return unsub
+  }, [authStatus])
+
+  // Auto-start and auto-end scheduled classes every minute.
+  useEffect(() => {
+    if (authStatus !== 'in') return
+    const run = () => {
+      try {
+        checkAutoClass()
+        const pending = pendingAutoEndPrompt()
+        if (pending) setAutoEndMeetingId(pending)
+      } catch {
+        /* never break the app over the class clock */
+      }
+    }
+    run()
+    const id = window.setInterval(run, 60_000)
+    return () => window.clearInterval(id)
   }, [authStatus])
 
   const qualityThreshold =
@@ -2637,6 +2661,32 @@ export default function App() {
         }}
       />
     )}
+    {autoEndMeetingId && (() => {
+      const meeting = loadMeetings().find((m) => m.id === autoEndMeetingId)
+      if (!meeting) {
+        clearAutoEndPrompt()
+        setAutoEndMeetingId(null)
+        return null
+      }
+      return (
+        <EndClassPrompt
+          count={meeting.attendees.length}
+          onLog={() => {
+            logMeetingAttendance(meeting.id)
+            clearAutoEndPrompt()
+            setAutoEndMeetingId(null)
+          }}
+          onSkip={() => {
+            clearAutoEndPrompt()
+            setAutoEndMeetingId(null)
+          }}
+          onStay={() => {
+            clearAutoEndPrompt()
+            setAutoEndMeetingId(null)
+          }}
+        />
+      )
+    })()}
     {skillPathsOpen && (
       <SkillPathBuilder
         coachId={activeProfile?.id}

@@ -1,6 +1,6 @@
 import type { LessonSession } from '../types'
 import { loadLessonSessions } from './lessonStore'
-import { loadMeetings } from './coachClasses'
+import { loadMeetings, loadOfferingsForCoach, parseClassTimeMinutes, WEEKDAYS } from './coachClasses'
 import type { TodayCalendarEvent } from './calendarClient'
 
 export type CoachReminder =
@@ -88,7 +88,14 @@ export function getCoachReminders(
   }
 
   // --- End-of-day wins nudge ---
-  if (now.getHours() >= 17 && !dismissed('log-wins', now)) {
+  // Only after the last scheduled class of the day has ended (not just 5pm).
+  const weekday = WEEKDAYS[now.getDay()]
+  const todaysOfferings = loadOfferingsForCoach(coachId).filter((o) => o.weekday === weekday)
+  const lastEndMinutes = todaysOfferings.length
+    ? Math.max(...todaysOfferings.map((o) => parseClassTimeMinutes(o.time) + 60))
+    : 17 * 60
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  if (nowMinutes >= lastEndMinutes && !dismissed('log-wins', now)) {
     const meetings = loadMeetings(coachId).filter(
       (m) => m.endedAt && sameDay(m.startedAt, now),
     ).length
