@@ -212,8 +212,48 @@ export async function readCoachClassesFile(): Promise<DiskCoachClasses> {
 export async function writeCoachClassesFile(raw: unknown): Promise<DiskCoachClasses> {
   const body = normalize(raw && typeof raw === 'object' ? (raw as DiskCoachClasses) : EMPTY)
   const current = await readCoachClassesFile()
+  const merged = unionFiles(current, body)
+  // One offering = one live meeting. A client with a stale local copy can
+  // auto-start a duplicate when it hasn't seen the live meeting yet (e.g. a
+  // phone that was backgrounded through the scheduled start). Keep the newest
+  // live meeting per offering, end the superseded ones, and carry their
+  // attendees forward so no roll call is lost.
+  const liveByOffering = new Map<string, Array<Record<string, unknown>>>()
+  for (const rawMeeting of merged.meetings) {
+    if (!rawMeeting || typeof rawMeeting !== 'object') continue
+    const m = rawMeeting as Record<string, unknown>
+    if (m.endedAt) continue
+    const oid = typeof m.offeringId === 'string' ? m.offeringId : ''
+    if (!liveByOffering.has(oid)) liveByOffering.set(oid, [])
+    liveByOffering.get(oid)!.push(m)
+  }
+  for (const list of liveByOffering.values()) {
+    if (list.length < 2) continue
+    list.sort((a, b) => String(a.startedAt ?? '').localeCompare(String(b.startedAt ?? '')))
+    const newest = list[list.length - 1]!
+    const newestAttendees = Array.isArray(newest.attendees) ? newest.attendees : []
+    const seen = new Set(
+      newestAttendees.map((a) => {
+        const row = a as Record<string, unknown>
+        return String(row.athleteId ?? `${row.firstName} ${row.lastName}`)
+      }),
+    )
+    for (const older of list.slice(0, -1)) {
+      const olderAttendees = Array.isArray(older.attendees) ? older.attendees : []
+      for (const a of olderAttendees) {
+        const row = a as Record<string, unknown>
+        const key = String(row.athleteId ?? `${row.firstName} ${row.lastName}`)
+        if (!seen.has(key)) {
+          seen.add(key)
+          newestAttendees.push(a)
+        }
+      }
+      newest.attendees = newestAttendees
+      older.endedAt = newest.startedAt
+    }
+  }
   const next: DiskCoachClasses = {
-    ...unionFiles(current, body),
+    ...merged,
     exportedAt: new Date().toISOString(),
     activeMeetingId: body.activeMeetingId ?? current.activeMeetingId ?? null,
   }

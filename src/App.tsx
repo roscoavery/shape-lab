@@ -506,9 +506,18 @@ export default function App() {
     if (authStatus !== 'in') return
     const run = () => {
       try {
-        checkAutoClass()
-        const pending = pendingAutoEndPrompt()
-        if (pending) setAutoEndMeetingId(pending)
+        // Hydrate first: a client with a stale local copy (e.g. a phone that
+        // was backgrounded through the scheduled start) must see the server's
+        // live meeting before deciding to auto-start, or it spawns duplicates.
+        void hydrateCoachClasses().then(() => {
+          try {
+            checkAutoClass()
+            const pending = pendingAutoEndPrompt()
+            if (pending) setAutoEndMeetingId(pending)
+          } catch {
+            /* never break the app over the class clock */
+          }
+        })
       } catch {
         /* never break the app over the class clock */
       }
