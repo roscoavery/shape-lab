@@ -399,7 +399,20 @@ export default function App() {
   }, [])
   const authStatusRef = useRef(authStatus)
   authStatusRef.current = authStatus
-  useAwayLock(authStatus === 'in' && !sessionIsKiosk(authUser) && !awayLocked, lockAway)
+  // Never lock during a live class or lesson. Otherwise 3h idle.
+  // (liveClass/liveLesson are defined below; check directly here.)
+  const lockSuppressed = (() => {
+    try {
+      if (getActiveMeeting(activeAthleteId)) return true
+      const lessonId = loadActiveLessonId()
+      if (lessonId) {
+        const s = getLessonSession(lessonId)
+        if (s && !s.endedAt) return true
+      }
+    } catch { /* ignore */ }
+    return false
+  })()
+  useAwayLock(authStatus === 'in' && !sessionIsKiosk(authUser) && !awayLocked && !lockSuppressed, lockAway)
 
   useEffect(() => {
     const onLost = () => {

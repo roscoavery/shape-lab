@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { HOLD_BUILD_CHIP, HOLD_BUILD_LABEL } from '../lib/holdBuild'
 import { logoutSession, unlockAway, type AuthSessionUser } from '../lib/authSession'
 
-export const AWAY_IDLE_MS = 20 * 60 * 1000
+export const AWAY_IDLE_MS = 3 * 60 * 60 * 1000
 
 type Props = {
   user: AuthSessionUser
