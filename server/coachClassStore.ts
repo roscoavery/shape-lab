@@ -177,12 +177,36 @@ export async function readCoachClassesFile(): Promise<DiskCoachClasses> {
   const stored = normalize(await readJson<DiskCoachClasses>(FILE, { ...EMPTY }))
   const bundled = normalize(readDiskJson<DiskCoachClasses>(FILE, { ...EMPTY }))
   const merged = unionFiles(bundled, stored)
-  if (merged.offerings.length > stored.offerings.length) {
-    const next = { ...merged, exportedAt: new Date().toISOString() }
+  // Auto-end meetings left live 12+ hours so a forgotten session never sticks.
+  const now = Date.now()
+  let changed = false
+  const meetings = (merged.meetings as Array<{ endedAt?: string; startedAt?: string }>).map((m) => {
+    if (m.endedAt) return m
+    const started = Date.parse(m.startedAt ?? '')
+    if (!Number.isFinite(started) || now - started < 12 * 60 * 60 * 1000) return m
+    changed = true
+    return { ...m, endedAt: new Date(Math.min(started + 3 * 60 * 60 * 1000, now)).toISOString() }
+  })
+  const withEnded = changed ? { ...merged, meetings } : merged
+  // Recompute the live meeting id in case the active one was auto-ended.
+  const live = (withEnded.meetings as Array<{ id: string; endedAt?: string; startedAt: string }>).filter(
+    (m) => !m.endedAt,
+  )
+  const activeMeetingId =
+    withEnded.activeMeetingId && live.some((m) => m.id === withEnded.activeMeetingId)
+      ? withEnded.activeMeetingId
+      : live.length > 0
+        ? live.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0]!.id
+        : null
+  const final = changed || activeMeetingId !== withEnded.activeMeetingId
+    ? { ...withEnded, activeMeetingId }
+    : withEnded
+  if (merged.offerings.length > stored.offerings.length || changed) {
+    const next = { ...final, exportedAt: new Date().toISOString() }
     await writeJson(FILE, next)
     return next
   }
-  return merged
+  return final
 }
 
 export async function writeCoachClassesFile(raw: unknown): Promise<DiskCoachClasses> {

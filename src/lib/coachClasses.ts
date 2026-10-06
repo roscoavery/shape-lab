@@ -285,6 +285,25 @@ export function pickLiveMeetingId(meetings: ClassMeeting[], preferred?: string |
   return live[0]!.id
 }
 
+/** A meeting left live for more than 12 hours was forgotten. End it automatically
+ *  so a stale session never blocks the next class. The end time is capped at
+ *  3 hours after start so attendance windows stay sane. */
+const STALE_MEETING_MS = 12 * 60 * 60 * 1000
+const MAX_MEETING_MS = 3 * 60 * 60 * 1000
+
+export function autoEndStaleMeetings(meetings: ClassMeeting[]): { meetings: ClassMeeting[]; ended: number } {
+  const now = Date.now()
+  let ended = 0
+  const next = meetings.map((m) => {
+    if (m.endedAt) return m
+    const started = Date.parse(m.startedAt)
+    if (!Number.isFinite(started) || now - started < STALE_MEETING_MS) return m
+    ended += 1
+    return { ...m, endedAt: new Date(Math.min(started + MAX_MEETING_MS, now)).toISOString() }
+  })
+  return { meetings: next, ended }
+}
+
 /** Profile Class nights — live “here tonight” and unlogged ends stay off. */
 export function attendeeCountsOnProfile(
   meeting: Pick<ClassMeeting, 'endedAt' | 'attendanceLogged'>,
@@ -1075,10 +1094,12 @@ export async function hydrateCoachClasses(): Promise<void> {
     const removed = new Set(removedOfferingIds)
     const droppedMeetings = new Set(removedMeetingIds)
     const offerings = mergeOfferings(local.offerings, remoteOfferings).filter((o) => !removed.has(o.id))
-    const meetings = mergeMeetings(
+    const merged = mergeMeetings(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
     ).filter((m) => !droppedMeetings.has(m.id))
+    // End any meeting left live for 12+ hours so a forgotten session never sticks.
+    const { meetings } = autoEndStaleMeetings(merged)
     const live = pickLiveMeetingId(meetings, data.activeMeetingId ?? local.activeMeetingId)
     write(
       { ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds, removedMeetingIds },
