@@ -2649,7 +2649,7 @@ export default function App() {
         }}
       />
     )}
-    {classSessionOpen && activeProfile && isCoachProfile(activeProfile) && (
+    {classSessionOpen && activeProfile && (isCoachProfile(activeProfile) || isShapelabAdmin(activeProfile)) && (
       <ClassSession
         coach={activeProfile}
         athletes={athletes}

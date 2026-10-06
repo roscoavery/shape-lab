@@ -619,10 +619,10 @@ export function HomeDashboard({
             it over.
           </p>
         </details>
-        {onStartClass && liveClass && liveOffering && liveClass.coachId !== signedIn?.id && (
+        {onStartClass && liveClass && liveOffering && liveClass.coachId !== signedIn?.id && !isShapelabAdmin(signedIn) && (
           <LiveClassRoll meeting={liveClass} offering={liveOffering} />
         )}
-        {onStartClass && liveClass && liveOffering && liveClass.coachId === signedIn?.id && (
+        {onStartClass && liveClass && liveOffering && (liveClass.coachId === signedIn?.id || isShapelabAdmin(signedIn)) && (
           <div className="mt-3 rounded-2xl border border-[var(--accent)] bg-[#102820] px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Class is running
