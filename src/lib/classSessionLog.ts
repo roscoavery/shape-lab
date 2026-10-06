@@ -57,6 +57,27 @@ export const CONTEST_HOLD_DRILLS: {
   { id: 'wall_sit', autoKey: 'wall_sit', label: 'Wall sit' },
 ]
 
+/** Modified variations for contest holds, matching the class clock. */
+export const CONTEST_HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
+  hollow: [
+    { id: 'bent_knee', label: 'Bent-knee' },
+    { id: 'tucked', label: 'Tucked' },
+    { id: 'curl_up', label: 'Curl up' },
+  ],
+  wall_handstand: [
+    { id: 'back_to_wall', label: 'Back to wall' },
+    { id: 'tucked', label: 'Tucked' },
+    { id: 'l', label: 'L' },
+    { id: 'piked', label: 'Piked' },
+  ],
+  superman: [{ id: 'bird_dog', label: 'Bird dogs' }],
+  side_plank: [{ id: 'on_knees', label: 'On knees' }],
+  wall_sit: [
+    { id: 'on_toes', label: 'On toes' },
+    { id: 'single_leg', label: 'Single leg' },
+  ],
+}
+
 function classLabel(label: string, className?: string): string {
   return className ? `In class · ${label} (${className})` : `In class · ${label}`
 }

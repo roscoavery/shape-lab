@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { AthleteName } from '../AthleteAvatar'
 import { AthleteSearchField } from './AthleteSearchField'
-import { CONTEST_HOLD_DRILLS } from '../../lib/classSessionLog'
+import { CONTEST_HOLD_DRILLS, CONTEST_HOLD_SPECS } from '../../lib/classSessionLog'
 import { logSessionHold, type LessonClockContext } from '../../lib/sessionClockLog'
 import { formatSeconds } from '../../hooks/useHoldTimer'
 
@@ -43,7 +43,9 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
   const timerRef = useRef<number | null>(null)
 
   const drill = CONTEST_HOLD_DRILLS.find((d) => d.id === drillId) ?? CONTEST_HOLD_DRILLS[0]
+  const [variationId, setVariationId] = useState<string | null>(null)
   const holdName = drill.id === 'wall_handstand' ? 'Wall handstand contest' : `${drill.label} contest`
+  const variationLabel = CONTEST_HOLD_SPECS[drill.id]?.find((s) => s.id === variationId)?.label
 
   useEffect(() => {
     return () => {
@@ -94,13 +96,14 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
   /** Athlete came down — freeze their time and log it to their homework now. */
   const tapDown = (athleteId: string) => {
     const seconds = (Date.now() - startRef.current) / 1000
+    const label = variationLabel ? `${holdName} · ${variationLabel}` : holdName
     // Guests have no profile — their time shows in the results but isn't logged.
     if (!isGuestId(athleteId)) {
       const n = logSessionHold({
         athleteIds: [athleteId],
         autoKey: drill.autoKey,
         seconds,
-        label: holdName,
+        label,
         lesson,
         className,
         meetingId,
@@ -124,12 +127,13 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
   const endEarly = () => {
     const seconds = (Date.now() - startRef.current) / 1000
     const loggable = inIds.filter((id) => !isGuestId(id))
+    const label = variationLabel ? `${holdName} · ${variationLabel}` : holdName
     for (const athleteId of loggable) {
       const n = logSessionHold({
         athleteIds: [athleteId],
         autoKey: drill.autoKey,
         seconds,
-        label: holdName,
+        label,
         lesson,
         className,
         meetingId,
@@ -186,7 +190,10 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
                 <button
                   key={d.id}
                   type="button"
-                  onClick={() => setDrillId(d.id)}
+                  onClick={() => {
+                    setDrillId(d.id)
+                    setVariationId(null)
+                  }}
                   className={`rounded-full px-4 py-2 text-sm font-semibold ${
                     d.id === drillId
                       ? 'bg-[var(--accent)] text-black'
@@ -198,6 +205,30 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
               ))}
             </div>
           </div>
+          {(CONTEST_HOLD_SPECS[drill.id]?.length ?? 0) > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
+                Variation
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {CONTEST_HOLD_SPECS[drill.id]!.map((spec) => {
+                  const on = variationId === spec.id
+                  return (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      onClick={() => setVariationId(on ? null : spec.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        on ? 'bg-[var(--accent)] text-black' : 'bg-white/10 text-white/80'
+                      }`}
+                    >
+                      {spec.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
