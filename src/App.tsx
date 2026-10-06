@@ -730,6 +730,13 @@ export default function App() {
       })
     }
     window.addEventListener('focus', pull)
+    // Phones backgrounded through an auto-start miss the revision poll while
+    // suspended. Refetch class meetings directly on focus/foreground so a
+    // class that started while the app was asleep appears immediately.
+    const refetchClasses = () => {
+      void hydrateCoachClasses().then(() => setLessonTick((n) => n + 1))
+    }
+    window.addEventListener('focus', refetchClasses)
     let tick = 0
     const start = () => {
       if (tick) return
@@ -742,6 +749,7 @@ export default function App() {
     const onVis = () => {
       if (document.visibilityState === 'visible') {
         pull()
+        refetchClasses()
         start()
       } else {
         stop()
@@ -752,6 +760,7 @@ export default function App() {
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('focus', pull)
+      window.removeEventListener('focus', refetchClasses)
       stop()
     }
   }, [gymBoot])
