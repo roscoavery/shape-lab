@@ -51,6 +51,7 @@ import {
   hydrateCoachClasses,
   subscribeCoachClasses,
 } from '../../lib/coachClasses'
+import { hydrateCoachHours } from '../../lib/coachHours'
 import { ClassRecapList } from '../today/ClassRecapList'
 import {
   athleteMatchesQuery,
@@ -174,6 +175,7 @@ export function HomeDashboard({
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
   useEffect(() => {
     void hydrateCoachClasses().then(() => setRefresh((n) => n + 1))
+    void hydrateCoachHours()
   }, [])
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeHiddenGyms(() => setHiddenTick((n) => n + 1)), [])

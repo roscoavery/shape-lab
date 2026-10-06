@@ -1,10 +1,12 @@
 import type { LessonSession } from '../types'
 import { loadLessonSessions } from './lessonStore'
 import { loadMeetings, loadOfferingsForCoach, parseClassTimeMinutes, WEEKDAYS } from './coachClasses'
+import { estimateHoursForDay, getDayLog, pendingJackrabbitDays } from './coachHours'
 import type { TodayCalendarEvent } from './calendarClient'
 
 export type CoachReminder =
   | { kind: 'log-wins'; meetings: number; lessons: number }
+  | { kind: 'log-hours'; date: string; estimate: number; pendingJackrabbit: number }
   | { kind: 'plan-lessons'; sessions: LessonSession[] }
   | { kind: 'plan-calendar-lessons'; events: TodayCalendarEvent[] }
 
@@ -34,6 +36,9 @@ export function dismissReminder(kind: string, d: Date = new Date()): void {
  *
  * - log-wins: after 5pm, if the coach had classes or lessons today that
  *   have ended, nudge them to log wins in the recaps at the bottom of Today.
+ * - log-hours: after the last scheduled class ends, on days with classes
+ *   (never lessons-only days), ask how many hours they worked today and
+ *   remind them to log it in Jackrabbit.
  * - plan-lessons: lessons on the calendar today or tomorrow with no plan
  *   attached get a planning nudge.
  *
@@ -95,16 +100,49 @@ export function getCoachReminders(
     ? Math.max(...todaysOfferings.map((o) => parseClassTimeMinutes(o.time) + 60))
     : 17 * 60
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const endedMeetingsToday = loadMeetings(coachId).filter(
+    (m) => m.endedAt && sameDay(m.startedAt, now),
+  )
   if (nowMinutes >= lastEndMinutes && !dismissed('log-wins', now)) {
-    const meetings = loadMeetings(coachId).filter(
-      (m) => m.endedAt && sameDay(m.startedAt, now),
-    ).length
+    const meetings = endedMeetingsToday.length
     const lessons = sessions.filter(
       (s) => s.endedAt && sameDay(s.startedAt, now),
     ).length
     if (meetings + lessons > 0) {
       out.push({ kind: 'log-wins', meetings, lessons })
     }
+  }
+
+  // --- End-of-day hours nudge ---
+  // Days with classes only, never lessons-only days. Asks the coach how many
+  // hours they worked (a number like 3.25) and reminds them to log it in
+  // Jackrabbit. Fires after the last class of the day ends, and catches up
+  // on the most recent missed class day too, so a forgotten day never slips.
+  const meetingsByDay = new Map<string, number>()
+  for (const m of loadMeetings(coachId)) {
+    if (!m.endedAt) continue
+    const day = m.startedAt.slice(0, 10)
+    meetingsByDay.set(day, (meetingsByDay.get(day) ?? 0) + 1)
+  }
+  const classDays: string[] = []
+  for (let back = 0; back < 7; back += 1) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - back)
+    const key = dateKey(d)
+    if (!meetingsByDay.has(key)) continue
+    if (back === 0 && nowMinutes < lastEndMinutes) continue
+    if (getDayLog(coachId, key)) continue
+    if (dismissed(`log-hours-${key}`, now)) continue
+    classDays.push(key)
+  }
+  if (classDays.length > 0) {
+    const day = classDays[0]
+    out.push({
+      kind: 'log-hours',
+      date: day,
+      estimate: estimateHoursForDay(coachId, day),
+      pendingJackrabbit: pendingJackrabbitDays(coachId).length,
+    })
   }
 
   return out

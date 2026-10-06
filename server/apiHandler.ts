@@ -102,6 +102,7 @@ import { addCoachMedia, readCoachMediaBuffer, sendCoachMediaFile } from './coach
 import { isHomeGym, persistMode, readRevision } from './persist.ts'
 import { sendContactsPage } from './contactsPage.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
+import { readCoachHoursFile, writeCoachHoursFile } from './coachHoursStore.ts'
 import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEventStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore.ts'
@@ -252,6 +253,7 @@ const API_PATHS = new Set([
   '/api/coach-library',
   '/api/lessons',
   '/api/coach-classes',
+  '/api/coach-hours',
   '/api/training-events',
   '/api/skill-paths',
   '/api/improve-notes',
@@ -2001,6 +2003,19 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       sendJson(res, 200, await writeCoachClassesFile(JSON.parse(body)))
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/coach-hours') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readCoachHoursFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      sendJson(res, 200, await writeCoachHoursFile(JSON.parse(body)))
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
