@@ -28,6 +28,7 @@ import { QuickAddAthlete } from '../today/QuickAddAthlete'
 import { CalendarDesk } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { getSessionGlow, type SessionKind } from '../../lib/sessionGlow'
+import { getAutoStartSessions, setAutoStartSessions } from '../../lib/sessionPrefs'
 import { PracticeNudge } from '../today/PracticeNudge'
 import { BackCheckin } from '../today/BackCheckin'
 import { isRyanAthlete } from '../../lib/ryanProfile'
@@ -68,6 +69,7 @@ import {
   eventKindLabel,
   getTrainingEvent,
   listTrainingEvents,
+  createTrainingEvent,
   setEventAthletes,
   subscribeTrainingEvents,
   toggleEventAthlete,
@@ -191,6 +193,41 @@ export function HomeDashboard({
       const lessonEvent = glow.closest.lesson
       if (lessonEvent?.matchedAthleteId) {
         setWithIds((prev) => (prev.length ? prev : [lessonEvent.matchedAthleteId!]))
+      }
+      // Auto-start school/camp/clinic from the calendar when enabled.
+      if (getAutoStartSessions()) {
+        const trainingKinds: ('school' | 'camp' | 'clinic')[] = ['school', 'camp', 'clinic']
+        for (const kind of trainingKinds) {
+          if (!glow.glowing.has(kind)) continue
+          const calEvent = glow.closest[kind]
+          if (!calEvent) continue
+          // Don't auto-start if something is already live.
+          const hasLive = getActiveMeeting(signedIn.id) || findLiveLesson(signedIn.id) || (gymScope.kind === 'event' && getTrainingEvent(gymScope.eventId))
+          if (hasLive) break
+          // Find or create the training event for this kind.
+          const all = listTrainingEvents()
+          const matches = all.filter((e) => e.kind === kind && e.coachIds.includes(signedIn.id))
+          if (matches[0]) {
+            setGymScope({ kind: 'event', eventId: matches[0].id })
+          } else {
+            // No group yet; create one from the calendar event title so the
+            // session starts and athletes can be added as they arrive.
+            const title = (calEvent.title || kind).trim() || kind
+            try {
+              const created = createTrainingEvent({
+                name: title,
+                kind,
+                coachId: signedIn.id,
+                hostGym: title,
+                athleteIds: [],
+              })
+              setGymScope({ kind: 'event', eventId: created.id })
+            } catch {
+              /* never break the app over auto-start */
+            }
+          }
+          break // Only auto-start one per check.
+        }
       }
     }
     void check()
@@ -761,6 +798,20 @@ export function HomeDashboard({
           </button>
         )}
         {!activeGroup && (
+        <>
+        <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-[var(--muted)]">
+          <input
+            type="checkbox"
+            checked={getAutoStartSessions()}
+            onChange={(e) => {
+              setAutoStartSessions(e.target.checked)
+              // Force a re-render so the checkbox reflects the change.
+              setRefresh((n) => n + 1)
+            }}
+            className="h-4 w-4 rounded accent-[var(--accent)]"
+          />
+          Auto-start school, camp, and clinic from the calendar
+        </label>
         <div className="mt-2 grid min-w-0 grid-cols-2 gap-2">
           <button
             type="button"
@@ -805,6 +856,7 @@ export function HomeDashboard({
             <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start clinic</span>
           </button>
         </div>
+        </>
         )}
         {onOpenNamesTest && !activeGroup && !liveClass && !liveLesson && (
           <div className="mt-3 min-w-0">
