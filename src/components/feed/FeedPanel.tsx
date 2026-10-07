@@ -553,11 +553,23 @@ export function FeedPanel({ athletes, athlete, channel = 'gym' }: Props) {
                     <MentionText text={post.caption} athletes={athletes} />
                   </p>
                 )}
-                {wins && taggedPeople.length > 0 && (
-                  <p className="mt-2 text-[13px] text-[var(--muted)]">
-                    with {taggedPeople.map((a) => publicFeedName(a)).join(', ')}
-                  </p>
-                )}
+                {wins && (() => {
+                  const others = taggedPeople.filter((a) => a.id !== post.authorId)
+                  const coachName = post.sharedByName?.trim()
+                  // Don't repeat the athlete's own name that's already at the top.
+                  // Show the coach who posted it, or other tagged athletes.
+                  const withLine = coachName
+                    ? `with ${coachName}`
+                    : others.length > 0
+                      ? `with ${others.map((a) => publicFeedName(a)).join(', ')}`
+                      : null
+                  if (!withLine) return null
+                  return (
+                    <p className="mt-2 text-[13px] text-[var(--muted)]">
+                      {withLine}
+                    </p>
+                  )
+                })()}
                 {athlete && (
                   <WinReactBar
                     post={post}
