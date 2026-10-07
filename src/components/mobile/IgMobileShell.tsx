@@ -207,20 +207,21 @@ export function IgMobileShell({
             <span>Back to gym</span>
           </button>
         )}
-        {sectionPillsVisible && !mobileSearch && (
-          <div className="px-3 pb-2 sm:px-6">
-            <AppNav
-              tab={tab}
-              ryan={ryan}
-              kiosk={kiosk}
-              admin={admin}
-              role={navRole ?? authUser.role}
-              isOwner={isOwner}
-              onGo={go}
-            />
-          </div>
-        )}
       </div>
+
+      {sectionPillsVisible && !mobileSearch && (
+        <div className="sticky top-0 z-30 border-b border-white/10 bg-[#0b1118] px-3 py-2 sm:px-6 md:pl-[88px] xl:pl-72">
+          <AppNav
+            tab={tab}
+            ryan={ryan}
+            kiosk={kiosk}
+            admin={admin}
+            role={navRole ?? authUser.role}
+            isOwner={isOwner}
+            onGo={go}
+          />
+        </div>
+      )}
 
       {mobileSearch ? (
         <MobileSearchPage

@@ -59,6 +59,30 @@ export function InlineVideo({
   const pointersRef = useRef(new Map<number, { x: number; y: number }>())
   const pinchRef = useRef<{ startDist: number; startScale: number } | null>(null)
   const pinchedRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  /**
+   * Mount the <video> element only when near the viewport. On 2GB devices
+   * (iPad Air 2) a card full of mounted videos exhausts memory; gating on
+   * proximity keeps behavior identical everywhere while cutting the peak.
+   */
+  const [nearViewport, setNearViewport] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    if (nearViewport) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setNearViewport(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '600px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [nearViewport])
 
   const clearHideTimer = () => {
     if (hideTimer.current !== null) {
@@ -238,6 +262,7 @@ export function InlineVideo({
 
   return (
     <div
+      ref={containerRef}
       className="relative h-full w-full overflow-hidden bg-black"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -246,6 +271,7 @@ export function InlineVideo({
     >
       <div className="h-full w-full" style={mirrored ? { transform: 'scaleX(-1)' } : undefined}>
         <div className="h-full w-full" style={cropStyle}>
+          {nearViewport && (
           <video
             ref={ref}
             src={url}
@@ -309,6 +335,7 @@ export function InlineVideo({
               setTime(t)
             }}
           />
+          )}
         </div>
       </div>
       {/* Text overlays: above mirror/crop so they always read normally. */}
