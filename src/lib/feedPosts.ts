@@ -99,16 +99,44 @@ export function profilePasses(posts: FeedPost[], profileId: string): FeedPost[] 
 
 let feedCache: FeedPost[] | null = null
 
+/** Client-side tombstones for deleted feed posts. Persists across refetches
+ *  so a delete never resurrects, even if the server hiccups. */
+const REMOVED_FEED_KEY = 'shapelab_removed_feed_ids'
+function loadRemovedFeedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(REMOVED_FEED_KEY)
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw)
+    return new Set(Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+function saveRemovedFeedId(id: string): void {
+  try {
+    const set = loadRemovedFeedIds()
+    set.add(id)
+    // Cap at 400, matching the server tombstone limit.
+    const arr = [...set].slice(-400)
+    localStorage.setItem(REMOVED_FEED_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
 function rememberFeedPost(post: FeedPost | null) {
   if (!post) return
+  // Never resurrect a deleted post.
+  if (loadRemovedFeedIds().has(post.id)) return
   const prev = feedCache ?? []
   feedCache = [post, ...prev.filter((row) => row.id !== post.id)]
 }
 
 function unionFeedPosts(local: FeedPost[], remote: FeedPost[]): FeedPost[] {
+  const removed = loadRemovedFeedIds()
   const byId = new Map<string, FeedPost>()
   for (const row of [...local, ...remote]) {
-    if (!row?.id) continue
+    if (!row?.id || removed.has(row.id)) continue
     const keep = byId.get(row.id)
     if (!keep) {
       byId.set(row.id, row)
@@ -468,6 +496,8 @@ export async function removeFeedPost(id: string, actorId: string, admin: boolean
     })
     const res = await markedFetch(`/api/feed?${qs.toString()}`, { method: 'DELETE' })
     if (!res.ok) return false
+    // Tombstone locally so it stays gone even if a refetch races the server.
+    saveRemovedFeedId(id)
     if (feedCache) feedCache = feedCache.filter((row) => row.id !== id)
     return true
   } catch {
