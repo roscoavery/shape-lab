@@ -55,6 +55,18 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
 
   const isGuestId = (id: string) => id.startsWith('guest:')
 
+  /**
+   * Class mode: the present roster is already in the contest, like the class
+   * clock. Lesson mode (no meeting): start empty and let the coach pick.
+   */
+  const preselectedRef = useRef(false)
+  useEffect(() => {
+    if (!preselectedRef.current && meetingId && athletes.length > 0) {
+      preselectedRef.current = true
+      setPicked(athletes.map((a) => a.id))
+    }
+  }, [meetingId, athletes])
+
   const addAthlete = (a: Athlete) => {
     if (!picked.includes(a.id)) setPicked((p) => [...p, a.id])
     setQuery('')
@@ -365,7 +377,14 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
                       <span className="text-white/70">
                         <AthleteName athlete={p.athlete} />
                       </span>
-                      <span className="font-mono font-bold tabular-nums">{formatSeconds(d.seconds)}</span>
+                      <span className="flex items-center gap-2">
+                        {!p.guest && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/80">
+                            Logged
+                          </span>
+                        )}
+                        <span className="font-mono font-bold tabular-nums">{formatSeconds(d.seconds)}</span>
+                      </span>
                     </li>
                   )
                 })}

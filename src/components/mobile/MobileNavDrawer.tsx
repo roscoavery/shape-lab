@@ -33,7 +33,7 @@ type Props = {
 }
 
 const PREVIEW_LABEL: Record<DeskPreview, string> = {
-  home: 'Gym desk',
+  home: 'Shapelab admin',
   coach: 'Coach',
   gymOwner: 'Gym owner',
   parent: 'Parent',
@@ -105,7 +105,7 @@ export function MobileNavDrawer({
                     onDeskPreview?.('home')
                   }}
                 >
-                  Back to gym desk
+                  Back to Shapelab admin
                   <span className="mt-0.5 block text-xs font-normal opacity-80">
                     Leave {PREVIEW_LABEL[deskPreview]} preview, still {authUser.email}
                   </span>

@@ -63,6 +63,8 @@ export const CONTEST_HOLD_SPECS: Record<string, { id: string; label: string }[]>
     { id: 'bent_knee', label: 'Bent-knee' },
     { id: 'tucked', label: 'Tucked' },
     { id: 'curl_up', label: 'Curl up' },
+    { id: 'arms_down', label: 'Arms down' },
+    { id: 'arms_up', label: 'Arms up' },
   ],
   wall_handstand: [
     { id: 'back_to_wall', label: 'Back to wall' },

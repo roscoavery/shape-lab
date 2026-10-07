@@ -24,7 +24,7 @@ export function MobileAccountSwitcher({ user, deskPreview, onDeskPreview }: Prop
   if (!sessionIsAdmin(user)) return null
 
   const current = DESK_PREVIEW_OPTIONS.find((row) => row.id === deskPreview) ?? DESK_PREVIEW_OPTIONS[0]
-  const title = deskPreview === 'home' ? user.displayName || 'Gym desk' : `${current.label} preview`
+  const title = deskPreview === 'home' ? user.displayName || 'Shapelab admin' : `${current.label} preview`
 
   const pick = (next: DeskPreview) => {
     setOpen(false)
@@ -70,7 +70,7 @@ export function MobileAccountSwitcher({ user, deskPreview, onDeskPreview }: Prop
                         className={`w-full rounded-xl px-3 py-3 text-left ${on ? 'bg-white/10' : ''}`}
                         onClick={() => pick(row.id)}
                       >
-                        <p className="text-sm font-medium">{row.id === 'home' ? 'Gym desk (admin)' : row.label}</p>
+                        <p className="text-sm font-medium">{row.id === 'home' ? 'Shapelab admin' : row.label}</p>
                         <p className="text-xs text-[var(--muted)]">{HINT[row.id]}{on ? ' · current' : ''}</p>
                       </button>
                     </li>
