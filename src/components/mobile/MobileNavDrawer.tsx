@@ -82,7 +82,7 @@ export function MobileNavDrawer({
       </button>
       {open && (
         <MobilePortal>
-          <div className="fixed inset-0 z-[220] flex flex-col bg-[#0b1118] md:hidden" role="dialog" aria-label="App menu">
+          <div className="fixed inset-0 z-[220] flex flex-col bg-[#0b1118]" role="dialog" aria-label="App menu">
             <div className="flex items-center justify-between border-b border-white/10 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <p className="text-base font-semibold">Menu</p>
               <button type="button" className="text-sm font-medium text-[var(--accent)]" onClick={() => setOpen(false)}>

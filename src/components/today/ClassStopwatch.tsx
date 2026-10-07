@@ -647,13 +647,15 @@ export function ClassStopwatch({
     )
   }
 
+  /** Confirmation/error note, rendered right above the log button that triggered it. */
+  const flashNote = flash ? (
+    <p className="rounded-lg border border-[var(--accent)] bg-[#102820] px-3 py-2 text-sm font-semibold text-[var(--accent)]">
+      {flash}
+    </p>
+  ) : null
+
   const body = (
     <div className="flex flex-col gap-4">
-      {flash && (
-        <p className="rounded-lg border border-[var(--accent)] bg-[#102820] px-3 py-2 text-sm font-semibold text-[var(--accent)]">
-          {flash}
-        </p>
-      )}
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -1027,6 +1029,7 @@ export function ClassStopwatch({
             }
           />
           {logWho}
+          {flashNote}
           <button
             type="button"
             onClick={logHold}
@@ -1071,6 +1074,7 @@ export function ClassStopwatch({
               </label>
             </div>
             {logWho}
+            {flashNote}
             <button
               type="button"
               onClick={() => logExtraReps(extra)}
@@ -1218,6 +1222,7 @@ export function ClassStopwatch({
           </label>
           </div>
           {logWho}
+          {flashNote}
           <button
             type="button"
             onClick={logVups}
