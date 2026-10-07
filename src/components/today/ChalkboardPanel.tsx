@@ -905,7 +905,6 @@ function ChalkboardCard({
       setChromeOpen((open) => !open)
     }
   }
-  const drills = item.kind === 'drill-list' || item.kind === 'drill' ? listDrills() : []
   const isClip = (item.kind === 'clip' || item.kind === 'loop') && Boolean(item.url)
   const overlays = item.overlays ?? []
   const coachProfile = useMemo(
@@ -1093,15 +1092,12 @@ function ChalkboardCard({
         </div>
       )}
       {item.kind === 'drill-list' && (
-        <ul className="space-y-1 px-3 pb-3">
-          {(item.drillIds ?? []).map((id) => {
-            const d = drills.find((x) => x.id === id)
-            return (
-              <li key={id} className="text-sm text-[var(--text)]">
-                {d?.title || id}
-              </li>
-            )
-          })}
+        <ul className="space-y-2 px-3 pb-3">
+          {(item.drillIds ?? []).map((id) => (
+            <li key={id}>
+              <DrillPreview drillId={id} />
+            </li>
+          ))}
         </ul>
       )}
       {item.kind === 'collage' && collage && (
