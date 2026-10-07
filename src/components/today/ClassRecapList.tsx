@@ -13,6 +13,7 @@ import {
 } from '../../lib/athleteNotes'
 import { noteAudienceLabel, type NoteAudience } from '../../lib/noteAudience'
 import { NoteAudiencePicker } from '../lesson/NoteAudiencePicker'
+import { AthleteSearchField } from './AthleteSearchField'
 import {
   addClassNote,
   attendeeLabel,
@@ -23,6 +24,7 @@ import {
   loadOfferings,
   loadOfferingsForCoach,
   markClassAttendance,
+  priorOfferingAthleteIds,
   removeClassAttendance,
   removeClassNote,
   resolveAttendeeAthletes,
@@ -114,7 +116,7 @@ function ClassRecapCard({
 }) {
   const [open, setOpen] = useState(false)
   const [askDelete, setAskDelete] = useState(false)
-  const [addId, setAddId] = useState('')
+  const [query, setQuery] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [classNote, setClassNote] = useState('')
   const [classAudience, setClassAudience] = useState<NoteAudience>('athlete')
@@ -148,7 +150,7 @@ function ClassRecapCard({
       className,
       at: meeting.endedAt ?? meeting.startedAt,
     })
-    setAddId('')
+    setQuery('')
     setFlash(
       copied
         ? `Logged ${athlete.name.split(' ')[0]} for this class and copied ${copied} hold${copied === 1 ? '' : 's'} / skill${copied === 1 ? '' : 's'}.`
@@ -308,28 +310,41 @@ function ClassRecapCard({
               <p className="text-xs text-[var(--muted)]">
                 Add someone who was here. That writes Class nights and copies holds already logged in this class.
               </p>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={addId}
-                  onChange={(e) => setAddId(e.target.value)}
-                  className="h-10 min-w-[10rem] flex-1 rounded-lg border border-white/10 bg-black/30 px-2 text-sm"
-                >
-                  <option value="">Pick an athlete…</option>
-                  {addable.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={!addId}
-                  onClick={() => addAthleteToRecap(addId)}
-                  className="h-10 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
-                >
-                  Add + log class
-                </button>
-              </div>
+              {(() => {
+                const usualIds = priorOfferingAthleteIds(meeting.offeringId)
+                const usuals = usualIds
+                  .map((id) => addable.find((a) => a.id === id))
+                  .filter((a): a is Athlete => Boolean(a))
+                  .slice(0, 12)
+                if (usuals.length === 0) return null
+                return (
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Usually in this class
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {usuals.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => addAthleteToRecap(a.id)}
+                          className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/85"
+                        >
+                          + {a.name.split(' ')[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+              <AthleteSearchField
+                athletes={addable}
+                query={query}
+                onQuery={setQuery}
+                onPick={(a) => addAthleteToRecap(a.id)}
+                placeholder="Search all athletes…"
+                anyRole
+              />
             </div>
           )}
           {askDelete ? (
