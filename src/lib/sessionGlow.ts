@@ -10,7 +10,7 @@ import { WEEKDAYS, parseClassTimeMinutes, type CoachClassOffering } from './coac
  * The glow stops once the session is actually started.
  */
 
-export type SessionKind = 'class' | 'lesson' | 'school' | 'camp'
+export type SessionKind = 'class' | 'lesson' | 'school' | 'camp' | 'clinic'
 
 /** Minutes before start time the glow kicks in. */
 export const GLOW_LEAD_MINUTES = 5
@@ -18,7 +18,8 @@ export const GLOW_LEAD_MINUTES = 5
 const CLASS_WORDS = ['class', 'team', 'squad', 'group class']
 const LESSON_WORDS = ['lesson', 'private', '1:1', '1-1', '1 on 1', 'semi-private']
 const SCHOOL_WORDS = ['school']
-const CAMP_WORDS = ['camp', 'clinic']
+const CAMP_WORDS = ['camp']
+const CLINIC_WORDS = ['clinic']
 
 function titleHas(title: string, words: string[]): boolean {
   const t = title.toLowerCase()
@@ -34,6 +35,7 @@ export function classifySessionEvent(ev: TodayCalendarEvent): SessionKind {
   if (ev.lessonLinks.length > 0 || ev.matchedAthleteId) return 'lesson'
   const title = ev.title ?? ''
   if (titleHas(title, SCHOOL_WORDS)) return 'school'
+  if (titleHas(title, CLINIC_WORDS)) return 'clinic'
   if (titleHas(title, CAMP_WORDS)) return 'camp'
   if (titleHas(title, LESSON_WORDS)) return 'lesson'
   if (titleHas(title, CLASS_WORDS)) return 'class'

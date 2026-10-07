@@ -262,7 +262,7 @@ export function TodayGymScope({
           <input
             className="h-10 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 text-sm"
             placeholder={
-              kind === 'school' ? 'School name' : kind === 'camp' ? 'Camp name' : 'Group name'
+              kind === 'school' ? 'School name' : kind === 'camp' ? 'Camp name' : kind === 'clinic' ? 'Clinic name' : 'Group name'
             }
             value={name}
             onChange={(e) => setName(e.target.value)}

@@ -307,7 +307,7 @@ export function HomeDashboard({
     setAddQuery('')
     setRosterOpen(false)
   }
-  const startTrainingKind = (kind: 'school' | 'camp') => {
+  const startTrainingKind = (kind: 'school' | 'camp' | 'clinic') => {
     const matches = events.filter((e) => e.kind === kind)
     if (matches[0]) {
       setGymScope({ kind: 'event', eventId: matches[0].id })
@@ -614,7 +614,7 @@ export function HomeDashboard({
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Start lesson is who you are with, one athlete or several. Start class is
             the hour you are teaching, so shape-test names and homework land on that
-            roster. Start school and Start camp open those lists, kids stay off the
+            roster. Start school, Start camp, and Start clinic open those lists, kids stay off the
             gym desk. The chalkboard for a class opens on this page without taking
             it over.
           </p>
@@ -789,6 +789,20 @@ export function HomeDashboard({
               Group
             </span>
             <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start camp</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => startTrainingKind('clinic')}
+            className={
+              glowingKinds.has('clinic') && !liveClass && !liveLesson
+                ? 'sl-names-glow sl-left px-3 py-2.5 text-left'
+                : 'rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left'
+            }
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Group
+            </span>
+            <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start clinic</span>
           </button>
         </div>
         )}
