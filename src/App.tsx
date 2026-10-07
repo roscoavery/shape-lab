@@ -209,6 +209,7 @@ import {
   loadMeetings,
   loadOfferingsForCoach,
   logMeetingAttendance,
+  skipMeetingAttendance,
   markClassAttendance,
   pendingAutoEndPrompt,
   priorOfferingAthleteIds,
@@ -2699,6 +2700,12 @@ export default function App() {
         setAutoEndMeetingId(null)
         return null
       }
+      // Answered on another device — don't ask again.
+      if (meeting.attendanceLogged !== undefined) {
+        clearAutoEndPrompt()
+        setAutoEndMeetingId(null)
+        return null
+      }
       return (
         <EndClassPrompt
           count={meeting.attendees.length}
@@ -2708,6 +2715,7 @@ export default function App() {
             setAutoEndMeetingId(null)
           }}
           onSkip={() => {
+            skipMeetingAttendance(meeting.id)
             clearAutoEndPrompt()
             setAutoEndMeetingId(null)
           }}

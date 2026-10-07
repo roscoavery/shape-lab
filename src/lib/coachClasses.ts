@@ -871,6 +871,17 @@ export function logMeetingAttendance(id: string): ClassMeeting | null {
   return meeting
 }
 
+/** Record that the end-of-class prompt was answered with "don't log".
+ *  Syncs across devices so the prompt doesn't reappear elsewhere. */
+export function skipMeetingAttendance(id: string): ClassMeeting | null {
+  const file = read()
+  const meeting = file.meetings.find((m) => m.id === id)
+  if (!meeting) return null
+  meeting.attendanceLogged = false
+  write(file)
+  return meeting
+}
+
 export function markClassAttendance(input: {
   athleteId?: string
   firstName: string
