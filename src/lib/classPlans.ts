@@ -1,5 +1,6 @@
 import { createId, loadAthletes } from './storage'
 import { classMemberIds } from './coachClasses'
+import { markedFetch } from './authSession'
 import type { Athlete } from '../types'
 
 /**
@@ -9,6 +10,10 @@ import type { Athlete } from '../types'
  * per-athlete tasks ("focus on..."). Tasks show up as checklists: on the
  * coach's checklist iPad during class, and on the athlete's own view
  * before class.
+ *
+ * Plans sync across devices through /api/class-plans (last-write-wins
+ * per plan by updatedAt), so the morning brief on one device feeds the
+ * checklist on another.
  */
 
 export type ClassPlanTask = {
@@ -102,6 +107,78 @@ export function loadClassPlans(): ClassPlan[] {
 function savePlans(plans: ClassPlan[]) {
   writeJson(PLANS_KEY, plans)
   emit()
+  schedulePush()
+}
+
+// --- Cross-device sync -------------------------------------------------
+
+let pushTimer: ReturnType<typeof setTimeout> | null = null
+let syncStarted = false
+
+function mergePlans(local: ClassPlan[], remote: ClassPlan[]): ClassPlan[] {
+  const byId = new Map<string, ClassPlan>()
+  for (const p of local) byId.set(p.id, p)
+  for (const p of remote) {
+    const existing = byId.get(p.id)
+    if (!existing || (p.updatedAt || '') >= (existing.updatedAt || '')) {
+      byId.set(p.id, p)
+    }
+  }
+  return [...byId.values()]
+}
+
+/** Pull server plans and merge with local. Runs once per session. */
+export async function syncClassPlans(): Promise<void> {
+  if (syncStarted) return
+  syncStarted = true
+  try {
+    const res = await markedFetch('/api/class-plans')
+    if (!res.ok) return
+    const data = (await res.json()) as { plans?: ClassPlan[] }
+    const remote = Array.isArray(data.plans) ? data.plans : []
+    const local = loadClassPlans()
+    const merged = mergePlans(local, remote)
+    // Only write + push when something changed.
+    const localIds = new Set(local.map((p) => p.id))
+    const changed =
+      merged.length !== local.length ||
+      remote.some((p) => !localIds.has(p.id))
+    if (changed) {
+      writeJson(PLANS_KEY, merged)
+      emit()
+    }
+    // Push merged state so the server converges too.
+    await pushClassPlansNow()
+  } catch {
+    /* offline */
+  }
+}
+
+/** Push local plans to the server immediately. */
+export async function pushClassPlansNow(): Promise<void> {
+  try {
+    const res = await markedFetch('/api/class-plans', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plans: loadClassPlans() }),
+    })
+    if (!res.ok) return
+    const data = (await res.json()) as { plans?: ClassPlan[] }
+    if (Array.isArray(data.plans)) {
+      writeJson(PLANS_KEY, data.plans)
+      emit()
+    }
+  } catch {
+    /* offline */
+  }
+}
+
+function schedulePush() {
+  if (pushTimer) clearTimeout(pushTimer)
+  pushTimer = setTimeout(() => {
+    pushTimer = null
+    void pushClassPlansNow()
+  }, 1500)
 }
 
 /** Get or create the plan for an offering on a date. */

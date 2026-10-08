@@ -145,6 +145,7 @@ import { FeedPanel } from './components/feed/FeedPanel'
 import { StoryComposer } from './components/stories/StoryComposer'
 import { NetworkPanel } from './components/network/NetworkPanel'
 import { ResearchPanel } from './components/research/ResearchPanel'
+import { syncClassPlans } from './lib/classPlans'
 import { GymLibraryProvider } from './lib/gymLibrary'
 import { ClipLoopsProvider } from './lib/clipLoops'
 import { VideoAdjustmentsProvider } from './lib/videoAdjustments'
@@ -277,6 +278,11 @@ function isOwnerView(activeProfile: Athlete | null, deskPreview: DeskPreview): b
 
 export default function App() {
   const camera = usePoseCamera()
+  // Pull class plans from the server so the morning brief on one device
+  // feeds the checklist on another.
+  useEffect(() => {
+    void syncClassPlans()
+  }, [])
   const [tab, setTab] = useState<AppTab>(() => {
     // A shared card link (?skill=...) jumps straight to Learn.
     try {

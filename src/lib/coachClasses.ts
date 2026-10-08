@@ -1206,6 +1206,20 @@ export function classMemberIds(offeringId: string, athletes: Athlete[]): Set<str
   const { lastWeek, regulars } = summarizeAttendance(offeringId, athletes)
   for (const a of lastWeek) ids.add(a.id)
   for (const a of regulars) ids.add(a.id)
+  // Also include anyone marked present in today's meetings (including the
+  // live one), so "everyone" tasks show during class even for a brand-new
+  // class with no roster or history yet.
+  const today = new Date()
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  for (const m of loadMeetings()) {
+    if (m.offeringId !== offeringId) continue
+    const started = new Date(m.startedAt)
+    const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}-${String(started.getDate()).padStart(2, '0')}`
+    if (key !== todayKey) continue
+    for (const att of m.attendees) {
+      if (att.athleteId) ids.add(att.athleteId)
+    }
+  }
   return ids
 }
 

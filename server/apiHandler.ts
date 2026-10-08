@@ -53,6 +53,11 @@ import {
   toggleFeedRepost,
 } from './feedStore.ts'
 import {
+  mergeClassPlans,
+  readClassPlans,
+  writeClassPlans,
+} from './classPlanStore.ts'
+import {
   addCoachStillFromBody,
   deleteCoachStill,
   extrasForClient,
@@ -246,6 +251,7 @@ const API_PATHS = new Set([
   '/api/collages',
   '/api/feed',
   '/api/feed-file',
+  '/api/class-plans',
   '/api/notices',
   '/api/key-helpers',
   '/api/research',
@@ -1848,8 +1854,25 @@ export async function handleShapeLabApi(
     }
     return true
   }
-  if (path === '/api/notices') {
+  if (path === '/api/class-plans') {
     if (req.method === 'GET') {
+      const stored = await readClassPlans()
+      sendJson(res, 200, { kind: 'shape-lab-class-plans', plans: stored.plans })
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = JSON.parse(await readRequestBody(req))
+      const incoming = Array.isArray(body.plans) ? body.plans : []
+      const stored = await readClassPlans()
+      const merged = mergeClassPlans(stored.plans, incoming)
+      await writeClassPlans(merged)
+      sendJson(res, 200, { kind: 'shape-lab-class-plans', plans: merged })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/notices') {    if (req.method === 'GET') {
       sendJson(res, 200, { kind: 'shape-lab-notices', notices: await noticesForClient() })
       return true
     }
