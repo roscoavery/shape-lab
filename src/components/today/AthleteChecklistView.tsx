@@ -183,6 +183,17 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                 <p className="text-sm text-white/50">
                   {time} · {offeringName}
                 </p>
+                {selectedId === 'all' && (
+                  <p className="mt-1 text-sm font-semibold text-[var(--accent)]">
+                    {task.athleteIds.includes('all')
+                      ? 'Everyone'
+                      : task.athleteIds
+                          .map((id) => athleteById(athletes, id))
+                          .filter((a): a is Athlete => Boolean(a))
+                          .map((a) => a.firstName || a.name)
+                          .join(', ') || 'Unassigned'}
+                  </p>
+                )}
                 {task.repsTarget ? (
                   <div className="mt-2 flex items-center gap-4">
                     <span
