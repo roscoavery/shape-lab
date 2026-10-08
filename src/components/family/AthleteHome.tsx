@@ -11,6 +11,7 @@ import { AthleteHoldStats } from './AthleteHoldStats'
 import { AthleteFoundation } from './AthleteFoundation'
 import { AthleteLeaderboards } from './AthleteLeaderboards'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { AthleteTodayTasks } from './AthleteTodayTasks'
 
 type Props = {
   athlete: Athlete | null
@@ -128,6 +129,7 @@ export function AthleteHome({
           Start Practice
         </button>
       </section>
+      <AthleteTodayTasks athlete={athlete} />
       <div id="tour-athlete-path">
       <CollapsibleSection title="Your path">
         <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />

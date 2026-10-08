@@ -25,6 +25,7 @@ import { ClassMergePrompt } from '../today/ClassMergePrompt'
 import { LiveClassRoll } from '../today/LiveClassRoll'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
+import { MorningBrief } from '../today/MorningBrief'
 import { CalendarDesk } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { getSessionGlow, type SessionKind } from '../../lib/sessionGlow'
@@ -127,6 +128,7 @@ type Props = {
   onOpenSkillPathGuide?: () => void
   /** When false, this desk is a coach login — not gym-admin. */
   gymAdmin?: boolean
+  onOpenChecklist?: () => void
 }
 
 export function HomeDashboard({
@@ -146,6 +148,7 @@ export function HomeDashboard({
   onOpenSkillPaths,
   onOpenSkillPathGuide,
   gymAdmin: gymAdminProp,
+  onOpenChecklist,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const gymAdmin = gymAdminProp ?? isShapelabAdmin(signedIn)
@@ -606,6 +609,13 @@ export function HomeDashboard({
 
   return (
     <div className="mx-auto grid min-w-0 max-w-3xl grid-cols-[minmax(0,1fr)] gap-4">
+      {coach && signedIn && onOpenChecklist && !liveClass && !liveLesson && (
+        <MorningBrief
+          coach={signedIn}
+          athletes={athletes}
+          onOpenChecklist={onOpenChecklist}
+        />
+      )}
       <CollapsibleSection
         title="Calendar"
         hint="Month, week, or day · collapsed until you need it"

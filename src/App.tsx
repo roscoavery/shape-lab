@@ -74,6 +74,7 @@ import { TEST_PARENT, TEST_ATHLETE } from './lib/testParentFixture'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
 import { FamilyPracticeView } from './components/family/FamilyPracticeView'
+import { AthleteChecklistView } from './components/today/AthleteChecklistView'
 import { AthleteViewBar } from './components/family/AthleteViewBar'
 import { ParentGateDialog } from './components/family/ParentGateDialog'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
@@ -352,6 +353,7 @@ export default function App() {
   const [athleteViewId, setAthleteViewId] = useState<string | null>(null)
   const [showParentGate, setShowParentGate] = useState(false)
   const [showFamilyPractice, setShowFamilyPractice] = useState(false)
+  const [showChecklist, setShowChecklist] = useState(false)
   const [parentGuideArticleId, setParentGuideArticleId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
@@ -1398,6 +1400,13 @@ export default function App() {
           onBack={() => setShowFamilyPractice(false)}
         />
       )}
+      {showChecklist && previewProfile && (
+        <AthleteChecklistView
+          coach={previewProfile}
+          athletes={athletes}
+          onBack={() => setShowChecklist(false)}
+        />
+      )}
       {tab === 'today' && deskRole === 'athlete' && (
         <div className="flex min-w-0 flex-col gap-4 pt-8 md:pt-4">
           <div className="px-5">
@@ -1520,6 +1529,7 @@ export default function App() {
                   goTab('learn')
                 }}
                 classSessionOpen={classSessionOpen}
+                onOpenChecklist={() => setShowChecklist(true)}
                 onViewProfile={openProfile}
                 onAthletesChange={setAthleteRoster}
                 onParentHomework={(id) => {

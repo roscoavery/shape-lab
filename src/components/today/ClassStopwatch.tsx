@@ -155,6 +155,8 @@ type Props = {
   extras?: ClassExtraExercise[]
   /** Fired after lesson-mode logging so the host can refresh. */
   onLessonActivity?: () => void
+  /** Family practice: logs land as family work; shows the honesty reminder. */
+  familyMode?: boolean
 }
 
 function formatWatch(ms: number): string {
@@ -177,6 +179,7 @@ export function ClassStopwatch({
   lesson,
   extras: extrasProp,
   onLessonActivity,
+  familyMode = false,
 }: Props) {
   const [, setClassTick] = useState(0)
   useEffect(() => subscribeCoachClasses(() => setClassTick((n) => n + 1)), [])
@@ -202,7 +205,9 @@ export function ClassStopwatch({
   const sessionNoun = lesson ? 'lesson' : 'class'
   const homeworkAs = lesson
     ? 'It shows on their homework as in this lesson.'
-    : 'It shows on their homework as in class.'
+    : familyMode
+      ? 'It shows on their homework as family practice.'
+      : 'It shows on their homework as in class.'
   /** Notify the lesson host after lesson-mode logging so it can refresh. */
   const afterLog = (n: number) => {
     if (lesson && n > 0) onLessonActivity?.()
@@ -414,6 +419,7 @@ export function ClassStopwatch({
       side: drill.autoKey === 'side_plank' ? side : undefined,
       coachId: signedIn?.id,
       coachName: signedIn?.name,
+      loggedFrom: familyMode ? 'family' : undefined,
     })
     afterLog(n)
     reset()
@@ -1553,6 +1559,15 @@ export function ClassStopwatch({
             : 'When no class is open, search who to log. Historical times go in a lesson.'}
         </InfoHint>
       </p>
+      {familyMode && (
+        <div className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/5 p-3">
+          <p className="text-sm text-[var(--text)]">
+            <strong>Log only what they actually held.</strong> If someone comes out early,
+            uncheck them before logging, or use the Contest tab to log their real time.
+            Logging extra seconds skews their progress tracking.
+          </p>
+        </div>
+      )}
       <div className="mt-4">{body}</div>
     </section>
   )
