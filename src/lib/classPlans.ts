@@ -67,11 +67,11 @@ function writeJson(key: string, value: unknown) {
 export function loadClassPlans(): ClassPlan[] {
   const list = readJson<ClassPlan[]>(PLANS_KEY, [])
   if (!Array.isArray(list)) return []
-  // Migrate tasks from the single-athleteId shape.
   let dirty = false
   for (const plan of list) {
     for (const task of plan.tasks) {
       const t = task as ClassPlanTask & { athleteId?: string }
+      // Migrate tasks from the single-athleteId shape.
       if (!Array.isArray(t.athleteIds) && typeof t.athleteId === 'string') {
         t.athleteIds = [t.athleteId]
         delete t.athleteId
@@ -80,6 +80,16 @@ export function loadClassPlans(): ClassPlan[] {
       if (!Array.isArray(t.athleteIds)) {
         t.athleteIds = ['all']
         dirty = true
+      }
+      // Pull rep counts out of titles the coach already wrote ("5 ro hs tuck reps").
+      if (t.repsTarget === undefined) {
+        const parsed = parseLeadingReps(t.text)
+        if (parsed.reps !== undefined && parsed.text !== t.text) {
+          t.text = parsed.text
+          t.repsTarget = parsed.reps
+          t.repsDone = 0
+          dirty = true
+        }
       }
     }
   }
@@ -147,7 +157,17 @@ export function addPlanTask(
   const trimmed = text.trim()
   if (!trimmed) return null
   const ids = athleteIds.length > 0 ? [...new Set(athleteIds)] : ['all']
-  const target = repsTarget && repsTarget > 0 ? Math.floor(repsTarget) : undefined
+  // If the coach typed the reps into the title ("5 ro hs tuck reps"),
+  // pull the number out automatically unless they set it explicitly.
+  let finalText = trimmed
+  let target = repsTarget && repsTarget > 0 ? Math.floor(repsTarget) : undefined
+  if (target === undefined) {
+    const parsed = parseLeadingReps(trimmed)
+    if (parsed.reps !== undefined) {
+      finalText = parsed.text
+      target = parsed.reps
+    }
+  }
   return updatePlan(planId, (p) => ({
     ...p,
     tasks: [
@@ -155,7 +175,7 @@ export function addPlanTask(
       {
         id: createId('ctask'),
         athleteIds: ids,
-        text: trimmed,
+        text: finalText,
         done: false,
         ...(target ? { repsTarget: target, repsDone: 0 } : {}),
         createdAt: new Date().toISOString(),
@@ -251,6 +271,20 @@ export function carryOverTasks(
 /** Today as YYYY-MM-DD in local time. */
 export function todayKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Pull a leading rep count out of task text.
+ * "5 ro hs tuck reps on spring floor" -> { text: "ro hs tuck reps on spring floor", reps: 5 }
+ * "10x hollow holds" -> { text: "hollow holds", reps: 10 }
+ * Returns the text unchanged when no leading number is found.
+ */
+export function parseLeadingReps(raw: string): { text: string; reps?: number } {
+  const m = raw.trim().match(/^(\d+)\s*[x×]?\s+(.+)$/)
+  if (!m) return { text: raw.trim() }
+  const reps = parseInt(m[1], 10)
+  if (!Number.isFinite(reps) || reps <= 0 || reps > 1000) return { text: raw.trim() }
+  return { text: m[2].trim(), reps }
 }
 
 /**

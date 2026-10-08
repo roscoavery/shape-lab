@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Athlete, AthleteCoachNote } from '../../types'
 import { isShapelabAdmin } from '../../lib/profileRole'
+import { getClassPlan } from '../../lib/classPlans'
 import {
   addCoachNotesToAthletes,
   applyCoachNoteRemove,
@@ -414,6 +415,15 @@ function AthleteRecap({
   const [win, setWin] = useState('')
   const [bigWin, setBigWin] = useState(false)
 
+  // Checked-off plan tasks for this athlete in this class.
+  const planDate = meeting.startedAt.slice(0, 10)
+  const plan = getClassPlan(planDate, meeting.offeringId)
+  const checkedTasks = (plan?.tasks ?? []).filter(
+    (t) =>
+      t.done &&
+      (t.athleteIds.includes(athlete.id) || t.athleteIds.includes('all')),
+  )
+
   return (
     <article className="rounded-xl bg-black/25 p-3">
       <div className="flex items-start justify-between gap-2">
@@ -457,6 +467,29 @@ function AthleteRecap({
             </ul>
           )}
         </CollapsibleSection>
+        {checkedTasks.length > 0 && (
+          <CollapsibleSection
+            inset
+            title="Checked tasks"
+            hint={`${checkedTasks.length} completed`}
+          >
+            <ul className="space-y-1.5">
+              {checkedTasks.map((task) => (
+                <li key={task.id} className="flex items-start gap-2 text-sm">
+                  <span className="mt-0.5 text-[var(--accent)]">✓</span>
+                  <span className="text-[var(--text)]">
+                    {task.text}
+                    {task.repsTarget ? (
+                      <span className="ml-1.5 text-xs text-[var(--muted)]">
+                        {task.repsDone ?? task.repsTarget}/{task.repsTarget} reps
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleSection>
+        )}
         <CollapsibleSection
           inset
           title="Notes"

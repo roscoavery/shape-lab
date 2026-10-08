@@ -100,7 +100,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   if (offerings.length === 0 && lessons.length === 0) return null
 
   return (
-    <section className="rounded-2xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
+    <section className="min-w-0 overflow-x-clip rounded-2xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
@@ -284,7 +284,7 @@ function ClassPlanCard({
       .join(', ') + (list.length > 6 ? ` +${list.length - 6} more` : '')
 
   return (
-    <div className="rounded-xl border border-[var(--panel-border)]">
+    <div className="min-w-0 rounded-xl border border-[var(--panel-border)]">
       <button
         type="button"
         onClick={onToggle}
@@ -381,7 +381,7 @@ function ClassPlanCard({
                       {task.done ? '✓' : ''}
                     </button>
                     <span
-                      className={`min-w-0 flex-1 text-sm ${
+                      className={`min-w-0 flex-1 break-words text-sm ${
                         task.done ? 'text-[var(--muted)] line-through' : 'text-[var(--text)]'
                       }`}
                     >
