@@ -47,6 +47,7 @@ import {
   viewerMaySeeFeedPost,
   attachVideoToFeedPost,
   celebrateFeedPost,
+  toggleFeedFist,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
@@ -1580,6 +1581,7 @@ export async function handleShapeLabApi(
         url.searchParams.get('kind') === 'video' ||
         url.searchParams.get('kind') === 'like' ||
         url.searchParams.get('kind') === 'hi5' ||
+        url.searchParams.get('kind') === 'fist' ||
         url.searchParams.get('kind') === 'repost' ||
         url.searchParams.get('kind') === 'celebrate' ||
         url.searchParams.get('kind') === 'attach'
@@ -1613,14 +1615,19 @@ export async function handleShapeLabApi(
               .map((s) => s.trim())
               .filter(Boolean)
         const kind = body.kind ?? url.searchParams.get('kind') ?? ''
-        if (kind === 'like' || kind === 'hi5' || kind === 'repost' || kind === 'celebrate') {
+        if (kind === 'like' || kind === 'hi5' || kind === 'fist' || kind === 'repost' || kind === 'celebrate') {
           const saved =
             kind === 'hi5'
               ? await toggleFeedHi5(
                   body.id ?? url.searchParams.get('id') ?? '',
                   body.authorId ?? url.searchParams.get('authorId') ?? '',
                 )
-              : kind === 'repost'
+              : kind === 'fist'
+                ? await toggleFeedFist(
+                    body.id ?? url.searchParams.get('id') ?? '',
+                    body.authorId ?? url.searchParams.get('authorId') ?? '',
+                  )
+                : kind === 'repost'
                 ? await toggleFeedRepost(
                     body.id ?? url.searchParams.get('id') ?? '',
                     body.authorId ?? url.searchParams.get('authorId') ?? '',
@@ -1639,9 +1646,11 @@ export async function handleShapeLabApi(
               error:
                 kind === 'hi5'
                   ? 'Could not high-five that post.'
-                  : kind === 'repost'
-                    ? 'Could not add that to your profile.'
-                    : 'Could not like that post.',
+                  : kind === 'fist'
+                    ? 'Could not fist-bump that post.'
+                    : kind === 'repost'
+                      ? 'Could not add that to your profile.'
+                      : 'Could not like that post.',
             })
             return true
           }

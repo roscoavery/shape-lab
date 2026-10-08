@@ -23,6 +23,8 @@ export type FeedPost = {
   likes?: string[]
   /** Who high-fived the athlete(s) on this post. */
   hi5s?: string[]
+  /** Who fist-bumped the athlete(s) on this post. */
+  fists?: string[]
   /** Coach posted this as the athlete's win. */
   sharedById?: string
   sharedByName?: string
@@ -150,6 +152,7 @@ function unionFeedPosts(local: FeedPost[], remote: FeedPost[]): FeedPost[] {
       channels: [...new Set([...postChannels(older), ...postChannels(newer)])],
       likes: [...new Set([...(older.likes ?? []), ...(newer.likes ?? [])])],
       hi5s: [...new Set([...(older.hi5s ?? []), ...(newer.hi5s ?? [])])],
+      fists: [...new Set([...(older.fists ?? []), ...(newer.fists ?? [])])],
       reposts: [...new Set([...(older.reposts ?? []), ...(newer.reposts ?? [])])],
       taggedIds: [...new Set([...(older.taggedIds ?? []), ...(newer.taggedIds ?? [])])],
     })
@@ -356,6 +359,22 @@ export async function toggleFeedHi5(postId: string, actorId: string): Promise<Fe
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: 'hi5', id: postId, authorId: actorId }),
+    })
+    if (!res.ok) return null
+    const post = (await res.json()) as FeedPost
+    rememberFeedPost(post)
+    return post
+  } catch {
+    return null
+  }
+}
+
+export async function toggleFeedFist(postId: string, actorId: string): Promise<FeedPost | null> {
+  try {
+    const res = await markedFetch('/api/feed?kind=fist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'fist', id: postId, authorId: actorId }),
     })
     if (!res.ok) return null
     const post = (await res.json()) as FeedPost

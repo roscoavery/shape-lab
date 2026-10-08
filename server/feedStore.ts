@@ -41,6 +41,8 @@ export type DiskFeedPost = {
   likes?: string[]
   /** Profile ids who high-fived the athlete(s) on this post. */
   hi5s?: string[]
+  /** Profile ids who fist-bumped the athlete(s) on this post. */
+  fists?: string[]
   sharedById?: string
   sharedByName?: string
   reposts?: string[]
@@ -140,6 +142,7 @@ function mergePosts(existing: DiskFeedPost[], incoming: DiskFeedPost[]): DiskFee
       channels: cleanChannels([...(older.channels ?? []), ...(newer.channels ?? [])]),
       likes: [...new Set([...(older.likes ?? []), ...(newer.likes ?? [])])],
       hi5s: [...new Set([...(older.hi5s ?? []), ...(newer.hi5s ?? [])])],
+      fists: [...new Set([...(older.fists ?? []), ...(newer.fists ?? [])])],
       reposts: [...new Set([...(older.reposts ?? []), ...(newer.reposts ?? [])])],
       taggedIds: [...new Set([...(older.taggedIds ?? []), ...(newer.taggedIds ?? [])])],
     })
@@ -475,6 +478,13 @@ export async function toggleFeedHi5(
   return toggleFeedMark(postId, actorId, 'hi5s')
 }
 
+export async function toggleFeedFist(
+  postId: string,
+  actorId: string,
+): Promise<DiskFeedPost | null> {
+  return toggleFeedMark(postId, actorId, 'fists')
+}
+
 export async function toggleFeedRepost(
   postId: string,
   actorId: string,
@@ -573,7 +583,7 @@ export async function attachVideoToFeedPost(params: {
 async function toggleFeedMark(
   postId: string,
   actorId: string,
-  field: 'likes' | 'hi5s' | 'reposts',
+  field: 'likes' | 'hi5s' | 'fists' | 'reposts',
 ): Promise<DiskFeedPost | null> {
   const sid = safeId(postId)
   const who = safeId(actorId)

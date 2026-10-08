@@ -12,6 +12,7 @@ import {
   publishTextPostResult,
   isPassPost,
   celebrateFeedPost,
+  toggleFeedFist,
   toggleFeedHi5,
   toggleFeedLike,
   toggleFeedRepost,
@@ -734,6 +735,9 @@ function WinReactBar({
   const hi5ed = (post.hi5s ?? []).includes(athlete.id)
   const hi5Targets = hi5Athletes(post, athletes, athlete.id)
   const showHi5 = canGiveHi5(athlete) && hi5Targets.length > 0
+  const fisted = (post.fists ?? []).includes(athlete.id)
+  // Fist bumps go to the same athletes as high-fives.
+  const showFist = showHi5
 
   const apply = (next: FeedPost) => {
     onPosts((prev) => prev.map((p) => (p.id === next.id ? { ...p, ...next } : p)))
@@ -817,6 +821,37 @@ function WinReactBar({
     })
   }
 
+  const tapFist = () => {
+    if (!showFist) return
+    const snapshot = post
+    const nextOn = !fisted
+    apply({ ...post, fists: markOn(post.fists, athlete.id, nextOn) })
+    if (nextOn) {
+      playGestureBurst('fist')
+      const names = hi5Targets.map((t) => givenName(t)).join(', ')
+      const youDid = `You fist-bumped ${names}`
+      onNotice(youDid)
+      window.setTimeout(() => onNotice(null), 4200)
+      for (const t of hi5Targets) {
+        void pushNotice({
+          toId: t.id,
+          kind: 'fist',
+          title: `${givenName(athlete)} fist-bumped you`,
+          body: youDid,
+          href: postOnChannel(post, 'wins') ? 'wins' : 'feed',
+        })
+      }
+    }
+    void toggleFeedFist(post.id, athlete.id).then((server) => {
+      if (!server) {
+        revert(snapshot)
+        onNotice('Could not fist-bump that. Try again.')
+        return
+      }
+      apply(server)
+    })
+  }
+
   const tapAllThree = () => {
     const snapshot = post
     apply({
@@ -871,6 +906,18 @@ function WinReactBar({
           <span className="text-base leading-none" aria-hidden>🙌</span>
           <span className="sr-only">High five</span>
           {(post.hi5s ?? []).length > 0 ? ` ${(post.hi5s ?? []).length}` : ''}
+        </button>
+      )}
+      {showFist && (
+        <button
+          type="button"
+          onClick={tapFist}
+          className={reactClass(fisted)}
+          aria-label={fisted ? 'Fist-bumped' : 'Fist bump'}
+        >
+          <span className="text-base leading-none" aria-hidden>👊</span>
+          <span className="sr-only">Fist bump</span>
+          {(post.fists ?? []).length > 0 ? ` ${(post.fists ?? []).length}` : ''}
         </button>
       )}
       {!compact && (
