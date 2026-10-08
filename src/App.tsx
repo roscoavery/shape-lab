@@ -74,6 +74,7 @@ import { TEST_PARENT, TEST_ATHLETE } from './lib/testParentFixture'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
 import { AthleteViewBar } from './components/family/AthleteViewBar'
+import { ParentGateDialog } from './components/family/ParentGateDialog'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
 import { AthleteFoundation } from './components/family/AthleteFoundation'
 import { GlowTour, tourSeen, type TourStep } from './components/homework/GlowTour'
@@ -348,6 +349,7 @@ export default function App() {
   })
   const [parentFocusId, setParentFocusId] = useState<string | null>(null)
   const [athleteViewId, setAthleteViewId] = useState<string | null>(null)
+  const [showParentGate, setShowParentGate] = useState(false)
   const [parentGuideArticleId, setParentGuideArticleId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
@@ -907,7 +909,15 @@ export default function App() {
     },
     [familyParent, familyAthletes],
   )
-  const exitAthleteView = useCallback(() => setAthleteViewId(null), [])
+  const exitAthleteView = useCallback(() => {
+    // Parent Gate: require PIN to return to Parent experience.
+    setShowParentGate(true)
+  }, [])
+
+  const confirmExitAthleteView = useCallback(() => {
+    setShowParentGate(false)
+    setAthleteViewId(null)
+  }, [])
 
   // Return to the parent experience after 20 minutes without interaction
   // while in athlete view.
@@ -920,7 +930,11 @@ export default function App() {
     window.addEventListener('pointerdown', bump)
     window.addEventListener('keydown', bump)
     const timer = window.setInterval(() => {
-      if (Date.now() - lastActive > 20 * 60 * 1000) exitAthleteView()
+      if (Date.now() - lastActive > 20 * 60 * 1000) {
+        // Inactivity: return to safe state directly, no PIN needed.
+        setShowParentGate(false)
+        setAthleteViewId(null)
+      }
     }, 60 * 1000)
     return () => {
       window.removeEventListener('pointerdown', bump)
@@ -1350,6 +1364,12 @@ export default function App() {
           parentName={activeProfile.firstName || ''}
           onBackToParent={exitAthleteView}
           onSwitchAthlete={enterAthleteView}
+        />
+      )}
+      {showParentGate && (
+        <ParentGateDialog
+          onSuccess={confirmExitAthleteView}
+          onCancel={() => setShowParentGate(false)}
         />
       )}
 
