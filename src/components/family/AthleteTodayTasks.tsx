@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import {
   tasksForAthleteOnDate,
   togglePlanTask,
+  bumpTaskReps,
   subscribeClassPlans,
   todayKey,
 } from '../../lib/classPlans'
@@ -44,42 +45,88 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
           {items.map(({ plan, task }) => {
             const offering = getOffering(plan.offeringId)
             return (
-              <li key={task.id}>
-                <button
-                  type="button"
-                  onClick={() => togglePlanTask(plan.id, task.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left ${
-                    task.done
-                      ? 'border-[var(--accent)]/30 bg-[var(--accent)]/5'
-                      : 'border-[var(--panel-border)] bg-[var(--panel)]'
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-lg ${
-                      task.done
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
-                        : 'border-[var(--panel-border)] text-transparent'
-                    }`}
+              <li
+                key={task.id}
+                className={`flex w-full items-center gap-3 rounded-xl border p-3 ${
+                  task.done
+                    ? 'border-[var(--accent)]/30 bg-[var(--accent)]/5'
+                    : 'border-[var(--panel-border)] bg-[var(--panel)]'
+                }`}
+              >
+                {task.repsTarget ? (
+                  <>
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block text-sm font-medium ${
+                          task.done
+                            ? 'text-[var(--muted)] line-through'
+                            : 'text-[var(--text)]'
+                        }`}
+                      >
+                        {task.text}
+                      </span>
+                      {offering && (
+                        <span className="block text-xs text-[var(--muted)]">
+                          {offering.time} · {offering.name}
+                        </span>
+                      )}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => bumpTaskReps(plan.id, task.id, -1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--panel-border)] text-lg text-[var(--text)]"
+                        aria-label="Remove a rep"
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[2.75rem] text-center text-sm font-bold tabular-nums text-[var(--text)]">
+                        {task.repsDone ?? 0}
+                        <span className="text-[var(--muted)]">/{task.repsTarget}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => bumpTaskReps(plan.id, task.id, 1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
+                        aria-label="Add a rep"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => togglePlanTask(plan.id, task.id)}
+                    className="flex w-full items-center gap-3 text-left"
                   >
-                    ✓
-                  </span>
-                  <span className="min-w-0">
                     <span
-                      className={`block text-sm font-medium ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-lg ${
                         task.done
-                          ? 'text-[var(--muted)] line-through'
-                          : 'text-[var(--text)]'
+                          ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
+                          : 'border-[var(--panel-border)] text-transparent'
                       }`}
                     >
-                      {task.text}
+                      ✓
                     </span>
-                    {offering && (
-                      <span className="block text-xs text-[var(--muted)]">
-                        {offering.time} · {offering.name}
+                    <span className="min-w-0">
+                      <span
+                        className={`block text-sm font-medium ${
+                          task.done
+                            ? 'text-[var(--muted)] line-through'
+                            : 'text-[var(--text)]'
+                        }`}
+                      >
+                        {task.text}
                       </span>
-                    )}
-                  </span>
-                </button>
+                      {offering && (
+                        <span className="block text-xs text-[var(--muted)]">
+                          {offering.time} · {offering.name}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                )}
               </li>
             )
           })}

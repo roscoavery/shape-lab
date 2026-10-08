@@ -11,10 +11,15 @@ import { createId } from './storage'
 
 export type ClassPlanTask = {
   id: string
-  /** Athlete id, or 'all' for a whole-class task. */
-  athleteId: string
+  /** Athlete ids this task is for, or ['all'] for a whole-class task. */
+  athleteIds: string[]
   text: string
   done: boolean
+  /** Optional rep target. Athletes tap through repsDone toward it. */
+  repsTarget?: number
+  repsDone?: number
+  /** Plan id this task was carried over from, if any. */
+  carriedFromPlanId?: string
   createdAt: string
 }
 
@@ -61,7 +66,25 @@ function writeJson(key: string, value: unknown) {
 
 export function loadClassPlans(): ClassPlan[] {
   const list = readJson<ClassPlan[]>(PLANS_KEY, [])
-  return Array.isArray(list) ? list : []
+  if (!Array.isArray(list)) return []
+  // Migrate tasks from the single-athleteId shape.
+  let dirty = false
+  for (const plan of list) {
+    for (const task of plan.tasks) {
+      const t = task as ClassPlanTask & { athleteId?: string }
+      if (!Array.isArray(t.athleteIds) && typeof t.athleteId === 'string') {
+        t.athleteIds = [t.athleteId]
+        delete t.athleteId
+        dirty = true
+      }
+      if (!Array.isArray(t.athleteIds)) {
+        t.athleteIds = ['all']
+        dirty = true
+      }
+    }
+  }
+  if (dirty) writeJson(PLANS_KEY, list)
+  return list
 }
 
 function savePlans(plans: ClassPlan[]) {
@@ -115,14 +138,28 @@ export function setPlanNotes(planId: string, notes: string): ClassPlan | null {
   return updatePlan(planId, (p) => ({ ...p, notes }))
 }
 
-export function addPlanTask(planId: string, athleteId: string, text: string): ClassPlan | null {
+export function addPlanTask(
+  planId: string,
+  athleteIds: string[],
+  text: string,
+  repsTarget?: number,
+): ClassPlan | null {
   const trimmed = text.trim()
   if (!trimmed) return null
+  const ids = athleteIds.length > 0 ? [...new Set(athleteIds)] : ['all']
+  const target = repsTarget && repsTarget > 0 ? Math.floor(repsTarget) : undefined
   return updatePlan(planId, (p) => ({
     ...p,
     tasks: [
       ...p.tasks,
-      { id: createId('ctask'), athleteId, text: trimmed, done: false, createdAt: new Date().toISOString() },
+      {
+        id: createId('ctask'),
+        athleteIds: ids,
+        text: trimmed,
+        done: false,
+        ...(target ? { repsTarget: target, repsDone: 0 } : {}),
+        createdAt: new Date().toISOString(),
+      },
     ],
   }))
 }
@@ -131,6 +168,18 @@ export function togglePlanTask(planId: string, taskId: string): ClassPlan | null
   return updatePlan(planId, (p) => ({
     ...p,
     tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)),
+  }))
+}
+
+/** Bump repsDone on a task. Auto-marks done when the target is reached. */
+export function bumpTaskReps(planId: string, taskId: string, delta: number): ClassPlan | null {
+  return updatePlan(planId, (p) => ({
+    ...p,
+    tasks: p.tasks.map((t) => {
+      if (t.id !== taskId || !t.repsTarget) return t
+      const repsDone = Math.max(0, Math.min(t.repsTarget, (t.repsDone ?? 0) + delta))
+      return { ...t, repsDone, done: repsDone >= t.repsTarget }
+    }),
   }))
 }
 
@@ -149,7 +198,7 @@ export function tasksForAthleteOnDate(
   const out: { plan: ClassPlan; task: ClassPlanTask }[] = []
   for (const plan of plansForDate(date)) {
     for (const task of plan.tasks) {
-      if (task.athleteId === athleteId || task.athleteId === 'all') {
+      if (task.athleteIds.includes(athleteId) || task.athleteIds.includes('all')) {
         out.push({ plan, task })
       }
     }
@@ -157,7 +206,73 @@ export function tasksForAthleteOnDate(
   return out
 }
 
+/**
+ * Carry incomplete tasks forward from an earlier class plan to a later one.
+ * Only tasks touching the given athlete ids are carried. Rep progress comes
+ * along so athletes pick up where they left off.
+ */
+export function carryOverTasks(
+  fromPlanId: string,
+  toPlanId: string,
+  athleteIds: string[],
+): ClassPlan | null {
+  const plans = loadClassPlans()
+  const from = plans.find((p) => p.id === fromPlanId)
+  if (!from) return null
+  const wanted = new Set(athleteIds)
+  const carried: ClassPlanTask[] = []
+  for (const task of from.tasks) {
+    if (task.done) continue
+    const overlap = task.athleteIds.filter(
+      (id) => id === 'all' || wanted.has(id),
+    )
+    if (overlap.length === 0) continue
+    // Skip if this exact task was already carried over.
+    const toPlan = plans.find((p) => p.id === toPlanId)
+    if (toPlan?.tasks.some((t) => t.carriedFromPlanId === from.id && t.text === task.text)) {
+      continue
+    }
+    carried.push({
+      id: createId('ctask'),
+      athleteIds: task.athleteIds.includes('all') ? ['all'] : overlap,
+      text: task.text,
+      done: false,
+      ...(task.repsTarget
+        ? { repsTarget: task.repsTarget, repsDone: task.repsDone ?? 0 }
+        : {}),
+      carriedFromPlanId: from.id,
+      createdAt: new Date().toISOString(),
+    })
+  }
+  if (carried.length === 0) return null
+  return updatePlan(toPlanId, (p) => ({ ...p, tasks: [...p.tasks, ...carried] }))
+}
+
 /** Today as YYYY-MM-DD in local time. */
 export function todayKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Tasks previously written for an athlete, most recent first, deduped by
+ * text. For quick re-assignment next week.
+ */
+export function pastTasksForAthlete(
+  athleteId: string,
+  limit = 12,
+): { text: string; repsTarget?: number }[] {
+  const seen = new Set<string>()
+  const out: { text: string; repsTarget?: number }[] = []
+  const plans = loadClassPlans().sort((a, b) => b.date.localeCompare(a.date))
+  for (const plan of plans) {
+    for (const task of plan.tasks) {
+      if (!task.athleteIds.includes(athleteId) && !task.athleteIds.includes('all')) continue
+      const key = task.text.trim().toLowerCase()
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      out.push({ text: task.text.trim(), ...(task.repsTarget ? { repsTarget: task.repsTarget } : {}) })
+      if (out.length >= limit) return out
+    }
+  }
+  return out
 }

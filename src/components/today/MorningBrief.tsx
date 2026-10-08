@@ -10,6 +10,8 @@ import {
   addPlanTask,
   togglePlanTask,
   removePlanTask,
+  carryOverTasks,
+  pastTasksForAthlete,
   subscribeClassPlans,
   todayKey,
   type ClassPlan,
@@ -48,7 +50,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   const [plansTick, setPlansTick] = useState(0)
   const [openOfferingId, setOpenOfferingId] = useState<string | null>(null)
   const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
-  const [taskAthlete, setTaskAthlete] = useState<Record<string, string>>({})
+  const [taskAthlete, setTaskAthlete] = useState<Record<string, string[]>>({})
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
@@ -126,24 +128,34 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
       </div>
 
       <div className="mt-4 grid gap-3">
-        {offerings.map((offering) => (
-          <ClassPlanCard
-            key={offering.id}
-            offering={offering}
-            athletes={athletes}
-            coachId={coach.id}
-            dateKey={dateKey}
-            open={openOfferingId === offering.id}
-            onToggle={() =>
-              setOpenOfferingId((id) => (id === offering.id ? null : offering.id))
-            }
-            taskInput={taskInputs[offering.id] ?? ''}
-            onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [offering.id]: v }))}
-            taskAthleteId={taskAthlete[offering.id] ?? 'all'}
-            onTaskAthlete={(v) => setTaskAthlete((s) => ({ ...s, [offering.id]: v }))}
-            plansTick={plansTick}
-          />
-        ))}
+        {offerings.map((offering) => {
+          const earlierPlans = offerings
+            .filter((o) => o.time < offering.time)
+            .map((o) => {
+              const p = getOrCreateClassPlan(dateKey, o.id, coach.id)
+              return { plan: p, offering: o }
+            })
+            .filter(({ plan }) => plan.tasks.some((t) => !t.done))
+          return (
+            <ClassPlanCard
+              key={offering.id}
+              offering={offering}
+              athletes={athletes}
+              coachId={coach.id}
+              dateKey={dateKey}
+              open={openOfferingId === offering.id}
+              onToggle={() =>
+                setOpenOfferingId((id) => (id === offering.id ? null : offering.id))
+              }
+              taskInput={taskInputs[offering.id] ?? ''}
+              onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [offering.id]: v }))}
+              taskAthleteIds={taskAthlete[offering.id] ?? ['all']}
+              onTaskAthletes={(v) => setTaskAthlete((s) => ({ ...s, [offering.id]: v }))}
+              plansTick={plansTick}
+              earlierPlans={earlierPlans}
+            />
+          )
+        })}
 
         {lessons.length > 0 && (
           <div className="rounded-xl border border-[var(--panel-border)] p-4">
@@ -183,9 +195,10 @@ function ClassPlanCard({
   onToggle,
   taskInput,
   onTaskInput,
-  taskAthleteId,
-  onTaskAthlete,
+  taskAthleteIds,
+  onTaskAthletes,
   plansTick,
+  earlierPlans,
 }: {
   offering: CoachClassOffering
   athletes: Athlete[]
@@ -195,9 +208,10 @@ function ClassPlanCard({
   onToggle: () => void
   taskInput: string
   onTaskInput: (v: string) => void
-  taskAthleteId: string
-  onTaskAthlete: (v: string) => void
+  taskAthleteIds: string[]
+  onTaskAthletes: (v: string[]) => void
   plansTick: number
+  earlierPlans: { plan: ClassPlan; offering: CoachClassOffering }[]
 }) {
   // Re-read the plan when plans change.
   const plan: ClassPlan = useMemo(
@@ -222,11 +236,46 @@ function ClassPlanCard({
     return out
   }, [lastWeek, regulars])
 
+  const [repsInput, setRepsInput] = useState('')
+
   const addTask = () => {
     if (!taskInput.trim()) return
-    addPlanTask(plan.id, taskAthleteId, taskInput)
+    const reps = parseInt(repsInput, 10)
+    addPlanTask(plan.id, taskAthleteIds, taskInput, Number.isFinite(reps) && reps > 0 ? reps : undefined)
     onTaskInput('')
+    setRepsInput('')
+    onTaskAthletes(['all'])
   }
+
+  const toggleAthleteChip = (id: string) => {
+    if (id === 'all') {
+      onTaskAthletes(['all'])
+      return
+    }
+    const withoutAll = taskAthleteIds.filter((x) => x !== 'all')
+    if (withoutAll.includes(id)) {
+      const next = withoutAll.filter((x) => x !== id)
+      onTaskAthletes(next.length > 0 ? next : ['all'])
+    } else {
+      onTaskAthletes([...withoutAll, id])
+    }
+  }
+
+  // Incomplete tasks in earlier classes today that touch athletes expected here.
+  const carryable = useMemo(() => {
+    const expectedIds = new Set(expected.map((a) => a.id))
+    const out: { plan: ClassPlan; offering: CoachClassOffering; count: number }[] = []
+    for (const { plan: ep, offering: eo } of earlierPlans) {
+      const n = ep.tasks.filter(
+        (t) =>
+          !t.done &&
+          t.athleteIds.some((id) => id === 'all' || expectedIds.has(id)) &&
+          !plan.tasks.some((mine) => mine.carriedFromPlanId === ep.id && mine.text === t.text),
+      ).length
+      if (n > 0) out.push({ plan: ep, offering: eo, count: n })
+    }
+    return out
+  }, [earlierPlans, expected, plan.tasks])
 
   const nameList = (list: Athlete[]) =>
     list
@@ -287,13 +336,33 @@ function ClassPlanCard({
           <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
             Athlete tasks
           </p>
+          {carryable.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {carryable.map(({ plan: ep, offering: eo, count }) => (
+                <button
+                  key={ep.id}
+                  type="button"
+                  onClick={() => {
+                    carryOverTasks(ep.id, plan.id, expected.map((a) => a.id))
+                  }}
+                  className="w-full rounded-xl border border-amber-300/30 bg-amber-300/5 px-3 py-2 text-left text-sm text-[var(--text)]"
+                >
+                  <span className="font-semibold text-amber-200">
+                    Carry over {count} task{count === 1 ? '' : 's'}
+                  </span>{' '}
+                  from {eo.time} · {eo.name}
+                </button>
+              ))}
+            </div>
+          )}
           {plan.tasks.length > 0 && (
             <ul className="mt-2 space-y-1.5">
               {plan.tasks.map((task) => {
-                const athlete =
-                  task.athleteId === 'all'
-                    ? null
-                    : athleteById(athletes, task.athleteId)
+                const names = task.athleteIds.includes('all')
+                  ? ['Everyone']
+                  : task.athleteIds.map(
+                      (id) => athleteById(athletes, id)?.firstName || athleteById(athletes, id)?.name || 'Athlete',
+                    )
                 return (
                   <li
                     key={task.id}
@@ -316,16 +385,21 @@ function ClassPlanCard({
                         task.done ? 'text-[var(--muted)] line-through' : 'text-[var(--text)]'
                       }`}
                     >
-                      {task.athleteId === 'all' ? (
-                        <span className="mr-1.5 rounded bg-white/10 px-1.5 py-0.5 text-xs">
-                          Everyone
+                      <span className="mr-1.5 rounded bg-white/10 px-1.5 py-0.5 text-xs">
+                        {names.slice(0, 3).join(', ')}
+                        {names.length > 3 ? ` +${names.length - 3}` : ''}
+                      </span>
+                      {task.text}
+                      {task.repsTarget ? (
+                        <span className="ml-1.5 text-xs text-[var(--muted)]">
+                          {task.repsDone ?? 0}/{task.repsTarget} reps
                         </span>
-                      ) : (
-                        <span className="mr-1.5 rounded bg-white/10 px-1.5 py-0.5 text-xs">
-                          {athlete?.firstName || athlete?.name || 'Athlete'}
+                      ) : null}
+                      {task.carriedFromPlanId && (
+                        <span className="ml-1.5 text-xs italic text-[var(--muted)]">
+                          carried over
                         </span>
                       )}
-                      {task.text}
                     </span>
                     <button
                       type="button"
@@ -342,18 +416,36 @@ function ClassPlanCard({
           )}
 
           <div className="mt-2 flex flex-col gap-2">
-            <select
-              value={taskAthleteId}
-              onChange={(e) => onTaskAthlete(e.target.value)}
-              className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-2 text-sm text-[var(--text)]"
-            >
-              <option value="all">Everyone</option>
-              {expected.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.firstName || a.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => toggleAthleteChip('all')}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  taskAthleteIds.includes('all')
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                    : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                }`}
+              >
+                Everyone
+              </button>
+              {expected.map((a) => {
+                const on = taskAthleteIds.includes(a.id)
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => toggleAthleteChip(a.id)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      on
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                    }`}
+                  >
+                    {a.firstName || a.name}
+                  </button>
+                )
+              })}
+            </div>
             <div className="flex min-w-0 gap-2">
               <input
                 value={taskInput}
@@ -361,8 +453,16 @@ function ClassPlanCard({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') addTask()
                 }}
-                placeholder="Add a focus task, e.g. 10 hollow holds"
+                placeholder="Add a focus task, e.g. hollow holds"
                 className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+              />
+              <input
+                value={repsInput}
+                onChange={(e) => setRepsInput(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Reps"
+                inputMode="numeric"
+                className="w-16 shrink-0 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-2 text-center text-sm text-[var(--text)]"
+                aria-label="Rep count (optional)"
               />
               <button
                 type="button"
@@ -372,9 +472,62 @@ function ClassPlanCard({
                 Add
               </button>
             </div>
+            <PastTaskChips
+              athleteIds={taskAthleteIds}
+              onPick={(text, reps) => {
+                onTaskInput(text)
+                setRepsInput(reps ? String(reps) : '')
+              }}
+            />
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Previously-written tasks for the selected athletes, for quick re-assignment.
+ * Tapping one fills the text and reps inputs so the coach can edit before adding.
+ */
+function PastTaskChips({
+  athleteIds,
+  onPick,
+}: {
+  athleteIds: string[]
+  onPick: (text: string, repsTarget?: number) => void
+}) {
+  const past = useMemo(() => {
+    const ids = athleteIds.filter((id) => id !== 'all')
+    if (ids.length === 0) return []
+    const seen = new Map<string, { text: string; repsTarget?: number }>()
+    for (const id of ids) {
+      for (const t of pastTasksForAthlete(id, 8)) {
+        const key = t.text.toLowerCase()
+        if (!seen.has(key)) seen.set(key, t)
+      }
+    }
+    return [...seen.values()].slice(0, 8)
+  }, [athleteIds])
+
+  if (past.length === 0) return null
+
+  return (
+    <div className="mt-1.5">
+      <p className="text-[11px] text-[var(--muted)]">Used before, tap to reuse:</p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {past.map((t, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onPick(t.text, t.repsTarget)}
+            className="rounded-full border border-[var(--panel-border)] px-2.5 py-1 text-xs text-[var(--muted)] hover:text-[var(--text)]"
+          >
+            {t.text}
+            {t.repsTarget ? ` · ${t.repsTarget}` : ''}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

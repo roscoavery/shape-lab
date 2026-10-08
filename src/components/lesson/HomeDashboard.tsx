@@ -689,6 +689,15 @@ export function HomeDashboard({
               >
                 Open running class
               </button>
+              {onOpenChecklist && (
+                <button
+                  type="button"
+                  onClick={onOpenChecklist}
+                  className="rounded-lg border border-[var(--panel-border)] px-4 py-2 text-sm font-semibold text-[var(--text)]"
+                >
+                  Athlete checklist
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setEndAsk(true)}
