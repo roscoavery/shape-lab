@@ -264,17 +264,18 @@ export function mergeKeywords(a?: string[], b?: string[]): string[] {
 }
 
 export function itemMatchesQuery(item: RefItem, query: string): boolean {
-  const needle = query.trim().toLowerCase()
-  if (!needle) return true
-  if (item.name.toLowerCase().includes(needle)) return true
-  if (item.postedBy?.toLowerCase().includes(needle)) return true
-  if (item.url?.toLowerCase().includes(needle)) return true
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return true
   const key = item.url ? socialVideoKey(item.url) : null
-  if (key?.toLowerCase().includes(needle)) return true
-  return (item.keywords ?? []).some((tag) => {
-    const t = tag.toLowerCase()
-    return t === needle || t.includes(needle) || needle.includes(t)
-  })
+  const haystacks = [
+    item.name.toLowerCase(),
+    item.postedBy?.toLowerCase() ?? '',
+    item.url?.toLowerCase() ?? '',
+    key?.toLowerCase() ?? '',
+    ...((item.keywords ?? []).map((t) => t.toLowerCase())),
+  ]
+  // Every word must appear somewhere (name, handle, URL, or a keyword).
+  return words.every((w) => haystacks.some((h) => h.includes(w)))
 }
 
 export function kindFromUrl(url: string): RefItemKind {

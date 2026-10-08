@@ -1275,7 +1275,7 @@ export default function App() {
     <IgStillProvider persistToApp onSave={saveIgStill}>
     <ShapeCopyProvider canEdit={libraryEdit}>
     <StillCropProvider canEdit={ryanEdit}>
-    <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null}>
+    <GymLibraryProvider profileId={personalCompare ? activeAthleteId : null} isAdmin={isShapelabAdmin(activeProfile)}>
     <ClipEditProvider viewer={activeProfile} athletes={athletes}>
     <ClipLoopsProvider>
     <VideoAdjustmentsProvider>

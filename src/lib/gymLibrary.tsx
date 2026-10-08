@@ -12,7 +12,7 @@ import {
   type LibraryBackup,
 } from './libraryBackup'
 import { pullCoachLibrary } from './coachLibrary'
-import { clipLoopKey, postedByFromUrl, socialPlatform } from './socialUrls'
+import { clipLoopKey, postedByFromUrl, socialPlatform, youtubeVideoId } from './socialUrls'
 import { LIBRARY_CHANGED_EVENT } from './libraryEvents'
 import { listCoachSkillRefs, subscribeCoachContent } from './coachContentStore'
 import { playableRank, subscribeClipPlayability } from './clipPlayability'
@@ -22,6 +22,15 @@ import {
   loadRemovedLibraryItemIds,
   loadRemovedLibraryUrlKeys,
 } from './libraryRemovals'
+import {
+  TECHNIQUE_EVIDENCE,
+  FEATURED_PROOF,
+  evidenceKeyForSkill,
+  type ProofVideo,
+} from '../config/techniqueEvidence'
+import { guideSkillsInOrder, guidelessSkills } from './skillRegistry'
+import { listDrills } from './coachContentStore'
+import { listSkillCardDrillVideos, getSkill } from './skillPaths'
 
 export type GymClip = {
   id: string
@@ -37,12 +46,147 @@ export type GymClip = {
   createdAt?: string
 }
 
+/**
+ * Uploaded video (not an IG/TikTok/FB/YouTube reference): direct files like
+ * /videos/*.mp4 and gym-hosted uploads. Powers the reference scroll's
+ * "Uploaded" filter.
+ */
+export function isUploadedClip(clip: Pick<GymClip, 'url' | 'kind' | 'collectionId'>): boolean {
+  if (
+    clip.collectionId === 'virtual:skill-cards' ||
+    clip.collectionId === 'virtual:drills' ||
+    clip.collectionId === 'virtual:skill-drills'
+  ) {
+    return true
+  }
+  if (clip.kind === 'instagram' || clip.kind === 'tiktok' || clip.kind === 'facebook') return false
+  if (youtubeVideoId(clip.url)) return false
+  if (socialPlatform(clip.url)) return false
+  return true
+}
+
+/**
+ * Uploaded videos filed on skill cards (seed evidence + featured proof).
+ * These are Ryan's own uploads and third-party references he curated —
+ * searchable in the reference scroll by who, what to watch for, and skill.
+ */
+function flattenSkillCardVideos(seen: Set<string>, goneUrls: Set<string>): GymClip[] {
+  // Evidence key -> skill name + aliases, for keyword tagging.
+  const keyToSkill = new Map<string, { name: string; aliases: string[] }>()
+  for (const s of [...guideSkillsInOrder(), ...guidelessSkills()]) {
+    const key = evidenceKeyForSkill(s)
+    if (!keyToSkill.has(key)) {
+      keyToSkill.set(key, { name: s.name, aliases: s.aliases ?? [] })
+    }
+  }
+  const out: GymClip[] = []
+  const pushVideo = (evidenceKey: string, video: ProofVideo, index: number) => {
+    const url = (video.url || '').trim()
+    if (!url) return
+    const urlKey = libraryUrlKey(url)
+    if (goneUrls.has(urlKey) || goneUrls.has(url)) return
+    const key = clipLoopKey(url).toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    const skill = keyToSkill.get(evidenceKey)
+    const who = (video.who || video.creator || '').trim()
+    const watchFor = (video.watchFor || '').trim()
+    const keywords = [
+      ...(skill ? [skill.name, ...skill.aliases] : []),
+      evidenceKey.replace(/-/g, ' '),
+      who,
+      watchFor,
+    ].filter(Boolean)
+    out.push({
+      id: `skillcard:${evidenceKey}:${index}`,
+      name: watchFor || who || url,
+      url,
+      kind: socialPlatform(url) ?? 'url',
+      collectionId: 'virtual:skill-cards',
+      collectionName: 'Skill cards',
+      keywords,
+      postedBy: who || postedByFromUrl(url) || undefined,
+    })
+  }
+  let index = 0
+  for (const [evidenceKey, video] of Object.entries(FEATURED_PROOF)) {
+    pushVideo(evidenceKey, video, index++)
+  }
+  for (const [evidenceKey, videos] of Object.entries(TECHNIQUE_EVIDENCE)) {
+    for (const video of videos) pushVideo(evidenceKey, video, index++)
+  }
+  return out
+}
+
+/**
+ * Drill library videos — Ryan's uploaded drill clips, searchable by title
+ * and notes.
+ */
+function flattenDrills(seen: Set<string>, goneUrls: Set<string>): GymClip[] {
+  const out: GymClip[] = []
+  for (const drill of listDrills()) {
+    const url = (drill.src || '').trim()
+    if (!url) continue
+    const urlKey = libraryUrlKey(url)
+    if (goneUrls.has(urlKey) || goneUrls.has(url)) continue
+    const key = clipLoopKey(url).toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({
+      id: `drill:${drill.id}`,
+      name: drill.title || url,
+      url,
+      kind: socialPlatform(url) ?? 'url',
+      collectionId: 'virtual:drills',
+      collectionName: 'Drill library',
+      keywords: [drill.title, drill.notes ?? ''].filter(Boolean),
+      postedBy: undefined,
+      createdAt: drill.updatedAt || drill.createdAt,
+    })
+  }
+  return out
+}
+
+/**
+ * Drill videos on skill cards (including per-coach "my system" cards).
+ * A coach sees their own cards' videos; admins see everything.
+ */
+function flattenSkillDrillVideos(
+  seen: Set<string>,
+  goneUrls: Set<string>,
+  viewer: { viewerId: string | null; isAdmin: boolean },
+): GymClip[] {
+  const out: GymClip[] = []
+  for (const { drill, skillName } of listSkillCardDrillVideos()) {
+    const url = (drill.videoUrl || '').trim()
+    if (!url) continue
+    const skill = getSkill(drill.skillId)
+    const ownerId = skill?.coachId ?? null
+    if (ownerId && ownerId !== viewer.viewerId && !viewer.isAdmin) continue
+    const urlKey = libraryUrlKey(url)
+    if (goneUrls.has(urlKey) || goneUrls.has(url)) continue
+    const key = clipLoopKey(url).toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({
+      id: `skilldrill:${drill.id}`,
+      name: drill.label || skillName,
+      url,
+      kind: socialPlatform(url) ?? 'url',
+      collectionId: 'virtual:skill-drills',
+      collectionName: skillName ? `Skill drills · ${skillName}` : 'Skill drills',
+      keywords: [drill.label, skillName, drill.note ?? ''].filter(Boolean),
+      postedBy: undefined,
+    })
+  }
+  return out
+}
+
 function flattenSkillRefs(
   seen: Set<string>,
   goneIds: Set<string>,
   goneUrls: Set<string>,
-): GymClip[] {
-  const out: GymClip[] = []
+): GymClip[] {  const out: GymClip[] = []
   for (const ref of listCoachSkillRefs()) {
     if (!ref.src) continue
     const key = clipLoopKey(ref.src).toLowerCase()
@@ -65,7 +209,10 @@ function flattenSkillRefs(
   return out
 }
 
-function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
+function flattenLibrary(
+  backup: LibraryBackup | null,
+  viewer: { viewerId: string | null; isAdmin: boolean } = { viewerId: null, isAdmin: false },
+): GymClip[] {
   const seen = new Set<string>()
   const goneIds = new Set([
     ...loadRemovedLibraryItemIds(),
@@ -109,6 +256,12 @@ function flattenLibrary(backup: LibraryBackup | null): GymClip[] {
   }
   }
   out.push(...flattenSkillRefs(seen, goneIds, goneUrls))
+  out.push(...flattenSkillCardVideos(seen, goneUrls))
+  // Ryan's private drill library — only he sees these in the scroll.
+  if (viewer.isAdmin) {
+    out.push(...flattenDrills(seen, goneUrls))
+  }
+  out.push(...flattenSkillDrillVideos(seen, goneUrls, viewer))
   out.sort((a, b) => playableRank(a.url) - playableRank(b.url))
   return out
 }
@@ -128,9 +281,12 @@ const GymLibraryContext = createContext<GymLibraryValue | null>(null)
 export function GymLibraryProvider({
   children,
   profileId = null,
+  isAdmin = false,
 }: {
   children: ReactNode
   profileId?: string | null
+  /** Ryan/admin viewer — sees private libraries (drill library, all skill videos). */
+  isAdmin?: boolean
 }) {
   const [backup, setBackup] = useState<LibraryBackup | null>(() => shippedCompareLibrary())
   const [loading, setLoading] = useState(true)
@@ -179,8 +335,8 @@ export function GymLibraryProvider({
 
   const clips = useMemo(() => {
     void metaTick
-    return flattenLibrary(backup)
-  }, [backup, metaTick])
+    return flattenLibrary(backup, { viewerId: profileId, isAdmin })
+  }, [backup, metaTick, profileId, isAdmin])
   const collections = backup?.collections ?? []
 
   const clipForUrl = useCallback(

@@ -11,7 +11,7 @@ import { HudCircle, IconFullscreen } from '../compare/CompareHud'
 import { ShareReference } from '../share/ShareReference'
 import { clipShareDraft } from '../../lib/shareReference'
 import { CollapsibleSection } from '../CollapsibleSection'
-import { useGymLibrary, type GymClip } from '../../lib/gymLibrary'
+import { useGymLibrary, type GymClip, isUploadedClip } from '../../lib/gymLibrary'
 import { useFavorites } from '../../lib/favorites'
 import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { itemMatchesQuery } from '../../lib/clipStore'
@@ -23,7 +23,13 @@ import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
 import { AddToSkillCardModal } from './CardVideoManager'
 import { LinkToSpottingCardModal } from './LinkToSpottingCardModal'
-import type { OrganizeEditor } from '../../lib/organizeLibrary'
+import {
+  copyClipToCollection,
+  createWritableCollection,
+  listWritableCollections,
+  type OrganizeEditor,
+} from '../../lib/organizeLibrary'
+import type { RefCollection } from '../../lib/clipStore'
 import { GUIDELESS_EVIDENCE_KEY, TECHNIQUE_EVIDENCE } from '../../config/techniqueEvidence'
 import { getRegistrySkill, getRegistrySkillByGuideId } from '../../lib/skillRegistry'
 
@@ -269,12 +275,14 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
   const favorites = useFavorites()
   const [active, setActive] = useState(0)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
+  const [onlyUploaded, setOnlyUploaded] = useState(false)
   const [query, setQuery] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [reelOpen, setReelOpen] = useState(false)
   const [reelIndex, setReelIndex] = useState(0)
   const [addToCardClip, setAddToCardClip] = useState<{ url: string; who: string; watchFor: string } | null>(null)
   const [linkSpottingClip, setLinkSpottingClip] = useState<{ id: string; url: string; name: string } | null>(null)
+  const [addVideoOpen, setAddVideoOpen] = useState(false)
   const [cardRefresh, setCardRefresh] = useState(0)
   const [sortState, setSortState] = useState(loadSort)
   const sortKey = sortState.key
@@ -344,6 +352,7 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
     const q = query.trim()
     const filtered = clips.filter((c) => {
       if (onlyFavorites && !favorites.isUrlFavorite(c.url)) return false
+      if (onlyUploaded && !isUploadedClip(c)) return false
       if (!q) return true
       const asItem = {
         id: c.id,
@@ -375,7 +384,7 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
       sorted.sort((a, b) => compareNullableText(clipSortSkill(a), clipSortSkill(b), dirMul))
     }
     return sorted
-  }, [clips, onlyFavorites, favorites, query, sortKey, sortDir])
+  }, [clips, onlyFavorites, onlyUploaded, favorites, query, sortKey, sortDir])
 
   useEffect(() => {
     setActive(0)
@@ -511,17 +520,19 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          aria-pressed={!onlyFavorites}
-          onClick={() => setOnlyFavorites(false)}
+          aria-pressed={!onlyFavorites && !onlyUploaded}
+          onClick={() => {
+            setOnlyFavorites(false)
+            setOnlyUploaded(false)
+          }}
           className={
-            !onlyFavorites
+            !onlyFavorites && !onlyUploaded
               ? 'rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white'
               : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]'
           }
         >
           All
-        </button>
-        <button
+        </button>        <button
           type="button"
           aria-pressed={onlyFavorites}
           onClick={() => setOnlyFavorites(true)}
@@ -533,6 +544,27 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
         >
           ★ Favorites
         </button>
+        <button
+          type="button"
+          aria-pressed={onlyUploaded}
+          onClick={() => setOnlyUploaded((v) => !v)}
+          className={
+            onlyUploaded
+              ? 'rounded-lg bg-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-white'
+              : 'rounded-lg border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]'
+          }
+        >
+          Uploaded
+        </button>
+        {(editor.gymEditor || editor.personalEditor) && (
+          <button
+            type="button"
+            onClick={() => setAddVideoOpen(true)}
+            className="rounded-lg border border-[var(--accent-dim)] px-3 py-1.5 text-sm font-semibold text-[var(--accent)]"
+          >
+            + Add
+          </button>
+        )}
         {query ? (
           <button
             type="button"
@@ -667,6 +699,159 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
       {linkSpottingClip && (
         <LinkToSpottingCardModal clip={linkSpottingClip} coachId={editor.profileId} isAdmin={isAdmin} onClose={() => setLinkSpottingClip(null)} />
       )}
+      {addVideoOpen && (
+        <AddVideoModal
+          editor={editor}
+          onClose={() => setAddVideoOpen(false)}
+          onAdded={(msg) => setFlash(msg)}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Coaches add a video URL to their own reference library. Admins write the
+ * gym collections; coaches write only their personal collections.
+ */
+function AddVideoModal({
+  editor,
+  onClose,
+  onAdded,
+}: {
+  editor: OrganizeEditor
+  onClose: () => void
+  onAdded: (message: string) => void
+}) {
+  const [url, setUrl] = useState('')
+  const [name, setName] = useState('')
+  const [collections, setCollections] = useState<RefCollection[]>([])
+  const [collectionId, setCollectionId] = useState('')
+  const [newName, setNewName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    listWritableCollections(editor).then((list) => {
+      if (cancelled) return
+      setCollections(list)
+      if (list.length > 0) setCollectionId(list[0].id)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [editor])
+
+  const save = async () => {
+    const cleanUrl = url.trim()
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      setError('Paste a video link starting with http(s).')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      let targetId = collectionId
+      if (!targetId) {
+        const col = await createWritableCollection(newName || 'My references', editor)
+        if (!col) throw new Error('Could not create a collection.')
+        targetId = col.id
+        setCollections((prev) => [...prev, col])
+      }
+      const result = await copyClipToCollection(
+        { name: name.trim() || cleanUrl, url: cleanUrl },
+        targetId,
+        editor,
+      )
+      if (!result.ok) throw new Error(result.reason)
+      onAdded(
+        result.already
+          ? `Already in "${result.collectionName}".`
+          : `Added to "${result.collectionName}".`,
+      )
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not add that video.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[430] flex items-end justify-center bg-black/55 p-4 sm:items-center"
+      onPointerDown={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[var(--panel-border)] bg-[#121820] p-4 shadow-2xl"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Add to {editor.gymEditor ? 'reference library' : 'my library'}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--text)]">
+              {editor.gymEditor
+                ? 'Saved to the gym library.'
+                : 'Only you can see your collections.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-2 py-1 text-xs text-[var(--muted)]"
+          >
+            Close
+          </button>
+        </div>
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Video link (Instagram, YouTube, mp4…)"
+            inputMode="url"
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name (optional)"
+            className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+          />
+          {collections.length > 0 ? (
+            <select
+              value={collectionId}
+              onChange={(e) => setCollectionId(e.target.value)}
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            >
+              {collections.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.items.length})
+                </option>
+              ))}
+              <option value="">+ New collection…</option>
+            </select>
+          ) : null}
+          {collectionId === '' ? (
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="New collection name"
+              className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+            />
+          ) : null}
+          {error ? <p className="text-xs text-red-400">{error}</p> : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void save()}
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
+          >
+            {busy ? 'Adding…' : 'Add video'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
