@@ -135,6 +135,7 @@ export function logClassHoldForAthletes(opts: {
   performedAt?: string
   coachId?: string
   coachName?: string
+  loggedFrom?: 'class' | 'family'
 }): number {
   let n = 0
   const sourceLabel = classLabel(opts.label, opts.className)
@@ -158,7 +159,7 @@ export function logClassHoldForAthletes(opts: {
       kind: 'hold',
       totalHoldSeconds: roundHoldSecondsUp(opts.seconds),
       score: 0,
-      loggedFrom: 'class',
+      loggedFrom: opts.loggedFrom ?? 'class',
       sourceLabel,
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),

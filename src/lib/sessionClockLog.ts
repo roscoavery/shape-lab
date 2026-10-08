@@ -34,6 +34,8 @@ type SharedLogArgs = {
   meetingId?: string
   coachId?: string
   coachName?: string
+  /** For non-lesson, non-class contexts (e.g. family practice). */
+  loggedFrom?: 'class' | 'family'
 }
 
 function extraShapeId(extra: ClassExtraExercise): string {
@@ -55,7 +57,7 @@ export function logSessionHold(
     side?: 'left' | 'right'
   },
 ): number {
-  const { athleteIds, autoKey, seconds, label, side, lesson, className, meetingId, coachId, coachName } = args
+  const { athleteIds, autoKey, seconds, label, side, lesson, className, meetingId, coachId, coachName, loggedFrom } = args
   if (!lesson) {
     return logClassHoldForAthletes({
       athleteIds,
@@ -68,6 +70,7 @@ export function logSessionHold(
       side,
       coachId,
       coachName,
+      loggedFrom,
     })
   }
   const shapeId = shapeIdForAutoKey(autoKey)

@@ -424,6 +424,7 @@ function LogCard({
   if (log.side) meta.push(log.side === 'left' ? 'Left side' : 'Right side')
   if (log.loggedFrom === 'lesson') meta.push(log.coachName ? `Lesson · ${log.coachName}` : 'Lesson')
   else if (log.loggedFrom === 'class') meta.push(log.sourceLabel ?? 'In class')
+  else if (log.loggedFrom === 'family') meta.push(log.coachName ? `Family practice · ${log.coachName}` : 'Family practice')
   else if (log.kind === 'sequence' && log.sourceLabel) meta.push(log.sourceLabel)
   if (log.method === 'manual') meta.push('Manual entry')
 

@@ -25,6 +25,7 @@ type Props = {
   onOpenLearn: () => void
   onOpenArticle: (articleId: string) => void
   onEnterAthleteView: (id: string) => void
+  onPracticeTogether?: () => void
 }
 
 function loadOnboardingSeen(): boolean {
@@ -44,6 +45,7 @@ export function ParentHome({
   onOpenLearn,
   onOpenArticle,
   onEnterAthleteView,
+  onPracticeTogether,
 }: Props) {
   const child = kids.find((row) => row.id === (focusId || kids[0]?.id)) ?? kids[0] ?? null
   const [onboardingSeen, setOnboardingSeen] = useState(loadOnboardingSeen)
@@ -174,6 +176,21 @@ export function ParentHome({
             This opens their practice view on this device, no separate login needed. You stay
             signed in as the parent.
           </p>
+          {kids.length >= 2 && onPracticeTogether && (
+            <button
+              type="button"
+              onClick={onPracticeTogether}
+              className="mt-1 rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-left"
+            >
+              <p className="text-sm font-semibold text-amber-200">
+                🏆 Practice together
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                Run holds for {kids.length} kids at once. Tap each name when they come out,
+                each time logs to their own homework.
+              </p>
+            </button>
+          )}
         </section>
       )}
 

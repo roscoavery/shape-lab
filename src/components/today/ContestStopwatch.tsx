@@ -17,6 +17,10 @@ type Props = {
   lesson?: LessonClockContext
   /** Fired after lesson-mode logging so the host can refresh. */
   onLessonActivity?: () => void
+  /** Pre-select these athlete ids on mount (e.g. family practice). */
+  preselectIds?: string[]
+  /** Log source for non-lesson holds (default 'class'). */
+  loggedFrom?: 'class' | 'family'
 }
 
 type DownEntry = { athleteId: string; seconds: number }
@@ -29,7 +33,7 @@ type DownEntry = { athleteId: string; seconds: number }
  * Here the coach taps each athlete's name the moment they come down and
  * that athlete's own time is logged to their homework on the spot.
  */
-export function ContestStopwatch({ athletes, signedIn, className, meetingId, lesson, onLessonActivity }: Props) {
+export function ContestStopwatch({ athletes, signedIn, className, meetingId, lesson, onLessonActivity, preselectIds, loggedFrom }: Props) {
   const [phase, setPhase] = useState<Phase>('setup')
   const [drillId, setDrillId] = useState<string>('wall_handstand')
   const [picked, setPicked] = useState<string[]>([])
@@ -58,14 +62,19 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
   /**
    * Class mode: the present roster is already in the contest, like the class
    * clock. Lesson mode (no meeting): start empty and let the coach pick.
+   * Family mode: preselectIds pre-picks the linked siblings.
    */
   const preselectedRef = useRef(false)
   useEffect(() => {
-    if (!preselectedRef.current && meetingId && athletes.length > 0) {
+    if (preselectedRef.current) return
+    if (preselectIds && preselectIds.length > 0) {
+      preselectedRef.current = true
+      setPicked(preselectIds)
+    } else if (meetingId && athletes.length > 0) {
       preselectedRef.current = true
       setPicked(athletes.map((a) => a.id))
     }
-  }, [meetingId, athletes])
+  }, [meetingId, athletes, preselectIds])
 
   const addAthlete = (a: Athlete) => {
     if (!picked.includes(a.id)) setPicked((p) => [...p, a.id])
@@ -121,6 +130,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
         meetingId,
         coachId: signedIn?.id,
         coachName: signedIn?.name,
+        loggedFrom,
       })
       if (lesson && n > 0) onLessonActivity?.()
     }
@@ -151,6 +161,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
         meetingId,
         coachId: signedIn?.id,
         coachName: signedIn?.name,
+        loggedFrom,
       })
       if (lesson && n > 0) onLessonActivity?.()
     }

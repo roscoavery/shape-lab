@@ -728,7 +728,7 @@ export type HomeworkLog = {
   /** For side plank: which side was trained */
   side?: 'left' | 'right'
   /** Lesson holds land on the athlete’s homework, labeled with the coach. */
-  loggedFrom?: 'lesson' | 'class' | 'profile' | 'today'
+  loggedFrom?: 'lesson' | 'class' | 'profile' | 'today' | 'family'
   /** Who entered this log. Coach-entered rows do not need the athlete signed in. */
   loggedByRole?: 'coach' | 'athlete' | 'parent'
   /** When the coach saved the log, if that is later than `date` (historical entry). */

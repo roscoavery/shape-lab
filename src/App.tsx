@@ -73,6 +73,7 @@ import { loadDeskPreview, saveDeskPreview, type DeskPreview } from './lib/deskPr
 import { TEST_PARENT, TEST_ATHLETE } from './lib/testParentFixture'
 import { ParentWellnessDesk } from './components/family/ParentWellnessDesk'
 import { ParentHome, ParentEducationDesk } from './components/family/ParentHome'
+import { FamilyPracticeView } from './components/family/FamilyPracticeView'
 import { AthleteViewBar } from './components/family/AthleteViewBar'
 import { ParentGateDialog } from './components/family/ParentGateDialog'
 import { AthleteHome, AthleteProgress } from './components/family/AthleteHome'
@@ -350,6 +351,7 @@ export default function App() {
   const [parentFocusId, setParentFocusId] = useState<string | null>(null)
   const [athleteViewId, setAthleteViewId] = useState<string | null>(null)
   const [showParentGate, setShowParentGate] = useState(false)
+  const [showFamilyPractice, setShowFamilyPractice] = useState(false)
   const [parentGuideArticleId, setParentGuideArticleId] = useState<string | null>(null)
   const [attempts, setAttempts] = useState<AttemptRecord[]>(() => loadAttempts())
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
@@ -1373,7 +1375,7 @@ export default function App() {
         />
       )}
 
-      {tab === 'today' && deskRole === 'parent' && previewProfile && (
+      {tab === 'today' && deskRole === 'parent' && previewProfile && !showFamilyPractice && (
         <ParentHome
           parent={previewProfile}
           kids={parentKids}
@@ -1386,6 +1388,14 @@ export default function App() {
             goTab('learn')
           }}
           onEnterAthleteView={enterAthleteView}
+          onPracticeTogether={() => setShowFamilyPractice(true)}
+        />
+      )}
+      {showFamilyPractice && previewProfile && deskRole === 'parent' && (
+        <FamilyPracticeView
+          parent={previewProfile}
+          kids={parentKids}
+          onBack={() => setShowFamilyPractice(false)}
         />
       )}
       {tab === 'today' && deskRole === 'athlete' && (
