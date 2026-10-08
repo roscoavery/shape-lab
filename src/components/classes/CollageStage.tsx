@@ -462,7 +462,10 @@ export function CollageStage({
         <div
           className="flex h-full w-full items-center justify-center"
           onClick={(e) => {
-            if (e.target === e.currentTarget && !exporting) setChrome((v) => !v)
+            // Tap anywhere to toggle chrome, like the reference scroll.
+            // Don't toggle when tapping an actual control button.
+            const target = e.target as HTMLElement
+            if (!exporting && !target.closest('button')) setChrome((v) => !v)
           }}
         >
           {grid}

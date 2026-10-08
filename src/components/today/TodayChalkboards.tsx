@@ -133,10 +133,10 @@ export function TodayChalkboards({ viewer, onOpenLibrary, embed = false }: Props
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setOpenId(board.id)}
+                  onClick={() => setOpenId((id) => (id === board.id ? null : board.id))}
                   className="text-[11px] font-semibold text-[var(--accent)]"
                 >
-                  Open
+                  {openId === board.id ? 'Close' : 'Open'}
                 </button>
                 {coach && (
                   <>
@@ -172,10 +172,10 @@ export function TodayChalkboards({ viewer, onOpenLibrary, embed = false }: Props
               </div>
               <button
                 type="button"
-                onClick={() => setOpenId(board.id)}
+                onClick={() => setOpenId((id) => (id === board.id ? null : board.id))}
                 className="text-[11px] font-semibold text-[var(--accent)]"
               >
-                View
+                {openId === board.id ? 'Close' : 'View'}
               </button>
             </li>
           ))}
