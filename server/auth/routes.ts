@@ -16,17 +16,20 @@ import {
   ensureBootstrapAdmin,
   findAccountById,
   hasAdminAccount,
-  linkAccounts,
-  linkDeviceTrusted,
   publicUserFromAccount,
-  trustLinkDevice,
-  unlinkAccounts,
   updateAccount,
 } from './accounts.ts'
 import { clampMaxDevices } from './types.ts'
 import { readAudit, writeAudit } from './audit.ts'
 import { stampGuardianLinks } from './familyLinks.ts'
-import { createInvite, peekInvite, redeemInvite } from './invites.ts'
+import {
+  createInvite,
+  peekInvite,
+  redeemInvite,
+  createAccountInvite,
+  peekAccountInvite,
+  redeemAccountInvite,
+} from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
 import { mailEnabledFor, sendInviteEmail } from './mail.ts'
 import {
@@ -239,8 +242,6 @@ export async function handleAuthRoutes(
         displayName?: string
         rosterProfileId?: string
         linkedAthleteIds?: string[]
-        gymId?: string
-        linkedAccountIds?: string[]
         sendEmail?: boolean
       } = {}
       try {
@@ -261,8 +262,6 @@ export async function handleAuthRoutes(
           displayName: body.displayName || body.email || 'Account',
           rosterProfileId: body.rosterProfileId,
           linkedAthleteIds: body.linkedAthleteIds,
-          gymId: body.gymId,
-          linkedAccountIds: body.linkedAccountIds,
         })
         if (created.role === 'parent') {
           await stampGuardianLinks({
@@ -301,8 +300,6 @@ export async function handleAuthRoutes(
         role?: string
         rosterProfileId?: string | null
         linkedAthleteIds?: string[]
-        gymId?: string | null
-        linkedAccountIds?: string[]
       } = {}
       try {
         body = JSON.parse(await readRequestBody(req)) as typeof body
@@ -324,8 +321,6 @@ export async function handleAuthRoutes(
           role: body.role && isAccountRole(body.role) ? body.role : undefined,
           rosterProfileId: body.rosterProfileId,
           linkedAthleteIds: body.linkedAthleteIds,
-          gymId: body.gymId,
-          linkedAccountIds: body.linkedAccountIds,
         })
         if (saved.role === 'parent') {
           await stampGuardianLinks({
@@ -373,192 +368,20 @@ export async function handleAuthRoutes(
     return true
   }
 
-  /**
-   * Switch to a linked account (same person, two logins — e.g. Levi's
-   * gymOwner and coach accounts). Needs the target account's password
-   * unless this device already proved it once. Front desk staff on the
-   * gym owner login cannot reach the linked coach account without it.
-   */
-  if (path === '/api/auth/switch') {
-    if (req.method !== 'POST') {
-      sendJson(res, 405, { error: 'Use POST' })
-      return true
-    }
-    const user = await userFromRequest(req)
-    if (!user) {
-      sendJson(res, 401, { error: 'Sign in to continue.' })
-      return true
-    }
-    if (isKiosk(user)) {
-      sendJson(res, 403, { error: 'Leave the floor first.' })
-      return true
-    }
-    let body: { accountId?: string; password?: string; deviceId?: string } = {}
-    try {
-      body = JSON.parse(await readRequestBody(req)) as typeof body
-    } catch {
-      sendJson(res, 400, { error: 'Could not read that request.' })
-      return true
-    }
-    const targetId = (body.accountId || '').trim()
-    const deviceId = (body.deviceId || '').trim().slice(0, 64)
-    if (!targetId) {
-      sendJson(res, 400, { error: 'Which account?' })
-      return true
-    }
-    if (tooMany(`switch:${user.accountId}`, 12, LOGIN_WINDOW_MS)) {
-      sendJson(res, 429, { error: 'Too many tries. Wait a few minutes.' })
-      return true
-    }
-    const current = await findAccountById(user.accountId)
-    const target = await findAccountById(targetId)
-    if (!current || !target) {
-      sendJson(res, 400, { error: 'That account is gone.' })
-      return true
-    }
-    if (!(current.linkedAccountIds ?? []).includes(targetId)) {
-      sendJson(res, 403, { error: 'Those accounts are not linked.' })
-      return true
-    }
-    const trusted = await linkDeviceTrusted(current.id, target.id, deviceId)
-    if (!trusted) {
-      const password = body.password || ''
-      if (!password || !(await accountPasswordMatches(target.id, password))) {
-        sendJson(res, 401, { error: 'Enter the password for that account.', needPassword: true })
-        return true
-      }
-      await trustLinkDevice(current.id, target.id, deviceId)
-    }
-    const session = await createSession(target.id)
-    setSessionCookie(req, res, session.id)
-    const switched = { ...publicUserFromAccount(target), kiosk: false }
-    await writeAudit('auth.switch', switched, { detail: `from ${current.email}` })
-    sendJson(res, 200, {
-      authenticated: true,
-      user: switched,
-      mailEnabled: mailEnabledFor(switched),
-      csrf: session.csrf,
-    })
-    return true
-  }
-
-  /**
-   * Link or unlink two accounts owned by the same person. Shapelab admin
-   * only — this is set up when the accounts are created, not by the
-   * account holders themselves.
-   */
-  if (path === '/api/auth/link') {
-    const user = await userFromRequest(req)
-    if (!user) {
-      sendJson(res, 401, { error: 'Sign in to continue.' })
-      return true
-    }
-    if (user.role !== 'admin') {
-      sendJson(res, 403, { error: 'Only the Shapelab admin can link accounts.' })
-      return true
-    }
-    if (denyAuthWriteFlood(res, user)) return true
-    let body: { aId?: string; bId?: string; unlink?: boolean } = {}
-    try {
-      body = JSON.parse(await readRequestBody(req)) as typeof body
-    } catch {
-      sendJson(res, 400, { error: 'Could not read that request.' })
-      return true
-    }
-    if (!body.aId || !body.bId) {
-      sendJson(res, 400, { error: 'Which two accounts?' })
-      return true
-    }
-    try {
-      if (body.unlink) {
-        await unlinkAccounts(body.aId, body.bId)
-        await writeAudit('auth.unlink', user, { detail: `${body.aId} / ${body.bId}` })
-      } else {
-        await linkAccounts(body.aId, body.bId)
-        await writeAudit('auth.link', user, { detail: `${body.aId} / ${body.bId}` })
-      }
-      sendJson(res, 200, { ok: true })
-    } catch (err) {
-      sendJson(res, 400, {
-        error: err instanceof Error ? err.message : 'Could not link those accounts.',
-      })
-    }
-    return true
-  }
-
-  /**
-   * The signed-in user's linked logins (same person, two accounts).
-   * Safe subset only — no password hashes, no other people's accounts.
-   */
-  if (path === '/api/auth/linked') {
-    if (req.method !== 'GET') {
-      sendJson(res, 405, { error: 'Use GET' })
-      return true
-    }
-    const user = await userFromRequest(req)
-    if (!user) {
-      sendJson(res, 401, { error: 'Sign in to continue.' })
-      return true
-    }
-    const current = await findAccountById(user.accountId)
-    const ids = current?.linkedAccountIds ?? []
-    const rows = await accountsWithoutSecrets()
-    const linked = rows
-      .filter((row) => ids.includes(row.id))
-      .map((row) => ({
-        id: row.id,
-        email: row.email,
-        role: row.role,
-        displayName: row.displayName,
-      }))
-    sendJson(res, 200, { accounts: linked })
-    return true
-  }
-
-  /**
-   * Verify the signed-in user's password (e.g. to leave front desk mode
-   * on a shared gym iPad). Never reveals anything about other accounts.
-   */
-  if (path === '/api/auth/verify') {
-    if (req.method !== 'POST') {
-      sendJson(res, 405, { error: 'Use POST' })
-      return true
-    }
-    const user = await userFromRequest(req)
-    if (!user) {
-      sendJson(res, 401, { error: 'Sign in to continue.' })
-      return true
-    }
-    let body: { password?: string } = {}
-    try {
-      body = JSON.parse(await readRequestBody(req)) as typeof body
-    } catch {
-      sendJson(res, 400, { error: 'Could not read that request.' })
-      return true
-    }
-    if (tooMany(`verify:${user.accountId}`, 12, LOGIN_WINDOW_MS)) {
-      sendJson(res, 429, { error: 'Too many tries. Wait a few minutes.' })
-      return true
-    }
-    const account = await findAccountById(user.accountId)
-    if (!account || !(await accountPasswordMatches(account.id, body.password || ''))) {
-      sendJson(res, 401, { error: 'That password is wrong.' })
-      return true
-    }
-    sendJson(res, 200, { ok: true })
-    return true
-  }
-
   if (path === '/api/auth/register') {
     if (req.method !== 'POST') {
       sendJson(res, 405, { error: 'Use POST' })
       return true
     }
-    if (!allowFirstAdmin() && (await hasAdminAccount())) {
-      /* gym computer or first-admin flag can take walk-up signups */
+    // SECURITY: Public self-registration is only allowed for initial gym setup
+    // (no admin account exists yet). Once an admin exists, all new accounts
+    // must come through the invitation system.
+    if (await hasAdminAccount()) {
+      sendJson(res, 403, { error: 'Ask your coach or gym for an invitation.' })
+      return true
     }
     if (!allowFirstAdmin()) {
-      sendJson(res, 403, { error: 'Ask a gym admin for a sign-in link.' })
+      sendJson(res, 403, { error: 'Ask your coach or gym for an invitation.' })
       return true
     }
     let body: { email?: string; password?: string; displayName?: string; role?: string } = {}
@@ -761,6 +584,94 @@ export async function handleAuthRoutes(
     } catch (err) {
       sendJson(res, 400, {
         error: err instanceof Error ? err.message : 'Could not set that password.',
+      })
+    }
+    return true
+  }
+
+  if (path === '/api/auth/account-invites') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const user = await userFromRequest(req)
+    if (!user) {
+      sendJson(res, 401, { error: 'Sign in to continue.' })
+      return true
+    }
+    if (!isAdmin(user)) {
+      sendJson(res, 403, { error: 'Only gym admin can create invitations.' })
+      return true
+    }
+    let body: { role?: string; athleteIds?: string[] } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const role = body.role
+    if (role !== 'coach' && role !== 'parent' && role !== 'athlete') {
+      sendJson(res, 400, { error: 'Choose coach, parent, or athlete.' })
+      return true
+    }
+    const athleteIds = Array.isArray(body.athleteIds)
+      ? body.athleteIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      : []
+    try {
+      const invite = await createAccountInvite(role, athleteIds, user.accountId, req)
+      await writeAudit('auth.invite', user, {
+        detail: `create ${role} invitation`,
+      })
+      sendJson(res, 200, invite)
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not create that invitation.',
+      })
+    }
+    return true
+  }
+
+  if (path === '/api/auth/account-invite') {
+    if (req.method === 'GET') {
+      const url = new URL(req.url || '/', 'http://127.0.0.1')
+      sendJson(res, 200, await peekAccountInvite(url.searchParams.get('token') || ''))
+      return true
+    }
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use GET or POST' })
+      return true
+    }
+    let body: { token?: string; email?: string; password?: string; displayName?: string } = {}
+    try {
+      body = JSON.parse(await readRequestBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: 'Could not read that request.' })
+      return true
+    }
+    const token = body.token || ''
+    const redeemed = await redeemAccountInvite(token)
+    if (!redeemed) {
+      sendJson(res, 401, { error: 'That invitation link is wrong, expired, or already used.' })
+      return true
+    }
+    try {
+      const created = await createAccount({
+        email: body.email || '',
+        password: body.password || '',
+        role: redeemed.role,
+        displayName: body.displayName || body.email || 'Account',
+        linkedAthleteIds: redeemed.athleteIds.length > 0 ? redeemed.athleteIds : undefined,
+      })
+      const session = await createSession(created.accountId)
+      setSessionCookie(req, res, session.id)
+      await writeAudit('auth.invite', null, {
+        detail: `redeem ${redeemed.role} invitation`,
+      })
+      sendJson(res, 200, { authenticated: true, user: created, csrf: session.csrf })
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Could not create that account.',
       })
     }
     return true

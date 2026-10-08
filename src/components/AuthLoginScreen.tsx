@@ -7,6 +7,7 @@ import {
   registerAccount,
   type AuthSessionUser,
 } from '../lib/authSession'
+import { peekAccountInvite, redeemAccountInvite } from '../lib/accountAdmin'
 
 type Props = {
   bootstrapAllowed: boolean
@@ -18,6 +19,14 @@ function inviteTokenFromUrl(): string {
     return new URLSearchParams(window.location.search).get('invite')?.trim() || ''
   } catch {
     return ''
+  }
+}
+
+function isNewAccountInvite(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('new') === '1'
+  } catch {
+    return false
   }
 }
 
@@ -42,6 +51,8 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteReady, setInviteReady] = useState(false)
+  const [isNewInvite, setIsNewInvite] = useState(false)
+  const [inviteRole, setInviteRole] = useState<'coach' | 'parent' | 'athlete' | null>(null)
   const [mode, setMode] = useState<'login' | 'bootstrap' | 'invite' | 'register'>(
     bootstrapAllowed ? 'bootstrap' : 'login',
   )
@@ -52,6 +63,26 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
     if (!token) return
     setInviteToken(token)
     setMode('invite')
+    if (isNewAccountInvite()) {
+      // New account-creation invite: role is determined by the server.
+      setIsNewInvite(true)
+      void peekAccountInvite(token)
+        .then((peek) => {
+          if (!peek.valid) {
+            setError('That invitation link is wrong, expired, or already used.')
+            setMode('login')
+            clearInviteFromUrl()
+            return
+          }
+          setInviteRole(peek.role || null)
+          setInviteReady(true)
+        })
+        .catch(() => {
+          setError('Could not open that invitation link.')
+          setMode('login')
+        })
+      return
+    }
     void peekInvite(token)
       .then((peek) => {
         if (!peek.valid) {
@@ -77,11 +108,13 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
       const result =
         mode === 'bootstrap'
           ? await bootstrapAdmin(email, password, displayName)
-          : mode === 'invite'
-            ? await redeemInvite(inviteToken, password)
-            : mode === 'register'
-              ? await registerAccount(email, password, displayName || email, registerRole)
-              : await loginWithPassword(email, password)
+          : mode === 'invite' && isNewInvite
+            ? await redeemAccountInvite(inviteToken, email, password, displayName || email)
+            : mode === 'invite'
+              ? await redeemInvite(inviteToken, password)
+              : mode === 'register'
+                ? await registerAccount(email, password, displayName || email, registerRole)
+                : await loginWithPassword(email, password)
       if (!result.user) {
         setError('Could not start that session.')
         return
@@ -101,22 +134,26 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
       <h1 className="mt-2 text-2xl font-semibold text-[var(--text)]">
         {mode === 'bootstrap'
           ? 'Create the shapelab admin account'
-          : mode === 'invite'
-            ? 'Choose your password'
-            : mode === 'register'
-              ? 'Create an account'
-              : 'Sign in'}
+          : mode === 'invite' && isNewInvite
+            ? `Create your ${inviteRole || ''} account`
+            : mode === 'invite'
+              ? 'Choose your password'
+              : mode === 'register'
+                ? 'Create an account'
+                : 'Sign in'}
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
         {mode === 'bootstrap'
           ? 'This computer does not have an admin account yet. Use your email and a long password. The old 4-digit gym PIN is not enough to open private data.'
-          : mode === 'invite'
-            ? `This link is for ${inviteName || 'your gym login'}. Pick a password only you know. It works once.`
-            : mode === 'register'
-              ? 'Use the gym link you were sent. Pick your email, a long password, and whether you are an athlete, parent, or coach.'
+          : mode === 'invite' && isNewInvite
+            ? `You've been invited to join Shape Lab as ${inviteRole === 'coach' ? 'a coach' : inviteRole === 'parent' ? 'a parent' : 'an athlete'}. Enter your details below. This link works once.`
+            : mode === 'invite'
+              ? `This link is for ${inviteName || 'your gym login'}. Pick a password only you know. It works once.`
+              : mode === 'register'
+                ? 'Use the gym link you were sent. Pick your email, a long password, and whether you are an athlete, parent, or coach.'
               : 'Private roster, photos, and parent contacts stay behind this account. Profile PINs only pick who is unlocked on this device after you sign in.'}
       </p>
-      {(mode === 'bootstrap' || mode === 'register') && (
+      {(mode === 'bootstrap' || mode === 'register' || (mode === 'invite' && isNewInvite)) && (
         <label className="mt-5 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Display name
@@ -124,12 +161,12 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={mode === 'register' ? 'Your name' : 'Shapelab admin'}
+            placeholder={mode === 'register' ? 'Your name' : mode === 'invite' ? 'Your name' : 'Shapelab admin'}
             className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
           />
         </label>
       )}
-      {mode !== 'invite' && (
+      {(mode !== 'invite' || isNewInvite) && (
         <label className="mt-4 block">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
             Email
@@ -195,16 +232,9 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
         </label>
       )}
       {mode === 'login' && (
-        <button
-          type="button"
-          onClick={() => {
-            setDisplayName('')
-            setMode('register')
-          }}
-          className="mt-3 text-left text-sm text-[var(--accent)]"
-        >
-          Create an account
-        </button>
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          Need access? Ask your coach or gym for an invitation.
+        </p>
       )}
       {mode === 'register' && (
         <button

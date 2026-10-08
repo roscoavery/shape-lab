@@ -20,6 +20,7 @@ import {
   type SessionRole,
 } from '../lib/authSession'
 import { CollapsibleSection } from './CollapsibleSection'
+import { InviteManager } from './InviteManager'
 import { DeskPreviewPicker } from './DeskPreviewPicker'
 import { DeskMessagesEditor } from './DeskMessagesEditor'
 import { MuseConnection } from './owner/MuseConnection'
@@ -550,6 +551,8 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
         </section>
         </CollapsibleSection>
       )}
+
+      {admin && <InviteManager athletes={athletes} />}
 
       {admin && (
         <CollapsibleSection title="Logins on this gym" hint={`${accounts.length} account${accounts.length === 1 ? '' : 's'}`} defaultOpen={false}>

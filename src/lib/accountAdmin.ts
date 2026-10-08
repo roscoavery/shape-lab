@@ -71,6 +71,38 @@ export async function createSignInLink(
   }
 }
 
+/**
+ * Create an account-creation invitation. The invite authorizes the recipient
+ * to create ONE new account with the specified role. For parent/athlete,
+ * athleteIds binds the new account to existing athlete profiles.
+ */
+export async function createAccountInvite(
+  role: 'coach' | 'parent' | 'athlete',
+  athleteIds: string[],
+): Promise<{ url: string; expiresAt: string; id: string }> {
+  const res = await fetch('/api/auth/account-invites', {
+    ...authWriteInit(JSON.stringify({ role, athleteIds })),
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(await readError(res, 'Could not create that invitation.'))
+  const data = (await res.json()) as { url?: string; expiresAt?: string; id?: string }
+  if (!data.url) throw new Error('Could not create that invitation.')
+  return { url: data.url, expiresAt: data.expiresAt || '', id: data.id || '' }
+}
+
+/**
+ * Peek at an account-creation invite to learn the authorized role.
+ */
+export async function peekAccountInvite(token: string): Promise<{
+  valid: boolean
+  role?: 'coach' | 'parent' | 'athlete'
+  athleteIds?: string[]
+}> {
+  const res = await fetch(`/api/auth/account-invite?token=${encodeURIComponent(token)}`)
+  if (!res.ok) return { valid: false }
+  return (await res.json()) as { valid: boolean; role?: 'coach' | 'parent' | 'athlete'; athleteIds?: string[] }
+}
+
 export async function patchGymAccount(input: {
   id: string
   displayName?: string
@@ -175,4 +207,24 @@ export async function linkGymAccounts(aId: string, bId: string, unlink = false):
     method: 'POST',
   })
   if (!res.ok) throw new Error(await readError(res, 'Could not link those accounts.'))
+}
+
+/**
+ * Redeem an account-creation invite. Creates a new account with the role
+ * authorized by the invite. Returns the authenticated user.
+ */
+export async function redeemAccountInvite(
+  token: string,
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<{ user: any }> {
+  const res = await fetch('/api/auth/account-invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, email, password, displayName }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Could not create that account.')
+  return { user: data.user }
 }
