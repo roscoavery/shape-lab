@@ -302,11 +302,11 @@ export default function App() {
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
-  // Discover sheet "All" → combined gym+wins feed. Consumed once on entry.
   const [feedChannel, setFeedChannel] = useState<'gym' | 'all'>('gym')
   useEffect(() => {
     if (tab === 'feed') {
-      setFeedChannel(takeDiscoverTarget() === 'all' ? 'all' : 'gym')
+      takeDiscoverTarget()
+      setFeedChannel('gym')
     }
   }, [tab])
   const [learnIntent, setLearnIntent] = useState<LearnIntent | null>(null)

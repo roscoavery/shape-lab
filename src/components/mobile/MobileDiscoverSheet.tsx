@@ -1,26 +1,47 @@
 import type { AppTab } from '../../lib/storage'
 import { saveTab } from '../../lib/storage'
 import { MobilePortal } from './MobilePortal'
-
-export type DiscoverTarget = 'all' | 'scroll' | 'wins' | 'feed' | 'compare' | 'learn'
+import { isCoachProfile } from '../../lib/profileRole'
+import type { Athlete } from '../../types'
+import type { DiscoverTarget } from '../../lib/mobileDiscover'
 
 type Props = {
   open: boolean
   onClose: () => void
   onPick: (tab: AppTab, target: DiscoverTarget) => void
+  athlete: Athlete | null
 }
 
-const ROWS: { target: DiscoverTarget; tab: AppTab; title: string; hint: string }[] = [
-  { target: 'all', tab: 'feed', title: 'All', hint: 'Wins, gym feed, and reference reels' },
+type Row = {
+  target: DiscoverTarget
+  tab: AppTab
+  title: string
+  hint: string
+  coachOnly?: boolean
+  athleteOnly?: boolean
+}
+
+const ROWS: Row[] = [
+  { target: 'homework', tab: 'homework', title: 'Homework', hint: 'Assigned work and practice' },
+  { target: 'classflows', tab: 'classes', title: 'Class flows', hint: 'Class plans and flows' },
   { target: 'scroll', tab: 'scroll', title: 'Reference reels', hint: 'Gym compare library scroll' },
   { target: 'wins', tab: 'wins', title: 'Wins', hint: 'Hits and accomplishments' },
   { target: 'feed', tab: 'feed', title: 'Gym feed', hint: 'Team posts and shares' },
   { target: 'compare', tab: 'compare', title: 'Passes & compare', hint: 'ShapeLab passes and A/B video' },
   { target: 'learn', tab: 'learn', title: 'Learn', hint: 'Shapes, skills, drills, and spotting' },
+  { target: 'spotting', tab: 'spotting', title: 'Spotting', hint: 'Spotting methods and study', coachOnly: true },
+  { target: 'mysystem', tab: 'mysystem', title: 'My system', hint: 'Your coaching system', coachOnly: true },
+  { target: 'skillpath', tab: 'learn', title: 'Skill path guide', hint: 'Skill progressions and guides', athleteOnly: true },
 ]
 
-export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
+export function MobileDiscoverSheet({ open, onClose, onPick, athlete }: Props) {
   if (!open) return null
+  const coach = isCoachProfile(athlete)
+  const rows = ROWS.filter((r) => {
+    if (r.coachOnly && !coach) return false
+    if (r.athleteOnly && coach) return false
+    return true
+  })
   return (
     <MobilePortal>
     <div
@@ -37,7 +58,7 @@ export function MobileDiscoverSheet({ open, onClose, onPick }: Props) {
         <p className="text-center text-base font-semibold">Discover</p>
         <p className="mt-1 text-center text-xs text-[var(--muted)]">Passes, wins, feed, reference video, and learn</p>
         <ul className="mt-4 space-y-1">
-          {ROWS.map((row) => (
+          {rows.map((row) => (
             <li key={row.target}>
               <button
                 type="button"
