@@ -1,4 +1,6 @@
-import { createId } from './storage'
+import { createId, loadAthletes } from './storage'
+import { classMemberIds } from './coachClasses'
+import type { Athlete } from '../types'
 
 /**
  * Class plans: the coach's morning prep for each class.
@@ -210,15 +212,30 @@ export function removePlanTask(planId: string, taskId: string): ClassPlan | null
   }))
 }
 
-/** All tasks for an athlete on a date, across all class plans. For the athlete view. */
+/** All tasks for an athlete on a date, across all class plans. For the athlete view.
+ * 'Everyone' tasks only apply to athletes in that task's class, not every
+ * athlete the coach sees that day. */
 export function tasksForAthleteOnDate(
   athleteId: string,
   date: string,
+  athletes?: Athlete[],
 ): { plan: ClassPlan; task: ClassPlanTask }[] {
+  const roster = athletes ?? loadAthletes()
   const out: { plan: ClassPlan; task: ClassPlanTask }[] = []
+  const memberCache = new Map<string, Set<string>>()
+  const membersOf = (offeringId: string): Set<string> => {
+    let s = memberCache.get(offeringId)
+    if (!s) {
+      s = classMemberIds(offeringId, roster)
+      memberCache.set(offeringId, s)
+    }
+    return s
+  }
   for (const plan of plansForDate(date)) {
     for (const task of plan.tasks) {
-      if (task.athleteIds.includes(athleteId) || task.athleteIds.includes('all')) {
+      if (task.athleteIds.includes(athleteId)) {
+        out.push({ plan, task })
+      } else if (task.athleteIds.includes('all') && membersOf(plan.offeringId).has(athleteId)) {
         out.push({ plan, task })
       }
     }

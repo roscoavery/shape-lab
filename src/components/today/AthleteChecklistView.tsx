@@ -11,6 +11,7 @@ import {
   type ClassPlan,
   type ClassPlanTask,
 } from '../../lib/classPlans'
+import { classMemberIds } from '../../lib/coachClasses'
 
 type Props = {
   coach: Athlete
@@ -71,12 +72,25 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     return out
   }, [plans, offerings])
 
-  // Athletes who have tasks today (plus 'Everyone' tasks apply to all).
+  // Athletes who have tasks today: specific assignments plus members of any
+  // class with an 'Everyone' task. 'Everyone' tasks apply to class members only.
   const athletesWithTasks = useMemo(() => {
     const ids = new Set<string>()
-    for (const { task } of rows) {
+    const memberCache = new Map<string, Set<string>>()
+    const membersOf = (offeringId: string): Set<string> => {
+      let s = memberCache.get(offeringId)
+      if (!s) {
+        s = classMemberIds(offeringId, athletes)
+        memberCache.set(offeringId, s)
+      }
+      return s
+    }
+    for (const { plan, task } of rows) {
       for (const aid of task.athleteIds) {
         if (aid !== 'all') ids.add(aid)
+      }
+      if (task.athleteIds.includes('all')) {
+        for (const mid of membersOf(plan.offeringId)) ids.add(mid)
       }
     }
     return [...ids]
@@ -85,13 +99,25 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
       .sort((a, b) => (a.firstName || a.name).localeCompare(b.firstName || b.name))
   }, [rows, athletes])
 
-  // Rows visible for the current selection.
+  // Rows visible for the current selection. 'Everyone' tasks only apply to
+  // athletes in that task's class, not every athlete the coach sees that day.
   const visible: TaskRow[] = useMemo(() => {
     if (selectedId === null || selectedId === 'all') return rows
+    const memberCache = new Map<string, Set<string>>()
+    const membersOf = (offeringId: string): Set<string> => {
+      let s = memberCache.get(offeringId)
+      if (!s) {
+        s = classMemberIds(offeringId, athletes)
+        memberCache.set(offeringId, s)
+      }
+      return s
+    }
     return rows.filter(
-      (r) => r.task.athleteIds.includes(selectedId) || r.task.athleteIds.includes('all'),
+      (r) =>
+        r.task.athleteIds.includes(selectedId) ||
+        (r.task.athleteIds.includes('all') && membersOf(r.plan.offeringId).has(selectedId)),
     )
-  }, [rows, selectedId])
+  }, [rows, selectedId, athletes])
 
   const doneCount = visible.filter((r) => r.task.done).length
 
@@ -130,7 +156,10 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
           <p className="text-center text-lg text-white/70">Tap your name</p>
           {athletesWithTasks.map((a) => {
             const myRows = rows.filter(
-              (r) => r.task.athleteIds.includes(a.id) || r.task.athleteIds.includes('all'),
+              (r) =>
+                r.task.athleteIds.includes(a.id) ||
+                (r.task.athleteIds.includes('all') &&
+                  classMemberIds(r.plan.offeringId, athletes).has(a.id)),
             )
             const myDone = myRows.filter((r) => r.task.done).length
             return (

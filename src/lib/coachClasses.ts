@@ -1192,6 +1192,23 @@ export function rosterAthletes(offering: CoachClassOffering | null | undefined, 
     .filter((a): a is Athlete => Boolean(a))
 }
 
+/**
+ * Ids of athletes who belong to a class: the standing roster plus recent
+ * attendees (last week + regulars), so class-scoped things like 'Everyone'
+ * tasks reach the right kids even when the roster is a little stale.
+ */
+export function classMemberIds(offeringId: string, athletes: Athlete[]): Set<string> {
+  const ids = new Set<string>()
+  const offering = loadOfferings().find((o) => o.id === offeringId)
+  if (offering) {
+    for (const id of offering.rosterIds) ids.add(id)
+  }
+  const { lastWeek, regulars } = summarizeAttendance(offeringId, athletes)
+  for (const a of lastWeek) ids.add(a.id)
+  for (const a of regulars) ids.add(a.id)
+  return ids
+}
+
 export function attendeeLabel(row: ClassAttendee, athletes: Athlete[]): string {
   const profile = row.athleteId ? athletes.find((a) => a.id === row.athleteId) : undefined
   return profile?.name || displayPersonName(row.firstName, row.lastName) || 'Athlete'
