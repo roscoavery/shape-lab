@@ -100,10 +100,13 @@ const ReelSection = memo(function ReelSection({
   // IG-style chrome: hidden while scrolling, tap the video to show/hide.
   const [chrome, setChrome] = useState(false)
   const toggleChrome = useCallback(() => setChrome((c) => !c), [])
-  // Horizontal mirror for the current reel (direct video files only).
+  // Horizontal mirror for the current reel. Direct files always work; Instagram
+  // reels play from a cached video file so they flip too. YouTube/TikTok use
+  // iframes and stay unflippable.
   const [flipped, setFlipped] = useState(false)
   useEffect(() => setFlipped(false), [clip.id])
-  const canFlip = !youtubeEmbedSrc(clip.url) && !socialPlatform(clip.url)
+  const platform = socialPlatform(clip.url)
+  const canFlip = !youtubeEmbedSrc(clip.url) && (platform === 'instagram' || platform === null)
   // The guided tour can pin chrome open for steps that spotlight controls —
   // otherwise a stray tap closes chrome mid-tour and orphans every later target.
   const [chromePinned, setChromePinned] = useState(false)

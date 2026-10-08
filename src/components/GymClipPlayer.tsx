@@ -147,6 +147,8 @@ export function GymClipPlayer({
         onPostedBy={onPostedBy}
         fit={objectFit}
         smartFit={useSmartFit}
+        mirror={mirror}
+        onFlip={onFlip}
       />
     )
     return fill ? (

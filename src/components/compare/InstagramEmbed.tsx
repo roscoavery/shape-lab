@@ -189,6 +189,9 @@ type Props = {
   /** Override Line overlay. Compact players default to no markup. */
   markup?: boolean
   markupSwipeSafe?: boolean
+  /** Horizontal mirror (flip) for the cached video file. */
+  mirror?: boolean
+  onFlip?: () => void
   overlayChrome?: boolean
   startChromeOpen?: boolean
   /** Controlled chrome visibility for fullscreen reels (tap the video to toggle). */
@@ -233,6 +236,8 @@ export function InstagramEmbed({
   hudCorner,
   markup,
   markupSwipeSafe = false,
+  mirror = false,
+  onFlip,
   overlayChrome,
   startChromeOpen,
   chromeOpen,
@@ -767,6 +772,9 @@ export function InstagramEmbed({
         onAbChange={onAbChange}
         markup={markup ?? (!compact && !bare)}
         markupSwipeSafe={markupSwipeSafe}
+        mirror={mirror}
+        flipActive={mirror}
+        onFlip={onFlip}
         compact={compact}
         bare={bare}
         active={active}

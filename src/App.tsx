@@ -964,10 +964,12 @@ export default function App() {
   }) => {
     // A payload hands a reference clip in from outside the tab (reference
     // scroll reel viewer); no payload means a plain open, which clears any
-    // stale incoming clip.
+    // stale incoming clip. A handoff lands on the mode chooser so the coach
+    // picks delay cam or another reel; only the plain Replay shortcut
+    // auto-enters fullscreen.
     setCompareIncomingRef(payload ?? null)
     goTab('compare')
-    setCompareFullTick((tick) => tick + 1)
+    if (!payload) setCompareFullTick((tick) => tick + 1)
   }
 
   const startLesson = async (
