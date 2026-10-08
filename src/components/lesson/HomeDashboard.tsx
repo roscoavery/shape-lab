@@ -623,7 +623,7 @@ export function HomeDashboard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-[var(--muted)]">Today</p>
-            <h2 className="text-xl font-semibold">Start a lesson, class, school, or camp</h2>
+            <h2 className="text-xl font-semibold">Start a session</h2>
           </div>
           {onOpenProfile && (
             <button
