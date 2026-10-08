@@ -23,7 +23,7 @@ type Row = {
 
 const ROWS: Row[] = [
   { target: 'homework', tab: 'homework', title: 'Homework', hint: 'Assigned work and practice' },
-  { target: 'classflows', tab: 'classes', title: 'Class flows', hint: 'Class plans and flows' },
+  { target: 'classflows', tab: 'tasks2', title: 'Class flows', hint: 'Guided sequence training in Practice' },
   { target: 'scroll', tab: 'scroll', title: 'Reference reels', hint: 'Gym compare library scroll' },
   { target: 'wins', tab: 'wins', title: 'Wins', hint: 'Hits and accomplishments' },
   { target: 'feed', tab: 'feed', title: 'Gym feed', hint: 'Team posts and shares' },

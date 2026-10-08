@@ -15,6 +15,7 @@ import { MobileNavDrawer } from './MobileNavDrawer'
 import { MobileDiscoverSheet } from './MobileDiscoverSheet'
 import { IgHomeIcon, IgMessagesIcon, IgReelsIcon, IgSearchIcon } from './IgNavIcons'
 import { stashDiscoverTarget, type DiscoverTarget } from '../../lib/mobileDiscover'
+import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 
 type ShellTab = 'home' | 'reels' | 'messages' | 'search' | 'profile'
 
@@ -96,6 +97,8 @@ export function IgMobileShell({
 
   const pickDiscover = (pickTab: AppTab, target: DiscoverTarget) => {
     stashDiscoverTarget(target)
+    // Skill path guide opens Learn straight on the skill map.
+    if (target === 'skillpath') stashMobileSearchJump({ kind: 'skillPath' })
     setMobileSearch(false)
     onGo(pickTab)
   }
