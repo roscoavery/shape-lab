@@ -341,11 +341,11 @@ function ClassPlanCard({
             </ul>
           )}
 
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-col gap-2">
             <select
               value={taskAthleteId}
               onChange={(e) => onTaskAthlete(e.target.value)}
-              className="shrink-0 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-2 text-sm text-[var(--text)]"
+              className="rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-2 text-sm text-[var(--text)]"
             >
               <option value="all">Everyone</option>
               {expected.map((a) => (
@@ -354,22 +354,24 @@ function ClassPlanCard({
                 </option>
               ))}
             </select>
-            <input
-              value={taskInput}
-              onChange={(e) => onTaskInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') addTask()
-              }}
-              placeholder="Add a focus task, e.g. 10 hollow holds"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
-            />
-            <button
-              type="button"
-              onClick={addTask}
-              className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
-            >
-              Add
-            </button>
+            <div className="flex min-w-0 gap-2">
+              <input
+                value={taskInput}
+                onChange={(e) => onTaskInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addTask()
+                }}
+                placeholder="Add a focus task, e.g. 10 hollow holds"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+              />
+              <button
+                type="button"
+                onClick={addTask}
+                className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
+              >
+                Add
+              </button>
+            </div>
           </div>
         </div>
       )}
