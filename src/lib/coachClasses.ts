@@ -1121,6 +1121,70 @@ export function priorOfferingAthleteIds(offeringId: string | null | undefined): 
   return ordered
 }
 
+export type AttendanceSummary = {
+  /** Who was there at the most recent session. */
+  lastWeek: Athlete[]
+  /** Who usually shows up: in at least half of the last 6 sessions. */
+  regulars: Athlete[]
+}
+
+/**
+ * Who to expect in a class, from actual attendance.
+ *
+ * Last week = the most recent ended session's roster. Regulars = athletes
+ * present in at least half of the last 6 sessions (so the coach sees who
+ * usually shows up, not just who was there once).
+ */
+export function summarizeAttendance(
+  offeringId: string,
+  athletes: Athlete[],
+): AttendanceSummary {
+  const empty: AttendanceSummary = { lastWeek: [], regulars: [] }
+  if (!offeringId) return empty
+  const past = loadMeetings()
+    .filter((m) => m.offeringId === offeringId && m.endedAt)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  if (past.length === 0) return empty
+
+  const byId = new Map(athletes.map((a) => [a.id, a]))
+  const resolve = (ids: string[]): Athlete[] => {
+    const out: Athlete[] = []
+    const seen = new Set<string>()
+    for (const id of ids) {
+      const a = byId.get(id)
+      if (a && !seen.has(id)) {
+        seen.add(id)
+        out.push(a)
+      }
+    }
+    return out
+  }
+
+  const lastWeek = resolve(
+    past[0].attendees.map((r) => r.athleteId).filter((id): id is string => Boolean(id)),
+  )
+
+  const recent = past.slice(0, 6)
+  const counts = new Map<string, number>()
+  for (const m of recent) {
+    const seenInMeeting = new Set<string>()
+    for (const row of m.attendees) {
+      if (row.athleteId && !seenInMeeting.has(row.athleteId)) {
+        seenInMeeting.add(row.athleteId)
+        counts.set(row.athleteId, (counts.get(row.athleteId) ?? 0) + 1)
+      }
+    }
+  }
+  const threshold = Math.max(2, Math.ceil(recent.length / 2))
+  const regularIds = [...counts.entries()]
+    .filter(([, n]) => n >= threshold)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id)
+  const regulars = resolve(regularIds)
+
+  return { lastWeek, regulars }
+}
+
 export function rosterAthletes(offering: CoachClassOffering | null | undefined, athletes: Athlete[]): Athlete[] {
   if (!offering) return []
   return offering.rosterIds

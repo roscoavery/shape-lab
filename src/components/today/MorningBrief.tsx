@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
-import { loadOfferingsForCoach, WEEKDAYS } from '../../lib/coachClasses'
+import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
 import { fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import {
@@ -86,13 +86,14 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   const totalAthletes = useMemo(() => {
     const ids = new Set<string>()
     for (const o of offerings) {
-      for (const id of o.rosterIds) ids.add(id)
+      const { lastWeek, regulars } = summarizeAttendance(o.id, athletes)
+      for (const a of [...lastWeek, ...regulars]) ids.add(a.id)
     }
     for (const l of lessons) {
       if (l.matchedAthleteId) ids.add(l.matchedAthleteId)
     }
     return ids.size
-  }, [offerings, lessons])
+  }, [offerings, lessons, athletes])
 
   if (offerings.length === 0 && lessons.length === 0) return null
 
@@ -204,19 +205,34 @@ function ClassPlanCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dateKey, offering.id, coachId, plansTick],
   )
-  const roster = useMemo(
-    () =>
-      offering.rosterIds
-        .map((id) => athleteById(athletes, id))
-        .filter((a): a is Athlete => Boolean(a)),
-    [offering.rosterIds, athletes],
+  const { lastWeek, regulars } = useMemo(
+    () => summarizeAttendance(offering.id, athletes),
+    [offering.id, athletes],
   )
+  // Task picker options: last week's crew plus regulars, no duplicates.
+  const expected = useMemo(() => {
+    const seen = new Set<string>()
+    const out: Athlete[] = []
+    for (const a of [...lastWeek, ...regulars]) {
+      if (!seen.has(a.id)) {
+        seen.add(a.id)
+        out.push(a)
+      }
+    }
+    return out
+  }, [lastWeek, regulars])
 
   const addTask = () => {
     if (!taskInput.trim()) return
     addPlanTask(plan.id, taskAthleteId, taskInput)
     onTaskInput('')
   }
+
+  const nameList = (list: Athlete[]) =>
+    list
+      .slice(0, 6)
+      .map((a) => a.firstName || a.name)
+      .join(', ') + (list.length > 6 ? ` +${list.length - 6} more` : '')
 
   return (
     <div className="rounded-xl border border-[var(--panel-border)]">
@@ -225,21 +241,34 @@ function ClassPlanCard({
         onClick={onToggle}
         className="flex w-full items-center justify-between gap-2 p-4 text-left"
       >
-        <div>
+        <div className="min-w-0">
           <p className="font-semibold text-[var(--text)]">
             {offering.time} · {offering.name}
           </p>
-          <p className="mt-0.5 text-sm text-[var(--muted)]">
-            {roster.length > 0
-              ? roster
-                  .slice(0, 6)
-                  .map((a) => a.firstName || a.name)
-                  .join(', ') + (roster.length > 6 ? ` +${roster.length - 6} more` : '')
-              : 'No roster yet'}
-            {plan.tasks.length > 0 && ` · ${plan.tasks.filter((t) => !t.done).length} tasks open`}
-          </p>
+          {lastWeek.length > 0 && (
+            <p className="mt-1 text-sm text-[var(--text)]">
+              <span className="text-[var(--muted)]">Last week: </span>
+              {nameList(lastWeek)}
+            </p>
+          )}
+          {regulars.length > 0 && (
+            <p className="mt-0.5 text-sm text-[var(--text)]">
+              <span className="text-[var(--muted)]">Usually here: </span>
+              {nameList(regulars)}
+            </p>
+          )}
+          {lastWeek.length === 0 && regulars.length === 0 && (
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              No attendance history yet
+            </p>
+          )}
+          {plan.tasks.length > 0 && (
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              {plan.tasks.filter((t) => !t.done).length} tasks open
+            </p>
+          )}
         </div>
-        <span className="text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+        <span className="shrink-0 text-[var(--muted)]">{open ? '▾' : '▸'}</span>
       </button>
 
       {open && (
@@ -319,7 +348,7 @@ function ClassPlanCard({
               className="shrink-0 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-2 text-sm text-[var(--text)]"
             >
               <option value="all">Everyone</option>
-              {roster.map((a) => (
+              {expected.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.firstName || a.name}
                 </option>
