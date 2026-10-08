@@ -6,7 +6,7 @@ import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from './AthleteDeskFeed'
 import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
-import { AthletePathStrip } from './AthletePathStrip'
+import { AthletePathSection } from './AthletePathSection'
 import { AthleteHoldStats } from './AthleteHoldStats'
 import { AthleteFoundation } from './AthleteFoundation'
 import { AthleteLeaderboards } from './AthleteLeaderboards'
@@ -47,6 +47,7 @@ export function AthleteHome({
   onOpenGuide,
   onOpenShapes,
   onOpenShapeTest,
+  onAthleteChange,
 }: Props & {
   onPractice: () => void
   onProgress: () => void
@@ -55,6 +56,7 @@ export function AthleteHome({
   onOpenGuide: () => void
   onOpenShapes: () => void
   onOpenShapeTest: () => void
+  onAthleteChange?: (next: Athlete) => void
 }) {
   const [nudgeTick, setNudgeTick] = useState(0)
   const pendingCount = useMemo(
@@ -131,9 +133,11 @@ export function AthleteHome({
       </section>
       <AthleteTodayTasks athlete={athlete} />
       <div id="tour-athlete-path">
-      <CollapsibleSection title="Your path">
-        <AthletePathStrip athlete={athlete} onOpenGuide={onOpenGuide} />
-      </CollapsibleSection>
+        <AthletePathSection
+          athlete={athlete}
+          onAthleteChange={onAthleteChange ?? (() => {})}
+          onOpenGuide={onOpenGuide}
+        />
       </div>
       <div id="tour-athlete-foundation">
       <CollapsibleSection title="Strengthen your foundation">

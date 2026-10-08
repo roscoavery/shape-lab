@@ -1414,6 +1414,9 @@ export default function App() {
           </div>
         <AthleteHome
           athlete={previewProfile}
+          onAthleteChange={(next) => {
+            setAthleteRoster(athletes.map((a) => (a.id === next.id ? next : a)))
+          }}
           onPractice={() => goTab('homework')}
           onQuickLog={() => goTab('classclock')}
           onProgress={() => goTab('progress')}
