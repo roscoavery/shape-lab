@@ -145,7 +145,7 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
     id: "why-not-just-try-the-skill",
     category: 'guide',
     title: "Why Doesn’t the Coach Just Let Them Try It?",
-    summary: "If I have 20 details to think about in 2 seconds, I will fail.",
+    summary: "If I have 20 details to think about in 2 seconds, the details get lost.",
     intro: [
     ],
     qa: [
