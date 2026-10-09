@@ -287,24 +287,22 @@ export function CompareSplitDivider({
       {onToggleFit ? (
         <button
           type="button"
-          aria-label={fitContain ? 'Fill video (crop)' : 'Fit video (show all)'}
+          aria-label={fitContain ? 'Fill video (crop to fill panel)' : 'Fit video (show whole video)'}
           aria-pressed={fitContain}
           title={fitContain ? 'Fill: crop to fill the panel' : 'Fit: show the whole video'}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onToggleFit}
           className={
             vertical
-              ? `absolute right-[3.75rem] top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+              ? `absolute right-[3.75rem] top-1/2 z-[32] flex h-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full px-3 text-xs font-bold shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
                   fitContain ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
                 }`
-              : `absolute left-1/2 top-[3.75rem] z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+              : `absolute left-1/2 top-[3.75rem] z-[32] flex h-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full px-3 text-xs font-bold shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
                   fitContain ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
                 }`
           }
         >
-          <span aria-hidden className={fitContain ? '' : 'opacity-40 grayscale'}>
-            {fitContain ? '⛶' : '◫'}
-          </span>
+          {fitContain ? 'Fill' : 'Fit'}
         </button>
       ) : null}
       {onRecord ? (
