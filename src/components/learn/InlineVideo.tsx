@@ -278,7 +278,7 @@ export function InlineVideo({
             playsInline
             muted
             loop={hi == null}
-            preload="metadata"
+            preload="auto"
             // pan-x AND pan-y: a swipe that starts on the video must still drive
             // the surrounding scroller (skill-card reference carousel, card
             // vertical scroll). Taps still reach the pointer handlers below, and

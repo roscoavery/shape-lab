@@ -943,10 +943,10 @@ function ExternalOverlay({
             e.stopPropagation()
             onClose()
           }}
-          aria-label="Close video"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl font-bold text-white"
+          aria-label="Back to skill card"
+          className="flex h-11 items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white"
         >
-          ✕
+          <span aria-hidden="true">←</span> Back
         </button>
       </div>
       <div
