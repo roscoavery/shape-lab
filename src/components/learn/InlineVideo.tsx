@@ -107,6 +107,10 @@ export function InlineVideo({
   useEffect(() => {
     const v = ref.current
     if (!v) return
+    // React's `muted` prop doesn't always set the DOM property — iOS
+    // requires the property for autoplay. Set it explicitly.
+    v.muted = true
+    v.defaultMuted = true
     setChromeOpen(false)
     setTime(0)
     setDuration(0)
@@ -131,9 +135,11 @@ export function InlineVideo({
     )
     io.observe(v)
     v.addEventListener('canplay', tryPlay)
+    v.addEventListener('canplaythrough', tryPlay)
     return () => {
       io.disconnect()
       v.removeEventListener('canplay', tryPlay)
+      v.removeEventListener('canplaythrough', tryPlay)
       clearHideTimer()
     }
   }, [url])
