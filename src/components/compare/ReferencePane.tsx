@@ -113,7 +113,7 @@ type Props = {
   /** Called with the underlying <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
   /** Fired when the user scrubs (for linked compare). */
-  onScrub?: (time: number) => void
+  onScrub?: (oldTime: number, newTime: number) => void
   /** How the video fits its panel: cover (crop) or contain (fit). */
   objectFit?: 'cover' | 'contain'
 }

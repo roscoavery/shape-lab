@@ -64,8 +64,9 @@ type Props = {
   /** Two-finger pinch-zoom on phones (Replay Last). */
   pinchZoom?: boolean
   /** Fired when the user scrubs (hold-drag or progress bar). The parent can
-   * use this to drive a linked video directly, avoiding seeked-event lag. */
-  onScrub?: (time: number) => void
+   * use this to drive a linked video directly, avoiding seeked-event lag.
+   * Provides (oldTime, newTime) so the parent can compute the delta. */
+  onScrub?: (oldTime: number, newTime: number) => void
   /** Scrub window currently looping — used to save that exact clip to Photos. */
   onWindowChange?: (start: number, end: number) => void
   /** Extra buttons in the overlay (Replay Last save / back). */
@@ -318,9 +319,10 @@ function VideoWorkbenchInner({
       const w = frame.clientWidth || 1
       const t = g.scrubAnchorT + ((e.clientX - g.scrubAnchorX) / w) * v.duration
       const clamped = Math.max(0, Math.min(v.duration, t))
+      const oldTime = v.currentTime
       v.currentTime = clamped
       // Notify parent so a linked video can follow directly (no seeked lag).
-      onScrubRef.current?.(clamped)
+      onScrubRef.current?.(oldTime, clamped)
     }
     e.preventDefault()
   }, [])
@@ -666,10 +668,11 @@ function VideoWorkbenchInner({
     const lo = windowStart
     const hi = duration || 0
     const clamped = Math.min(Math.max(t, lo), hi)
+    const oldTime = v.currentTime
     v.currentTime = clamped
     setTime(v.currentTime)
     // Notify parent so a linked video can follow.
-    onScrubRef.current?.(clamped)
+    onScrubRef.current?.(oldTime, clamped)
   }
 
   const togglePlay = () => {

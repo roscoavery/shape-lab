@@ -84,6 +84,22 @@ export function InlineVideo({
     return () => io.disconnect()
   }, [nearViewport])
 
+  // When the video mounts (nearViewport), explicitly call load() — iOS
+  // Safari ignores preload hints and won't fetch data until load() or
+  // play() is called.
+  useEffect(() => {
+    if (!nearViewport) return
+    const v = ref.current
+    if (v) {
+      v.muted = true
+      try {
+        v.load()
+      } catch {
+        /* noop */
+      }
+    }
+  }, [nearViewport])
+
   const clearHideTimer = () => {
     if (hideTimer.current !== null) {
       window.clearTimeout(hideTimer.current)

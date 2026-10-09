@@ -93,7 +93,7 @@ type CameraPaneProps = {
   /** Called with the replay <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
   /** Fired when the user scrubs (for linked compare). */
-  onScrub?: (time: number) => void
+  onScrub?: (oldTime: number, newTime: number) => void
   /**
    * Clips-only mode: hide the live camera UI entirely, show just the replay
    * clip player (or a pick-a-clip prompt). Used for two-clip compare.
