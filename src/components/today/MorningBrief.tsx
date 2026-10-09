@@ -98,7 +98,14 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   }, [offerings, lessons, athletes])
 
   // After the last class/lesson ends, the day is done and the brief goes away.
+  // Re-check every minute so it disappears on its own without a refresh.
+  const [nowTick, setNowTick] = useState(0)
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 60000)
+    return () => window.clearInterval(id)
+  }, [])
   const dayDone = useMemo(() => {
+    void nowTick
     const now = new Date()
     let lastEnd: Date | null = null
     for (const o of offerings) {
@@ -114,7 +121,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
       if (!Number.isNaN(end.getTime()) && (!lastEnd || end > lastEnd)) lastEnd = end
     }
     return lastEnd !== null && now > lastEnd
-  }, [offerings, lessons])
+  }, [offerings, lessons, nowTick])
 
   if (offerings.length === 0 && lessons.length === 0) return null
   if (dayDone) return null
