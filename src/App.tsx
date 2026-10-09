@@ -2184,7 +2184,7 @@ export default function App() {
         <div
           className={
             compareOverlayFullscreen
-              ? 'pointer-events-none fixed inset-0 z-[500]'
+              ? 'fixed inset-0 z-[400]'
               : 'fixed inset-x-0 bottom-0 z-[500] flex max-h-[75dvh] flex-col rounded-t-3xl border-t border-white/10 bg-[var(--bg)] shadow-[0_-16px_48px_rgba(0,0,0,0.5)]'
           }
         >
