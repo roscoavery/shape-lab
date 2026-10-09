@@ -305,6 +305,9 @@ export default function App() {
     name: string
     itemId?: string
   } | null>(null)
+  // When a reference-scroll reel hands a clip to Compare, the tool opens as an
+  // overlay on top of the scroll instead of navigating to the compare tab.
+  const [compareOverlayOpen, setCompareOverlayOpen] = useState(false)
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
@@ -969,13 +972,18 @@ export default function App() {
     itemId?: string
   }) => {
     // A payload hands a reference clip in from outside the tab (reference
-    // scroll reel viewer); no payload means a plain open, which clears any
-    // stale incoming clip. A handoff lands on the mode chooser so the coach
-    // picks delay cam or another reel; only the plain Replay shortcut
-    // auto-enters fullscreen.
+    // scroll reel viewer): open the compare tool as an overlay on top of the
+    // current tab, landing on the mode chooser so the coach picks delay cam
+    // or another reel. No payload means a plain open from the compare tab
+    // itself, which clears any stale incoming clip. Only the plain Replay
+    // shortcut auto-enters fullscreen.
     setCompareIncomingRef(payload ?? null)
-    goTab('compare')
-    if (!payload) setCompareFullTick((tick) => tick + 1)
+    if (payload) {
+      setCompareOverlayOpen(true)
+    } else {
+      goTab('compare')
+      setCompareFullTick((tick) => tick + 1)
+    }
   }
 
   const startLesson = async (
@@ -2163,6 +2171,65 @@ export default function App() {
               }
             />
           </CompareErrorBoundary>
+        </div>
+      )}
+
+      {/* Compare opened from a reference-scroll reel: overlay on top of the
+          current tab instead of navigating away. */}
+      {compareOverlayOpen && (
+        <div className="fixed inset-0 z-[300] flex flex-col bg-[var(--bg)]">
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+            <button
+              type="button"
+              onClick={() => setCompareOverlayOpen(false)}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
+              aria-label="Back to reference scroll"
+            >
+              ← Back
+            </button>
+            <span className="text-sm font-semibold text-white/60">Compare</span>
+            <span className="w-16" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <CompareErrorBoundary>
+              <ComparePanel
+                onSaveIgStill={saveIgStill}
+                referencePhotos={referencePhotos}
+                persistIgToApp={ryanEdit}
+                athleteId={liveLesson?.athleteId ?? activeAthleteId}
+                athleteName={
+                  athletes.find((a) => a.id === (liveLesson?.athleteId ?? activeAthleteId))?.name ??
+                  null
+                }
+                gymEditor={ryanEdit}
+                personalEditor={personalCompare}
+                incomingReference={compareIncomingRef}
+                videoSource={liveLesson ? 'lesson' : undefined}
+                lessonId={liveLesson?.id ?? null}
+                skillId={liveLesson ? shape.id : null}
+                skillLabel={liveLesson ? shape.name : null}
+                classId={liveClass?.offeringId ?? null}
+                className={liveClassOffering ? classLabel(liveClassOffering) : null}
+                lessonBar={
+                  liveLesson ? (
+                    <LessonNoteBar
+                      coachId={liveLesson.coachId}
+                      placeholder="Compare note for this athlete…"
+                      onAdd={(text, topic, audience) => {
+                        const next = addLessonNote(liveLesson.id, text, 'compare', {
+                          kind: topic.kind,
+                          id: topic.id,
+                          label: topic.label,
+                          audience,
+                        })
+                        if (next) setLessonTick((n) => n + 1)
+                      }}
+                    />
+                  ) : null
+                }
+              />
+            </CompareErrorBoundary>
+          </div>
         </div>
       )}
 
