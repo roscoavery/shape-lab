@@ -158,7 +158,7 @@ export function InlineVideo({
       v.removeEventListener('canplaythrough', tryPlay)
       clearHideTimer()
     }
-  }, [url])
+  }, [url, nearViewport])
 
   const seek = (t: number) => {
     const v = ref.current

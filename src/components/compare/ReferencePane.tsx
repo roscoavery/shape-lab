@@ -1492,6 +1492,7 @@ export function ReferencePane({
           itemId={activeItem.id}
           savedUrl={activeItem.savedUrl}
           onCached={markCached}
+          fit={objectFit}
           postedBy={activeItem.postedBy || postedByFromUrl(activeItem.url)}
           onPostedBy={(handle) => {
             if (!activeCollection) return
