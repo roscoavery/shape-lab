@@ -63,35 +63,35 @@ export function useLinkedPlayheads(
       releaseSoon()
     }
 
-    /** Scrub on `from` moves `to` by the same seconds delta. */
+    /** Scrub on `from` moves `to` by the same seconds delta.
+     * Uses `seeking` (fires immediately on currentTime set) for responsive
+     * scrubbing from either panel. The delta threshold prevents feedback:
+     * the follower's own seek computes ~zero delta and does nothing.
+     * No `syncing` block here — rapid scrubbing must not be throttled. */
     const linkSeek = (
       from: HTMLVideoElement,
       to: HTMLVideoElement,
       getLast: () => number,
       setLast: (n: number) => void,
     ) => {
-      if (syncing) return
       const delta = from.currentTime - getLast()
       setLast(from.currentTime)
       if (Math.abs(delta) < 0.004) return
       const dur = Number.isFinite(to.duration) && to.duration > 0 ? to.duration : 0
       const target = dur > 0 ? Math.max(0, Math.min(dur, to.currentTime + delta)) : to.currentTime + delta
       if (Math.abs(to.currentTime - target) < 0.03) {
-        setLast(to.currentTime)
         return
       }
-      syncing = true
       try {
         to.currentTime = target
       } catch {
         /* not seekable right now */
       }
       setLast(target)
-      releaseSoon()
     }
 
-    const onSeekedA = () => linkSeek(a, b, () => lastA, (n) => { lastA = n })
-    const onSeekedB = () => linkSeek(b, a, () => lastB, (n) => { lastB = n })
+    const onSeekingA = () => linkSeek(a, b, () => lastA, (n) => { lastA = n })
+    const onSeekingB = () => linkSeek(b, a, () => lastB, (n) => { lastB = n })
 
     const linkPlay = (to: HTMLVideoElement) => {
       if (syncing || !to.paused) return
@@ -111,15 +111,15 @@ export function useLinkedPlayheads(
     const onPauseA = () => linkPause(b)
     const onPauseB = () => linkPause(a)
 
-    a.addEventListener('seeked', onSeekedA)
-    b.addEventListener('seeked', onSeekedB)
+    a.addEventListener('seeking', onSeekingA)
+    b.addEventListener('seeking', onSeekingB)
     a.addEventListener('play', onPlayA)
     b.addEventListener('play', onPlayB)
     a.addEventListener('pause', onPauseA)
     b.addEventListener('pause', onPauseB)
     return () => {
-      a.removeEventListener('seeked', onSeekedA)
-      b.removeEventListener('seeked', onSeekedB)
+      a.removeEventListener('seeking', onSeekingA)
+      b.removeEventListener('seeking', onSeekingB)
       a.removeEventListener('play', onPlayA)
       b.removeEventListener('play', onPlayB)
       a.removeEventListener('pause', onPauseA)

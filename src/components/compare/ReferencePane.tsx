@@ -112,6 +112,8 @@ type Props = {
   handoffItemId?: string | null
   /** Called with the underlying <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /** How the video fits its panel: cover (crop) or contain (fit). */
+  objectFit?: 'cover' | 'contain'
 }
 
 export function ReferencePane({
@@ -123,6 +125,7 @@ export function ReferencePane({
   handoffName = null,
   handoffItemId = null,
   onVideoElement,
+  objectFit = 'cover',
 }: Props) {
   const favorites = useFavorites()
   const [collections, setCollections] = useState<RefCollection[]>([])
@@ -1464,6 +1467,8 @@ export function ReferencePane({
           onFlip={topCanFlip ? () => setTopFlipped((f) => !f) : undefined}
           allowAbLoop
           fill={fill}
+          pinchZoom={!pip}
+          objectFit={objectFit}
           persistUrl={activeItem.url}
           loopA={activeItem.trimStart ?? null}
           loopB={activeItem.trimEnd ?? null}
@@ -1515,6 +1520,8 @@ export function ReferencePane({
           onFlip={topCanFlip ? () => setTopFlipped((f) => !f) : undefined}
           allowAbLoop
           fill={fill}
+          pinchZoom={!pip}
+          objectFit={objectFit}
           persistUrl={activeItem?.url}
           loopA={activeItem?.trimStart ?? null}
           loopB={activeItem?.trimEnd ?? null}

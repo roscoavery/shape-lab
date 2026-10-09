@@ -10,6 +10,7 @@ import { CameraPane } from './CameraPane'
 import { ReferencePane } from './ReferencePane'
 import { CompareChromeRail } from './CompareChromeRail'
 import { CompareSplitDivider } from './CompareSplitDivider'
+import { useCleanRecorder } from './useCleanRecorder'
 import {
   CompareLayoutContext,
   flipFocus,
@@ -102,8 +103,44 @@ export function ComparePanel({
   const [handoffItemId, setHandoffItemId] = useState<string | null>(null)
   // Playhead link: ties the reference and athlete video playheads together.
   const [linked, setLinked] = useState(false)
+  // Fit mode for split panels: 'cover' (default, crops to fill) or 'contain'
+  // (fits whole video, letterboxes). Toggle in the split divider.
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover')
   const [refVideo, setRefVideo] = useState<HTMLVideoElement | null>(null)
   const [camVideo, setCamVideo] = useState<HTMLVideoElement | null>(null)
+  // Clean recording: canvas capture without UI buttons.
+  const { recording: cleanRecording, start: startCleanRecord, stop: stopCleanRecord } = useCleanRecorder()
+  const [recordNotice, setRecordNotice] = useState<string | null>(null)
+
+  const handleRecord = async (withMic: boolean) => {
+    if (cleanRecording) {
+      const blob = await stopCleanRecord()
+      if (blob) {
+        // Download the recording.
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `compare-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(url), 5000)
+        setRecordNotice('Recording saved.')
+        setTimeout(() => setRecordNotice(null), 3000)
+      }
+      return
+    }
+    // Start: top video is ref, bottom is cam (in tb split).
+    const ok = await startCleanRecord(refVideo, camVideo, {
+      withMic,
+      split,
+      topRatio: split === 'tb' ? tbRatio : lrRatio,
+    })
+    if (!ok) {
+      setRecordNotice('Could not start recording.')
+      setTimeout(() => setRecordNotice(null), 3000)
+    }
+  }
   // Two-clips mode: hide the live camera, compare two clips top and bottom.
   const [twoClips, setTwoClips] = useState(false)
   // True when two-clips was entered from the start-screen "View clip" button:
@@ -265,6 +302,17 @@ export function ComparePanel({
         }
       >
         {fullscreen && <CompareChromeRail photos={referencePhotos} />}
+        {fullscreen && cleanRecording ? (
+          <div className="pointer-events-none absolute left-1/2 top-3 z-[260] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm font-semibold text-white">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+            Recording
+          </div>
+        ) : null}
+        {fullscreen && recordNotice ? (
+          <div className="pointer-events-none absolute left-1/2 top-3 z-[260] -translate-x-1/2 rounded-full bg-black/70 px-3 py-1.5 text-sm font-semibold text-white">
+            {recordNotice}
+          </div>
+        ) : null}
         <div className={fullscreen ? 'relative flex min-h-0 min-w-0 flex-1 flex-col' : 'flex flex-col gap-4'}>
           {!fullscreen && (
             <div className="flex flex-col gap-3">
@@ -403,6 +451,7 @@ export function ComparePanel({
                   handoffName={handoffName}
                   handoffItemId={handoffItemId}
                   onVideoElement={onRefVideo}
+                  objectFit={fitMode}
                 />
               </ComparePipSlot>
               {splitScreen ? (
@@ -415,6 +464,10 @@ export function ComparePanel({
                   onToggleLink={() => setLinked((on) => !on)}
                   twoClips={twoClips}
                   onToggleTwoClips={viewClipEntry ? undefined : () => setTwoClips((on) => !on)}
+                  fitContain={fitMode === 'contain'}
+                  onToggleFit={() => setFitMode((m) => (m === 'cover' ? 'contain' : 'cover'))}
+                  onRecord={handleRecord}
+                  recording={cleanRecording}
                 />
               ) : null}
               <ComparePipSlot
@@ -451,6 +504,7 @@ export function ComparePanel({
                   openPickerTick={pickerTick}
                   gymEditor={gymEditor}
                   profileId={athleteId}
+                  objectFit={fitMode}
                   onPlayAsReference={(_src, name, itemId) => {
                     setHandoffSrc(null)
                     setHandoffName(name)

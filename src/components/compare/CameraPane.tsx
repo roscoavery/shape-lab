@@ -103,6 +103,8 @@ type CameraPaneProps = {
   gymEditor?: boolean
   /** Coach profile id for the add-to-card modal. */
   profileId?: string | null
+  /** How the video fits its panel: cover (crop) or contain (fit). */
+  objectFit?: 'cover' | 'contain'
 }
 
 export function CameraPane({
@@ -120,12 +122,13 @@ export function CameraPane({
   openPickerTick = 0,
   gymEditor = false,
   profileId = null,
+  objectFit,
 }: CameraPaneProps) {
   const saveSource = videoSource ?? 'compare-replay'
   const liveVideoRef = useRef<HTMLVideoElement | null>(null)
   const delayVideoRef = useRef<HTMLVideoElement | null>(null)
   const iosDelay = isIosDevice()
-  const cameraFit = isIpadDevice() ? 'cover' : 'contain'
+  const cameraFit = objectFit ?? (isIpadDevice() ? 'cover' : 'contain')
   const streamRef = useRef<MediaStream | null>(null)
 
   // Delay engine refs

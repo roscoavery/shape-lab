@@ -10,7 +10,7 @@
  * an extreme restores the previous split.
  */
 
-import { useEffect, useRef, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 
 type Props = {
   axis: 'x' | 'y'
@@ -26,6 +26,12 @@ type Props = {
   /** Two-clips mode: camera hidden, two clips compared. */
   twoClips?: boolean
   onToggleTwoClips?: () => void
+  /** Fit mode: cover (crop to fill) or contain (fit whole video). */
+  fitContain?: boolean
+  onToggleFit?: () => void
+  /** Clean recording: capture videos without UI buttons. */
+  onRecord?: (withMic: boolean) => void
+  recording?: boolean
 }
 
 // A release faster than this (px per ms) counts as a flick, not a drag.
@@ -49,6 +55,10 @@ export function CompareSplitDivider({
   onToggleLink,
   twoClips = false,
   onToggleTwoClips,
+  fitContain = false,
+  onToggleFit,
+  onRecord,
+  recording = false,
 }: Props) {
   const vertical = axis === 'y'
   // Top/bottom gets the full travel range so either video can go full
@@ -75,6 +85,9 @@ export function CompareSplitDivider({
   if (!animating.current && value > 0.02 && value < 0.98) {
     restoreRatio.current = value
   }
+
+  // Record menu: choose with or without voiceover.
+  const [recordMenu, setRecordMenu] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -270,6 +283,88 @@ export function CompareSplitDivider({
             {twoClips ? '📷' : '🎬'}
           </span>
         </button>
+      ) : null}
+      {onToggleFit ? (
+        <button
+          type="button"
+          aria-label={fitContain ? 'Fill video (crop)' : 'Fit video (show all)'}
+          aria-pressed={fitContain}
+          title={fitContain ? 'Fill: crop to fill the panel' : 'Fit: show the whole video'}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onToggleFit}
+          className={
+            vertical
+              ? `absolute right-[3.75rem] top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  fitContain ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+              : `absolute left-1/2 top-[3.75rem] z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                  fitContain ? 'bg-[var(--accent)] text-black' : 'bg-white/15 text-white'
+                }`
+          }
+        >
+          <span aria-hidden className={fitContain ? '' : 'opacity-40 grayscale'}>
+            {fitContain ? '⛶' : '◫'}
+          </span>
+        </button>
+      ) : null}
+      {onRecord ? (
+        <>
+          <button
+            type="button"
+            aria-label={recording ? 'Stop recording' : 'Record clean video'}
+            title={recording ? 'Stop recording' : 'Record without UI buttons'}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              if (recording) {
+                onRecord(false) // false = stop
+              } else {
+                setRecordMenu((v) => !v)
+              }
+            }}
+            className={
+              vertical
+                ? `absolute right-[6.5rem] top-1/2 z-[32] flex h-9 w-9 -translate-y-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                    recording ? 'bg-red-600 text-white' : 'bg-white/15 text-white'
+                  }`
+                : `absolute left-1/2 top-[6.5rem] z-[32] flex h-9 w-9 -translate-x-1/2 touch-auto items-center justify-center rounded-full text-lg shadow-[0_4px_14px_rgba(0,0,0,0.45)] ${
+                    recording ? 'bg-red-600 text-white' : 'bg-white/15 text-white'
+                  }`
+            }
+          >
+            <span aria-hidden>{recording ? '⏹' : '⏺'}</span>
+          </button>
+          {recordMenu && !recording ? (
+            <div
+              className={
+                vertical
+                  ? 'absolute right-[6.5rem] top-1/2 z-[33] -translate-y-[130%] rounded-xl border border-white/10 bg-[#1a222c] p-2 shadow-xl'
+                  : 'absolute left-1/2 top-[6.5rem] z-[33] -translate-x-1/2 translate-y-[-130%] rounded-xl border border-white/10 bg-[#1a222c] p-2 shadow-xl'
+              }
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordMenu(false)
+                  onRecord(true)
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/10"
+              >
+                🎙 With voiceover
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordMenu(false)
+                  onRecord(false)
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/10"
+              >
+                🔇 Without voiceover
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : null}
     </div>
   )
