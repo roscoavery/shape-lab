@@ -109,11 +109,17 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
     const now = new Date()
     let lastEnd: Date | null = null
     for (const o of offerings) {
-      const [h, m] = o.time.split(':').map(Number)
-      if (Number.isNaN(h)) continue
+      // Offering times look like "5pm", "4pm", "6:30pm".
+      const match = o.time.match(/(\d+)(?::(\d+))?\s*(am|pm)/i)
+      if (!match) continue
+      let h = Number(match[1])
+      const m = match[2] ? Number(match[2]) : 0
+      const ampm = match[3].toLowerCase()
+      if (ampm === 'pm' && h < 12) h += 12
+      if (ampm === 'am' && h === 12) h = 0
       // Classes run an hour.
       const end = new Date(now)
-      end.setHours(h + 1, Number.isNaN(m) ? 0 : m, 0, 0)
+      end.setHours(h + 1, m, 0, 0)
       if (!lastEnd || end > lastEnd) lastEnd = end
     }
     for (const l of lessons) {
