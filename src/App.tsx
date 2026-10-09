@@ -2177,7 +2177,7 @@ export default function App() {
       {/* Compare opened from a reference-scroll reel: overlay on top of the
           current tab instead of navigating away. */}
       {compareOverlayOpen && (
-        <div className="fixed inset-0 z-[300] flex flex-col bg-[var(--bg)]">
+        <div className="fixed inset-0 z-[500] flex flex-col bg-[var(--bg)]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
             <button
               type="button"
@@ -2204,6 +2204,7 @@ export default function App() {
                 gymEditor={ryanEdit}
                 personalEditor={personalCompare}
                 incomingReference={compareIncomingRef}
+                handoffBottomChooser
                 videoSource={liveLesson ? 'lesson' : undefined}
                 lessonId={liveLesson?.id ?? null}
                 skillId={liveLesson ? shape.id : null}

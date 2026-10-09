@@ -50,6 +50,12 @@ type Props = {
    * When it changes, the payload is loaded into the reference pane handoff.
    */
   incomingReference?: { src: string | null; name: string; itemId?: string } | null
+  /**
+   * When true and an incoming reference is present, the start screen shows a
+   * focused chooser: delay cam or another clip for the bottom view, with the
+   * reference on top. Skips the full mode list.
+   */
+  handoffBottomChooser?: boolean
 }
 
 export function ComparePanel({
@@ -68,6 +74,7 @@ export function ComparePanel({
   lessonBar = null,
   enterFullscreenTick = 0,
   incomingReference = null,
+  handoffBottomChooser = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
   const [split, setSplit] = useState<CompareSplit>('tb')
@@ -254,6 +261,38 @@ export function ComparePanel({
         <div className={fullscreen ? 'relative flex min-h-0 min-w-0 flex-1 flex-col' : 'flex flex-col gap-4'}>
           {!fullscreen && (
             <div className="flex flex-col gap-3">
+              {handoffBottomChooser && incomingReference ? (
+                <>
+                  <p className="px-1 text-center text-sm font-semibold text-white/70">
+                    Compare “{incomingReference.name}” to:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => enterReplay('tb', 'split')}
+                    className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#5cf0c8] via-[#2dd4a8] to-[#147a62] px-5 py-6 text-center shadow-[0_16px_40px_rgba(45,212,168,0.32)] sm:py-8"
+                  >
+                    <span className="mt-1 text-2xl font-bold tracking-tight text-[var(--on-accent)] sm:text-3xl">
+                      Delay cam
+                    </span>
+                    <span className="mt-2 max-w-lg text-sm font-medium text-[var(--on-accent)]/80">
+                      Reference on top, live delay cam on the bottom.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={enterTwoClips}
+                    className="group relative flex w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#a78bfa] via-[#7c5cf0] to-[#3d2a86] px-5 py-6 text-center shadow-[0_16px_40px_rgba(124,92,240,0.32)] sm:py-8"
+                  >
+                    <span className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                      Another clip
+                    </span>
+                    <span className="mt-2 max-w-lg text-sm font-medium text-white/80">
+                      Reference on top, pick any video for the bottom.
+                    </span>
+                  </button>
+                </>
+              ) : (
+              <>
               <button
                 type="button"
                 onClick={() => enterReplay('tb', 'split')}
@@ -314,6 +353,8 @@ export function ComparePanel({
                   Watch the gym list, swipe carousels, and make your own collections.
                 </span>
               </button>
+              </>
+              )}
             </div>
           )}
           {fullscreen ? (
