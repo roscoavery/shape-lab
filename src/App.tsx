@@ -308,6 +308,9 @@ export default function App() {
   // When a reference-scroll reel hands a clip to Compare, the tool opens as an
   // overlay on top of the scroll instead of navigating to the compare tab.
   const [compareOverlayOpen, setCompareOverlayOpen] = useState(false)
+  // When the compare tool goes fullscreen (a mode was picked), the bottom
+  // sheet chrome hides so the fullscreen tool has the whole screen.
+  const [compareOverlayFullscreen, setCompareOverlayFullscreen] = useState(false)
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
@@ -2174,14 +2177,25 @@ export default function App() {
         </div>
       )}
 
-      {/* Compare opened from a reference-scroll reel: overlay on top of the
-          current tab instead of navigating away. */}
+      {/* Compare opened from a reference-scroll reel: a bottom sheet slides up
+          over the reel (which keeps playing behind it) instead of navigating
+          away. When a mode is picked the tool goes fullscreen. */}
       {compareOverlayOpen && (
-        <div className="fixed inset-0 z-[500] flex flex-col bg-[var(--bg)]">
+        <div
+          className={
+            compareOverlayFullscreen
+              ? 'pointer-events-none fixed inset-0 z-[500]'
+              : 'fixed inset-x-0 bottom-0 z-[500] flex max-h-[75dvh] flex-col rounded-t-3xl border-t border-white/10 bg-[var(--bg)] shadow-[0_-16px_48px_rgba(0,0,0,0.5)]'
+          }
+        >
+          {!compareOverlayFullscreen && (
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
             <button
               type="button"
-              onClick={() => setCompareOverlayOpen(false)}
+              onClick={() => {
+                setCompareOverlayOpen(false)
+                setCompareOverlayFullscreen(false)
+              }}
               className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold"
               aria-label="Back to reference scroll"
             >
@@ -2190,7 +2204,8 @@ export default function App() {
             <span className="text-sm font-semibold text-white/60">Compare</span>
             <span className="w-16" />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          )}
+          <div className={compareOverlayFullscreen ? 'contents' : 'min-h-0 flex-1 overflow-y-auto'}>
             <CompareErrorBoundary>
               <ComparePanel
                 onSaveIgStill={saveIgStill}
@@ -2205,6 +2220,7 @@ export default function App() {
                 personalEditor={personalCompare}
                 incomingReference={compareIncomingRef}
                 handoffBottomChooser
+                onFullscreenChange={setCompareOverlayFullscreen}
                 videoSource={liveLesson ? 'lesson' : undefined}
                 lessonId={liveLesson?.id ?? null}
                 skillId={liveLesson ? shape.id : null}

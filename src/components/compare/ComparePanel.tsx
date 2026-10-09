@@ -56,6 +56,8 @@ type Props = {
    * reference on top. Skips the full mode list.
    */
   handoffBottomChooser?: boolean
+  /** Called when the panel enters/exits fullscreen. */
+  onFullscreenChange?: (fullscreen: boolean) => void
 }
 
 export function ComparePanel({
@@ -75,8 +77,13 @@ export function ComparePanel({
   enterFullscreenTick = 0,
   incomingReference = null,
   handoffBottomChooser = false,
+  onFullscreenChange,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
+  // Notify parent when fullscreen changes (for overlay chrome).
+  useEffect(() => {
+    onFullscreenChange?.(fullscreen)
+  }, [fullscreen, onFullscreenChange])
   const [split, setSplit] = useState<CompareSplit>('tb')
   const [focus, setFocus] = useState<CompareFocus>('split')
   const [chromeOpen, setChromeOpen] = useState(false)
