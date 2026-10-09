@@ -64,10 +64,10 @@ export function useLinkedPlayheads(
     }
 
     /** Scrub on `from` moves `to` by the same seconds delta.
-     * Uses `seeking` (fires immediately on currentTime set) for responsive
-     * scrubbing from either panel. The delta threshold prevents feedback:
-     * the follower's own seek computes ~zero delta and does nothing.
-     * No `syncing` block here — rapid scrubbing must not be throttled. */
+     * Uses `seeked` (fires when seek completes) for natural throttling during
+     * rapid scrubbing. The delta threshold prevents feedback: the follower's
+     * own seek computes ~zero delta and does nothing. No `syncing` block —
+     * rapid scrubbing must not be throttled. */
     const linkSeek = (
       from: HTMLVideoElement,
       to: HTMLVideoElement,
@@ -90,8 +90,8 @@ export function useLinkedPlayheads(
       setLast(target)
     }
 
-    const onSeekingA = () => linkSeek(a, b, () => lastA, (n) => { lastA = n })
-    const onSeekingB = () => linkSeek(b, a, () => lastB, (n) => { lastB = n })
+    const onSeekedA = () => linkSeek(a, b, () => lastA, (n) => { lastA = n })
+    const onSeekedB = () => linkSeek(b, a, () => lastB, (n) => { lastB = n })
 
     const linkPlay = (to: HTMLVideoElement) => {
       if (syncing || !to.paused) return
@@ -111,15 +111,15 @@ export function useLinkedPlayheads(
     const onPauseA = () => linkPause(b)
     const onPauseB = () => linkPause(a)
 
-    a.addEventListener('seeking', onSeekingA)
-    b.addEventListener('seeking', onSeekingB)
+    a.addEventListener('seeked', onSeekedA)
+    b.addEventListener('seeked', onSeekedB)
     a.addEventListener('play', onPlayA)
     b.addEventListener('play', onPlayB)
     a.addEventListener('pause', onPauseA)
     b.addEventListener('pause', onPauseB)
     return () => {
-      a.removeEventListener('seeking', onSeekingA)
-      b.removeEventListener('seeking', onSeekingB)
+      a.removeEventListener('seeked', onSeekedA)
+      b.removeEventListener('seeked', onSeekedB)
       a.removeEventListener('play', onPlayA)
       b.removeEventListener('play', onPlayB)
       a.removeEventListener('pause', onPauseA)

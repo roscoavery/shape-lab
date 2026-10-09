@@ -409,7 +409,7 @@ function VideoWorkbenchInner({
   const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 })
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
-  const zoomed = zoom.scale > 1.02
+  const zoomed = zoom.scale > 1.02 || zoom.scale < 0.98
 
   useEffect(() => {
     const v = videoRef.current
@@ -590,7 +590,8 @@ function VideoWorkbenchInner({
         const a = e.touches[0]!
         const b = e.touches[1]!
         const p = pinchRef.current
-        const nextScale = Math.min(4, Math.max(1, p.scale * (distOf(a, b) / p.dist)))
+        // Allow zooming out to 0.5 so the full video can fit in the panel.
+        const nextScale = Math.min(4, Math.max(0.5, p.scale * (distOf(a, b) / p.dist)))
         const mid = midOf(a, b)
         const dx = mid.x - p.x
         const dy = mid.y - p.y
@@ -616,7 +617,8 @@ function VideoWorkbenchInner({
       if (e.touches.length < 2) pinchRef.current = null
       if (e.touches.length === 0) {
         panRef.current = null
-        setZoom((z) => (z.scale <= 1.05 ? { scale: 1, x: 0, y: 0 } : z))
+        // Snap back to 1.0 when close (from either direction).
+        setZoom((z) => (z.scale >= 0.95 && z.scale <= 1.05 ? { scale: 1, x: 0, y: 0 } : z))
       }
     }
 

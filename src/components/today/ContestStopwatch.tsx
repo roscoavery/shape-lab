@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import { AthleteName } from '../AthleteAvatar'
 import { AthleteSearchField } from './AthleteSearchField'
 import { CONTEST_HOLD_DRILLS, CONTEST_HOLD_SPECS } from '../../lib/classSessionLog'
 import { logSessionHold, type LessonClockContext } from '../../lib/sessionClockLog'
 import { formatSeconds } from '../../hooks/useHoldTimer'
+import { getActiveMeeting, resolveAttendeeAthletes } from '../../lib/coachClasses'
 
 type Phase = 'setup' | 'live' | 'done'
 
@@ -63,7 +64,14 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
    * Class mode: the present roster is already in the contest, like the class
    * clock. Lesson mode (no meeting): start empty and let the coach pick.
    * Family mode: preselectIds pre-picks the linked siblings.
+   * When in a live class (active meeting), the present roster is used —
+   * same as the class clock.
    */
+  const activeMeeting = meetingId ? null : getActiveMeeting(signedIn?.id)
+  const presentIds = useMemo(() => {
+    if (!activeMeeting) return []
+    return resolveAttendeeAthletes(activeMeeting, athletes).map((a) => a.id)
+  }, [activeMeeting, athletes])
   const preselectedRef = useRef(false)
   useEffect(() => {
     if (preselectedRef.current) return
@@ -73,8 +81,11 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
     } else if (meetingId && athletes.length > 0) {
       preselectedRef.current = true
       setPicked(athletes.map((a) => a.id))
+    } else if (presentIds.length > 0) {
+      preselectedRef.current = true
+      setPicked(presentIds)
     }
-  }, [meetingId, athletes, preselectIds])
+  }, [meetingId, athletes, preselectIds, presentIds])
 
   const addAthlete = (a: Athlete) => {
     if (!picked.includes(a.id)) setPicked((p) => [...p, a.id])
