@@ -171,7 +171,14 @@ function VideoWorkbenchInner({
   // Report the underlying <video> element so parents (Compare link) can
   // drive it directly. Re-runs when the inner remounts on src change.
   useEffect(() => {
-    onVideoElement?.(videoRef.current)
+    const v = videoRef.current
+    // React's `muted` prop doesn't reliably set the DOM property — iOS
+    // requires the property for autoplay. Set it explicitly on mount.
+    if (v) {
+      v.muted = true
+      v.defaultMuted = true
+    }
+    onVideoElement?.(v)
     return () => onVideoElement?.(null)
   }, [onVideoElement])
   const fixingDurationRef = useRef(false)
