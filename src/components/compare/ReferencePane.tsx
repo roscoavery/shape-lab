@@ -1493,6 +1493,7 @@ export function ReferencePane({
           savedUrl={activeItem.savedUrl}
           onCached={markCached}
           fit={objectFit}
+          onScrub={onScrub}
           postedBy={activeItem.postedBy || postedByFromUrl(activeItem.url)}
           onPostedBy={(handle) => {
             if (!activeCollection) return

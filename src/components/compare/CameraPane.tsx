@@ -1520,6 +1520,7 @@ export function CameraPane({
                   postedBy={replaySocialItem.postedBy || postedByFromUrl(replaySocialItem.url!)}
                   fill
                   fit={cameraFit}
+                  onScrub={onScrub}
                   markup
                   hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
