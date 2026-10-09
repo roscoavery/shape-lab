@@ -191,6 +191,15 @@ function VideoWorkbenchInner({
   const [autoFit, setAutoFit] = useState<'cover' | 'contain'>(objectFit)
   const [time, setTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  // Reset zoom when the fit mode changes — a stuck zoom can make "fit"
+  // look like it's still cropping.
+  const prevFitRef = useRef(objectFit)
+  useEffect(() => {
+    if (prevFitRef.current !== objectFit) {
+      prevFitRef.current = objectFit
+      setZoom({ scale: 1, x: 0, y: 0 })
+    }
+  }, [objectFit])
   const [muted, setMuted] = useState(!startUnmuted)
   // Keep the video element's muted flag in sync with state.
   useEffect(() => {
