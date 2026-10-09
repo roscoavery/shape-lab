@@ -2749,6 +2749,7 @@ export default function App() {
         <ArcadeHub
           athletes={athletes}
           coach={Boolean(activeProfile && isCoachProfile(activeProfile))}
+          admin={Boolean(activeProfile && isShapelabAdmin(activeProfile))}
           onClose={() => setArcadeOpen(false)}
         />
       </div>

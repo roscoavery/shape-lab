@@ -41,8 +41,8 @@ import { BalanceGalaxyGame } from './lab/BalanceGalaxyGame'
 
 /**
  * Tumbling Arcade hub — rooms of games.
- * Main Room is for everyone; the Experimental Lab (and any custom rooms)
- * are coach-only. Coaches move games between rooms and leave testing notes.
+ * Main Room is for everyone; the Experimental Lab is admin-only. Custom rooms
+ * are coach-visible. Coaches move games between rooms and leave testing notes.
  */
 
 function GameLabels({ g }: { g: ArcadeGameDef }) {
@@ -346,10 +346,13 @@ function RoomManager({ rooms, onChanged }: { rooms: ArcadeRoom[]; onChanged: () 
 export function ArcadeHub({
   athletes,
   coach,
+  admin = false,
   onClose,
 }: {
   athletes: Athlete[]
   coach: boolean
+  /** Shapelab admin: sees the Experimental Lab and Coming soon. Coaches don't. */
+  admin?: boolean
   onClose: () => void
 }) {
   const [activeGame, setActiveGame] = useState<string | null>(null)
@@ -358,10 +361,17 @@ export function ArcadeHub({
   const [managingRooms, setManagingRooms] = useState(false)
 
   const rooms = useMemo(() => listRooms(), [refresh])
-  const visibleRooms = rooms.filter((r) => coach || r.id === 'main')
+  // Main Room is for everyone. The Experimental Lab is admin-only (not even
+  // coaches). Custom rooms are coach-visible.
+  const visibleRooms = rooms.filter((r) => {
+    if (r.id === 'main') return true
+    if (r.id === 'lab') return admin
+    return coach
+  })
   const room = visibleRooms.find((r) => r.id === roomId) ?? visibleRooms[0]
   const games = useMemo(() => gamesInRoom(room?.id ?? 'main'), [room, refresh])
-  const comingSoon = room?.id === 'main' ? unplacedGames() : []
+  // Coming soon (unplaced games) is admin-only.
+  const comingSoon = room?.id === 'main' && admin ? unplacedGames() : []
 
   if (activeGame === 'stick-it') {
     return (
