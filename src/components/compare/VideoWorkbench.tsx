@@ -63,6 +63,9 @@ type Props = {
   startUnmuted?: boolean
   /** Two-finger pinch-zoom on phones (Replay Last). */
   pinchZoom?: boolean
+  /** Fired when the user scrubs (hold-drag or progress bar). The parent can
+   * use this to drive a linked video directly, avoiding seeked-event lag. */
+  onScrub?: (time: number) => void
   /** Scrub window currently looping — used to save that exact clip to Photos. */
   onWindowChange?: (start: number, end: number) => void
   /** Extra buttons in the overlay (Replay Last save / back). */
@@ -138,6 +141,7 @@ function VideoWorkbenchInner({
   tapTogglesChrome = false,
   startUnmuted = false,
   pinchZoom = false,
+  onScrub,
   onWindowChange,
   overlayActions,
   hudCorner,
@@ -304,7 +308,10 @@ function VideoWorkbenchInner({
     if (v && v.duration && frame) {
       const w = frame.clientWidth || 1
       const t = g.scrubAnchorT + ((e.clientX - g.scrubAnchorX) / w) * v.duration
-      v.currentTime = Math.max(0, Math.min(v.duration, t))
+      const clamped = Math.max(0, Math.min(v.duration, t))
+      v.currentTime = clamped
+      // Notify parent so a linked video can follow directly (no seeked lag).
+      onScrubRef.current?.(clamped)
     }
     e.preventDefault()
   }, [])
@@ -410,6 +417,10 @@ function VideoWorkbenchInner({
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
   const zoomed = zoom.scale > 1.02 || zoom.scale < 0.98
+  // Ref for the scrub callback so the gesture handler (stable useCallback)
+  // always calls the latest version without re-subscribing.
+  const onScrubRef = useRef(onScrub)
+  onScrubRef.current = onScrub
 
   useEffect(() => {
     const v = videoRef.current
@@ -645,8 +656,11 @@ function VideoWorkbenchInner({
     if (!v) return
     const lo = windowStart
     const hi = duration || 0
-    v.currentTime = Math.min(Math.max(t, lo), hi)
+    const clamped = Math.min(Math.max(t, lo), hi)
+    v.currentTime = clamped
     setTime(v.currentTime)
+    // Notify parent so a linked video can follow.
+    onScrubRef.current?.(clamped)
   }
 
   const togglePlay = () => {

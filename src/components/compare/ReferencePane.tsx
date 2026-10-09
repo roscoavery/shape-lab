@@ -112,6 +112,8 @@ type Props = {
   handoffItemId?: string | null
   /** Called with the underlying <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /** Fired when the user scrubs (for linked compare). */
+  onScrub?: (time: number) => void
   /** How the video fits its panel: cover (crop) or contain (fit). */
   objectFit?: 'cover' | 'contain'
 }
@@ -125,6 +127,7 @@ export function ReferencePane({
   handoffName = null,
   handoffItemId = null,
   onVideoElement,
+  onScrub,
   objectFit = 'cover',
 }: Props) {
   const favorites = useFavorites()
@@ -1477,6 +1480,7 @@ export function ReferencePane({
           compact={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onScrub={onScrub}
           onSwipeVertical={topSwipeNav}
           tapTogglesChrome={fill && !viewer}
           chromeOpen={fill && !viewer ? fsChromeOpen : undefined}
@@ -1507,6 +1511,7 @@ export function ReferencePane({
           quiet={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onScrub={onScrub}
           onSwipeVertical={topSwipeNav}
           tapTogglesChrome={fill && !viewer}
           chromeOpen={fill && !viewer ? fsChromeOpen : undefined}
@@ -1530,6 +1535,7 @@ export function ReferencePane({
           compact={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
+          onScrub={onScrub}
           onSwipeVertical={topSwipeNav}
           tapTogglesChrome={fill && !viewer}
           chromeOpen={fill && !viewer ? fsChromeOpen : undefined}

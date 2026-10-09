@@ -92,6 +92,8 @@ type CameraPaneProps = {
   onPlayAsReference?: (src: string | null, name: string, itemId?: string) => void
   /** Called with the replay <video> element (Compare playhead link). */
   onVideoElement?: (video: HTMLVideoElement | null) => void
+  /** Fired when the user scrubs (for linked compare). */
+  onScrub?: (time: number) => void
   /**
    * Clips-only mode: hide the live camera UI entirely, show just the replay
    * clip player (or a pick-a-clip prompt). Used for two-clip compare.
@@ -118,6 +120,7 @@ export function CameraPane({
   className = null,
   onPlayAsReference,
   onVideoElement,
+  onScrub,
   clipsOnly = false,
   openPickerTick = 0,
   gymEditor = false,
@@ -1519,6 +1522,7 @@ export function CameraPane({
                   markup
                   hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
+              onScrub={onScrub}
                   onSwipeVertical={stepBottomClip}
                   tapTogglesChrome={fullscreen}
                   chromeOpen={fullscreen ? replayChromeOpen : undefined}
@@ -1577,6 +1581,7 @@ export function CameraPane({
               onSaveToCollection={() => void sendReplay('collection')}
               hudCorner={camHudCorner}
               onVideoElement={onVideoElement}
+              onScrub={onScrub}
               onSwipeVertical={stepBottomClip}
               tapTogglesChrome={fullscreen}
               chromeOpen={fullscreen ? replayChromeOpen : undefined}

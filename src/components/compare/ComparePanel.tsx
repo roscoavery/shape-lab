@@ -108,6 +108,52 @@ export function ComparePanel({
   const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover')
   const [refVideo, setRefVideo] = useState<HTMLVideoElement | null>(null)
   const [camVideo, setCamVideo] = useState<HTMLVideoElement | null>(null)
+  // Refs for the linked-scrub direct drive (avoids seeked-event lag).
+  const refVideoRef = useRef<HTMLVideoElement | null>(null)
+  const camVideoRef = useRef<HTMLVideoElement | null>(null)
+  const lastScrubRef = useRef<{ ref: number; cam: number }>({ ref: 0, cam: 0 })
+  const linkedRef = useRef(linked)
+  linkedRef.current = linked
+  /** Direct-drive linked scrub: when the user scrubs one video, move the
+   * other by the same delta immediately (no waiting for seeked events). */
+  const onRefScrub = useCallback((time: number) => {
+    if (!linkedRef.current) return
+    const cam = camVideoRef.current
+    if (!cam) return
+    const delta = time - lastScrubRef.current.ref
+    lastScrubRef.current.ref = time
+    if (Math.abs(delta) < 0.001) return
+    try {
+      const dur = Number.isFinite(cam.duration) && cam.duration > 0 ? cam.duration : 0
+      const target = dur > 0 ? Math.max(0, Math.min(dur, cam.currentTime + delta)) : cam.currentTime + delta
+      cam.currentTime = target
+      lastScrubRef.current.cam = target
+    } catch { /* not seekable */ }
+  }, [])
+  const onCamScrub = useCallback((time: number) => {
+    if (!linkedRef.current) return
+    const ref = refVideoRef.current
+    if (!ref) return
+    const delta = time - lastScrubRef.current.cam
+    lastScrubRef.current.cam = time
+    if (Math.abs(delta) < 0.001) return
+    try {
+      const dur = Number.isFinite(ref.duration) && ref.duration > 0 ? ref.duration : 0
+      const target = dur > 0 ? Math.max(0, Math.min(dur, ref.currentTime + delta)) : ref.currentTime + delta
+      ref.currentTime = target
+      lastScrubRef.current.ref = target
+    } catch { /* not seekable */ }
+  }, [])
+  const onRefVideoWithRef = useCallback((v: HTMLVideoElement | null) => {
+    setRefVideo(v)
+    refVideoRef.current = v
+    if (v) lastScrubRef.current.ref = v.currentTime
+  }, [])
+  const onCamVideoWithRef = useCallback((v: HTMLVideoElement | null) => {
+    setCamVideo(v)
+    camVideoRef.current = v
+    if (v) lastScrubRef.current.cam = v.currentTime
+  }, [])
   // Clean recording: canvas capture without UI buttons.
   const { recording: cleanRecording, start: startCleanRecord, stop: stopCleanRecord } = useCleanRecorder()
   const [recordNotice, setRecordNotice] = useState<string | null>(null)
@@ -148,8 +194,6 @@ export function ComparePanel({
   const [viewClipEntry, setViewClipEntry] = useState(false)
   // Bumps to auto-open the bottom pane clip picker (start-screen View clip).
   const [pickerTick, setPickerTick] = useState(0)
-  const onRefVideo = useCallback((v: HTMLVideoElement | null) => setRefVideo(v), [])
-  const onCamVideo = useCallback((v: HTMLVideoElement | null) => setCamVideo(v), [])
   useLinkedPlayheads(refVideo, camVideo, linked)
 
   const enterReplay = (next: CompareSplit, afterGo: CompareFocus = 'split') => {
@@ -450,7 +494,8 @@ export function ComparePanel({
                   handoffSrc={handoffSrc}
                   handoffName={handoffName}
                   handoffItemId={handoffItemId}
-                  onVideoElement={onRefVideo}
+                  onVideoElement={onRefVideoWithRef}
+                  onScrub={onRefScrub}
                   objectFit={fitMode}
                 />
               </ComparePipSlot>
@@ -499,7 +544,8 @@ export function ComparePanel({
                   skillLabel={skillLabel}
                   classId={classId}
                   className={className}
-                  onVideoElement={onCamVideo}
+                  onVideoElement={onCamVideoWithRef}
+                  onScrub={onCamScrub}
                   clipsOnly={twoClips}
                   openPickerTick={pickerTick}
                   gymEditor={gymEditor}
