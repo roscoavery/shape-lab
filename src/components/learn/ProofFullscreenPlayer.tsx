@@ -655,9 +655,12 @@ function LocalAnalysisPlayer({
           Math.max(0, Math.min(v.duration, g.scrubAnchorT + ((e.clientX - g.scrubAnchorX) / w) * v.duration)),
         )
       }
+      // Keep the carousel's swipe suppression alive while scrubbing — the
+      // 1500ms set at hold engagement expires during a long scrub.
+      if (swipeSuppressRef) swipeSuppressRef.current = Date.now() + 1500
       e.preventDefault()
     },
-    [scrubTo],
+    [scrubTo, swipeSuppressRef],
   )
 
   const onGestureUp = useCallback(
