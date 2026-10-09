@@ -1,5 +1,6 @@
 import type { Athlete, HomeworkItem } from '../types'
 import { addHomeworkItem, createId, loadAllHomework, loadHomeworkLogs } from './storage'
+import { FOUNDATION_FACTS_DRAFT } from '../config/foundationFacts'
 
 export type PracticeRec = {
   id: string
@@ -107,17 +108,63 @@ export function daysSinceHomework(athleteId: string): number | null {
   return Math.floor((Date.now() - t) / 86400000)
 }
 
+/**
+ * Rotating homework nudge copy. Picks a different message each day so it's
+ * not the same alert on repeat. Mixes:
+ * - Profile-based coaching (superman gap, open shoulders, back pain)
+ * - Pain prevention ("easier to stay out of pain than to get out of pain")
+ * - Consistency encouragement (references their own log streaks)
+ * - Specific exercise recharge (from the foundation facts deck)
+ */
 export function homeworkNudgeCopy(athlete: Athlete): string {
+  const firstName = athlete.name.split(' ')[0]
+  const dayOfYear = Math.floor(Date.now() / 86400000)
+
+  // Check consistency: longest streak in the last 60 days
+  const logs = loadHomeworkLogs().filter((l) => l.athleteId === athlete.id)
+  const recentLogs = logs.filter((l) => {
+    const t = Date.parse(l.date || '')
+    return Number.isFinite(t) && Date.now() - t < 60 * 86400000
+  })
+  const wasConsistent = recentLogs.length >= 8
+
+  // Pool of nudge angles — rotates daily
+  const pool: string[] = []
+
+  // 1. Profile-based (original logic, kept)
   if (athlete.harderShape === 'superman') {
-    return `${athlete.name.split(' ')[0]}, Superman should feel as easy as hollow. A few holds today close that gap.`
+    pool.push(`${firstName}, Superman should feel as easy as hollow. A few holds today close that gap.`)
   }
   if ((athlete.openShoulderHardness ?? 0) >= 4) {
-    return `Open shoulders get easier with bridge and handstand work. One round today.`
+    pool.push(`Open shoulders get easier with bridge and handstand work. One round today.`)
   }
   if (athlete.hasBackPain) {
-    return `Iso holds are how you stay out of pain. Hollow or Superman for a minute beats skipping.`
+    pool.push(`Iso holds are how you stay out of pain. Hollow or Superman for a minute beats skipping.`)
   }
-  return `Handstand is the skill everything else hangs on. Even a short wall hold today counts.`
+
+  // 2. Pain prevention (Ryan's wording)
+  pool.push(`It's easier to stay out of pain than to get out of pain. Back extension work today keeps you there.`)
+  pool.push(`Your back will thank you later. Superman holds or bridges, just a few minutes.`)
+
+  // 3. Consistency encouragement
+  if (wasConsistent) {
+    pool.push(`${firstName}, you were on a roll not long ago. One round today gets it back.`)
+    pool.push(`Remember how consistent you were? That version of you is one session away.`)
+  } else {
+    pool.push(`Small today beats perfect tomorrow. One round of holds and you're back in it.`)
+  }
+
+  // 4. Specific exercise recharge (from foundation facts)
+  const facts = FOUNDATION_FACTS_DRAFT
+  if (facts.length > 0) {
+    const fact = facts[dayOfYear % facts.length]!
+    pool.push(`Remember to recharge with ${fact.exercise.toLowerCase()}: ${fact.fact}`)
+  }
+
+  // 5. Default fallback
+  pool.push(`Handstand is the skill everything else hangs on. Even a short wall hold today counts.`)
+
+  return pool[dayOfYear % pool.length]!
 }
 
 export type HoldBenchmarkKey = 'hollow' | 'superman' | 'side_plank' | 'wall_handstand'
