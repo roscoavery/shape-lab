@@ -97,7 +97,27 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
     return ids.size
   }, [offerings, lessons, athletes])
 
+  // After the last class/lesson ends, the day is done and the brief goes away.
+  const dayDone = useMemo(() => {
+    const now = new Date()
+    let lastEnd: Date | null = null
+    for (const o of offerings) {
+      const [h, m] = o.time.split(':').map(Number)
+      if (Number.isNaN(h)) continue
+      // Classes run an hour.
+      const end = new Date(now)
+      end.setHours(h + 1, Number.isNaN(m) ? 0 : m, 0, 0)
+      if (!lastEnd || end > lastEnd) lastEnd = end
+    }
+    for (const l of lessons) {
+      const end = new Date(l.endAt)
+      if (!Number.isNaN(end.getTime()) && (!lastEnd || end > lastEnd)) lastEnd = end
+    }
+    return lastEnd !== null && now > lastEnd
+  }, [offerings, lessons])
+
   if (offerings.length === 0 && lessons.length === 0) return null
+  if (dayDone) return null
 
   return (
     <section className="min-w-0 overflow-x-clip rounded-2xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
