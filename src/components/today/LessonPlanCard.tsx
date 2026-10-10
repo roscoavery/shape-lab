@@ -107,7 +107,7 @@ export function LessonPlanCard({
           ))}
         </ul>
       )}
-      <div className="flex gap-2">
+      <div className="flex min-w-0 gap-2">
         <input
           type="text"
           value={taskInput}
@@ -123,12 +123,12 @@ export function LessonPlanCard({
           value={repsInput}
           onChange={(e) => setRepsInput(e.target.value)}
           placeholder="Reps"
-          className="w-16 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
+          className="w-14 shrink-0 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm"
         />
         <button
           type="button"
           onClick={addTask}
-          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[#06281f]"
         >
           Add
         </button>
@@ -141,13 +141,13 @@ export function LessonPlanCard({
   }
 
   return (
-    <div className="rounded-lg bg-[#121820] px-3 py-2">
+    <div className="min-w-0 rounded-lg bg-[#121820] px-3 py-2">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 text-left"
+        className="flex w-full min-w-0 items-center justify-between gap-2 text-left"
         onClick={onToggle}
       >
-        <span className="text-sm text-[var(--text)]">
+        <span className="min-w-0 truncate text-sm text-[var(--text)]">
           {formatTime(event.startAt)} · {label}
           {plan.tasks.length > 0 && (
             <span className="ml-2 text-xs text-[var(--muted)]">
@@ -155,9 +155,9 @@ export function LessonPlanCard({
             </span>
           )}
         </span>
-        <span className="text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+        <span className="shrink-0 text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
       </button>
-      {open && <div className="mt-2 border-t border-white/10 pt-2">{body}</div>}
+      {open && <div className="mt-2 min-w-0 border-t border-white/10 pt-2">{body}</div>}
     </div>
   )
 }

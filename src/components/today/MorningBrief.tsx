@@ -196,11 +196,11 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
         })}
 
         {lessons.length > 0 && (
-          <div className="rounded-xl border border-[var(--panel-border)] p-4">
+          <div className="min-w-0 rounded-xl border border-[var(--panel-border)] p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
               Lessons today
             </p>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 min-w-0 space-y-2">
               {lessons.map((ev, i) => {
                 const athlete = ev.matchedAthleteId
                   ? athleteById(athletes, ev.matchedAthleteId)

@@ -54,18 +54,19 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     [dateKey, tick],
   )
 
-  // All task rows, tagged with their class.
+  // All task rows, tagged with their class (or lesson).
   const rows: TaskRow[] = useMemo(() => {
     const out: TaskRow[] = []
     for (const plan of plans) {
+      const isLesson = plan.offeringId.startsWith('lesson:')
       const offering = offerings.get(plan.offeringId)
-      if (!offering) continue
+      if (!offering && !isLesson) continue
       for (const task of plan.tasks) {
         out.push({
           plan,
           task,
-          offeringName: offering.name,
-          time: offering.time,
+          offeringName: isLesson ? 'Private lesson' : offering!.name,
+          time: isLesson ? '' : offering!.time,
         })
       }
     }
@@ -74,10 +75,12 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
 
   // Athletes who have tasks today: specific assignments plus members of any
   // class with an 'Everyone' task. 'Everyone' tasks apply to class members only.
+  // Lesson 'all' tasks (unlinked event) show in the all-athletes view only.
   const athletesWithTasks = useMemo(() => {
     const ids = new Set<string>()
     const memberCache = new Map<string, Set<string>>()
     const membersOf = (offeringId: string): Set<string> => {
+      if (offeringId.startsWith('lesson:')) return new Set()
       let s = memberCache.get(offeringId)
       if (!s) {
         s = classMemberIds(offeringId, athletes)
@@ -105,6 +108,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     if (selectedId === null || selectedId === 'all') return rows
     const memberCache = new Map<string, Set<string>>()
     const membersOf = (offeringId: string): Set<string> => {
+      if (offeringId.startsWith('lesson:')) return new Set()
       let s = memberCache.get(offeringId)
       if (!s) {
         s = classMemberIds(offeringId, athletes)
