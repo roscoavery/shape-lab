@@ -30,6 +30,7 @@ import { CoachHoldEntry } from '../family/CoachHoldEntry'
 import { SessionClock } from '../today/SessionClock'
 import {
   getOrCreateClassPlan,
+  plansForDate,
   togglePlanTask,
   reorderPlanTask,
   subscribeClassPlans,
@@ -78,24 +79,64 @@ export function LessonWorkspace({
 
   // Planned tasks for this lesson (written in the morning brief or calendar).
   // The plan lives in the class-plan store under lesson:<calendarEventId>.
+  // Falls back to finding today's lesson plans for this athlete if the
+  // lesson wasn't started from a calendar event.
   const lessonTasks = useMemo(() => {
     void plansTick
-    if (!session.calendarEventId || !coach) return []
-    const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
-    return p.tasks
+    if (!coach) return []
+    const date = todayKey()
+    // Primary: plan linked to the calendar event.
+    if (session.calendarEventId) {
+      const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, coach.id)
+      if (p.tasks.length > 0) return p.tasks
+    }
+    // Fallback: find today's lesson plans with tasks for this athlete.
+    const athleteIds = new Set<string>()
+    if (athlete) athleteIds.add(athlete.id)
+    for (const a of lessonAthletes ?? []) athleteIds.add(a.id)
+    for (const sid of lessonAthleteIds(session)) athleteIds.add(sid)
+    if (athleteIds.size === 0) return []
+    const plans = plansForDate(date).filter((p) => p.offeringId.startsWith('lesson:'))
+    for (const p of plans) {
+      const mine = p.tasks.filter(
+        (t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)),
+      )
+      if (mine.length > 0) return mine
+    }
+    return []
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.calendarEventId, coach?.id, plansTick])
+  }, [session.calendarEventId, session.id, coach?.id, athlete?.id, plansTick])
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
   useEffect(() => {
     void pullClassPlans()
   }, [])
 
+  // Find the plan holding these tasks (for toggle/reorder).
+  const findTaskPlan = () => {
+    if (!coach) return null
+    const date = todayKey()
+    if (session.calendarEventId) {
+      const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, coach.id)
+      if (p.tasks.length > 0) return p
+    }
+    const athleteIds = new Set<string>()
+    if (athlete) athleteIds.add(athlete.id)
+    for (const a of lessonAthletes ?? []) athleteIds.add(a.id)
+    for (const sid of lessonAthleteIds(session)) athleteIds.add(sid)
+    const plans = plansForDate(date).filter((p) => p.offeringId.startsWith('lesson:'))
+    for (const p of plans) {
+      if (p.tasks.some((t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)))) {
+        return p
+      }
+    }
+    return null
+  }
+
   const { handleProps, rowStyle } = useDragList((from, to) => {
-    if (!session.calendarEventId || !coach) return
-    const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
+    const p = findTaskPlan()
     const task = lessonTasks[from]
-    if (task) reorderPlanTask(p.id, task.id, to)
+    if (p && task) reorderPlanTask(p.id, task.id, to)
   })
 
   const extras = useMemo(() => {
@@ -165,9 +206,8 @@ export function LessonWorkspace({
                   <button
                     type="button"
                     onClick={() => {
-                      if (!session.calendarEventId || !coach) return
-                      const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
-                      togglePlanTask(p.id, t.id)
+                      const p = findTaskPlan()
+                      if (p) togglePlanTask(p.id, t.id)
                     }}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                       t.done
