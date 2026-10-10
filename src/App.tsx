@@ -1472,6 +1472,14 @@ export default function App() {
               onJumpToRecaps={() =>
                 document.getElementById('today-recaps')?.scrollIntoView({ behavior: 'smooth' })
               }
+              onPlanLesson={(eventId) => {
+                // Tell the morning brief to open this lesson's plan editor.
+                window.dispatchEvent(
+                  new CustomEvent('shapelab:open-calendar-event', { detail: { eventId } }),
+                )
+                // Scroll to the morning brief.
+                document.getElementById('morning-brief')?.scrollIntoView({ behavior: 'smooth' })
+              }}
             />
             </div>
           )}

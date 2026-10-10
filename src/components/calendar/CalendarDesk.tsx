@@ -28,6 +28,9 @@ import { AcuityNotesView } from './AcuityNotesView'
 import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
+import { classifySessionEvent } from '../../lib/sessionGlow'
+import { LessonPlanCard } from '../today/LessonPlanCard'
+import { subscribeClassPlans, pullClassPlans, todayKey } from '../../lib/classPlans'
 
 type Props = {
   coachId: string
@@ -188,6 +191,26 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [openEventId, setOpenEventId] = useState<string | null>(null)
+  const [plansTick, setPlansTick] = useState(0)
+  const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
+  const dateKey = todayKey()
+
+  useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
+  useEffect(() => {
+    void pullClassPlans()
+  }, [])
+
+  // Open a calendar event's plan editor when the "needs a plan" banner is tapped.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ eventId?: string }>).detail
+      if (detail?.eventId) {
+        setOpenEventId(detail.eventId)
+      }
+    }
+    window.addEventListener('shapelab:open-calendar-event', handler)
+    return () => window.removeEventListener('shapelab:open-calendar-event', handler)
+  }, [])
   const [fullScreen, setFullScreen] = useState(false)
   const [displayPrefs, setDisplayPrefs] = useState(() => loadCalendarDisplayPrefs())
   const [layersOpen, setLayersOpen] = useState(false)
@@ -803,7 +826,8 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                       }).then(() => {
                         setPickEventId(null)
                         void refresh()
-                        startLesson(pickEvent, a.id)
+                        // Do NOT auto-start here. Linking just attaches the
+                        // profile; the clock starts the lesson at its time.
                       })
                     }}
                   >
@@ -937,6 +961,22 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                   !openEvent.id.startsWith('shapelab-class:') ? () => deleteOpenEvent() : undefined
                 }
               />
+              {classifySessionEvent(openEvent) === 'lesson' && (
+                <div className="mt-2">
+                  <LessonPlanCard
+                    event={openEvent}
+                    athlete={openEvent.matchedAthleteId ? (athletes.find((a) => a.id === openEvent.matchedAthleteId) ?? null) : null}
+                    coachId={coachId}
+                    dateKey={dateKey}
+                    open={true}
+                    onToggle={() => {}}
+                    taskInput={taskInputs[`lesson:${openEvent.id}`] ?? ''}
+                    onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [`lesson:${openEvent.id}`]: v }))}
+                    plansTick={plansTick}
+                    hideHeader={true}
+                  />
+                </div>
+              )}
             </div>
           )}
           <nav

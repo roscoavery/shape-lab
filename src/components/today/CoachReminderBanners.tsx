@@ -195,9 +195,11 @@ function HoursLogPanel({ coachId }: { coachId: string }) {
 export function CoachReminderBanners({
   coachId,
   onJumpToRecaps,
+  onPlanLesson,
 }: {
   coachId: string
   onJumpToRecaps: () => void
+  onPlanLesson?: (eventId: string) => void
 }) {
   const [tick, setTick] = useState(0)
   const [calEvents, setCalEvents] = useState<TodayCalendarEvent[]>([])
@@ -327,19 +329,36 @@ export function CoachReminderBanners({
             className="rounded-xl border border-sky-300/40 bg-sky-300/10 px-4 py-3"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[var(--text)]">
                   {r.events.length} lesson{r.events.length === 1 ? '' : 's'} on your calendar need{r.events.length === 1 ? 's' : ''} a plan
                 </p>
                 <ul className="mt-1 space-y-0.5 text-xs text-[var(--muted)]">
                   {r.events.slice(0, 4).map((ev) => (
                     <li key={ev.id}>
-                      {ev.title} ·{' '}
-                      {new Date(ev.startAt).toLocaleString([], {
-                        weekday: 'short',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
+                      {onPlanLesson ? (
+                        <button
+                          type="button"
+                          onClick={() => onPlanLesson(ev.id)}
+                          className="text-left underline decoration-sky-300/50 underline-offset-2"
+                        >
+                          {ev.title} ·{' '}
+                          {new Date(ev.startAt).toLocaleString([], {
+                            weekday: 'short',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </button>
+                      ) : (
+                        <span>
+                          {ev.title} ·{' '}
+                          {new Date(ev.startAt).toLocaleString([], {
+                            weekday: 'short',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      )}
                     </li>
                   ))}
                   {r.events.length > 4 && (

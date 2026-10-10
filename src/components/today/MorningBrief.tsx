@@ -62,6 +62,18 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
     void pullClassPlans()
   }, [])
 
+  // Open a lesson's plan editor when the "needs a plan" banner is tapped.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ eventId?: string }>).detail
+      if (detail?.eventId) {
+        setOpenOfferingId(`lesson:${detail.eventId}`)
+      }
+    }
+    window.addEventListener('shapelab:open-calendar-event', handler)
+    return () => window.removeEventListener('shapelab:open-calendar-event', handler)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     const load = async () => {
@@ -144,7 +156,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   if (dayDone) return null
 
   return (
-    <section className="min-w-0 overflow-x-clip rounded-2xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
+    <section id="morning-brief" className="min-w-0 overflow-x-clip rounded-2xl border border-[var(--accent)]/30 bg-[var(--panel)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">

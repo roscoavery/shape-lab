@@ -112,6 +112,14 @@ export function LessonWorkspace({
           {athleteName}
           <span className="font-normal text-[var(--muted)]"> with {coachName}</span>
         </h2>
+        {(athlete?.needsOnboarding || athlete?.createdFromCalendar) && (
+          <div className="mt-2 rounded-lg bg-[#102820] px-3 py-2">
+            <p className="text-xs text-[var(--accent)]">
+              {athlete.firstName || 'This athlete'} was added from your calendar. Take a minute
+              at the start to finish their profile.
+            </p>
+          </div>
+        )}
         {session.calendarTitle && session.calendarStartAt && (
           <p className="mt-1 text-sm text-[var(--muted)]">
             Calendar · {session.calendarTitle} ·{' '}

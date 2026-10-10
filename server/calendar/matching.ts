@@ -170,13 +170,16 @@ export function extractContactBits(text: string): { phone?: string; email?: stri
 
 /** One First Last in event notes that is not already on the gym roster. Title is ignored — parents often put their own name there. */
 export function extractUnmatchedPersonName(
-  _title: string,
+  title: string,
   description: string,
   athletes: Athlete[],
 ): { firstName: string; lastName: string; fullName: string } | null {
-  const raw = unescapeCalendarText(description).trim()
+  // Check both title and description for a person name.
+  const raw = unescapeCalendarText(`${title}\n${description}`).trim()
   if (!raw) return null
   const found = new Map<string, { firstName: string; lastName: string }>()
+
+  // Two-word names (first + last).
   const re = /\b([A-Za-z][A-Za-z'-]{1,24})\s+([A-Za-z][A-Za-z'-]{1,24})\b/g
   let m: RegExpExecArray | null
   while ((m = re.exec(raw))) {
@@ -190,9 +193,32 @@ export function extractUnmatchedPersonName(
     if (athletes.some((a) => normalizePersonName(athleteFullName(a)) === full)) continue
     found.set(full, { firstName: first, lastName: last })
   }
+
+  // Single-word names (first name only). Only if no two-word name was found,
+  // to avoid double-counting "Sadie" inside "Sadie Smith".
+  if (found.size === 0) {
+    const single = /\b([A-Za-z][A-Za-z'-]{2,24})\b/g
+    let s: RegExpExecArray | null
+    while ((s = single.exec(raw))) {
+      const name = s[1]!.replace(/^./, (c) => c.toUpperCase())
+      if (SKIP_NAME_TOKENS.has(name.toLowerCase())) continue
+      const norm = normalizePersonName(name)
+      // Skip if any existing athlete has this first name.
+      if (athletes.some((a) => {
+        const af = a.firstName?.trim() || a.name.trim().split(/\s+/)[0] || ''
+        return normalizePersonName(af) === norm
+      })) continue
+      found.set(norm, { firstName: name, lastName: '' })
+    }
+  }
+
   if (found.size !== 1) return null
   const parts = [...found.values()][0]!
-  return { firstName: parts.firstName, lastName: parts.lastName, fullName: `${parts.firstName} ${parts.lastName}` }
+  return {
+    firstName: parts.firstName,
+    lastName: parts.lastName,
+    fullName: parts.lastName ? `${parts.firstName} ${parts.lastName}` : parts.firstName,
+  }
 }
 
 export function matchEventToAthlete(input: MatchInput): MatchResult {
