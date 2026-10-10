@@ -231,6 +231,25 @@ export function HomeDashboard({
           }
           break // Only auto-start one per check.
         }
+        // Auto-start 1-on-1 lessons at their calendar time when enabled.
+        // Needs a matched athlete; manual linking in the calendar never
+        // starts the lesson, only the clock does.
+        if (glow.glowing.has('lesson') && lessonEvent?.matchedAthleteId) {
+          const hasLive = getActiveMeeting(signedIn.id) || findLiveLesson(signedIn.id) || (gymScope.kind === 'event' && getTrainingEvent(gymScope.eventId))
+          if (!hasLive) {
+            try {
+              onStartLesson([lessonEvent.matchedAthleteId], null, {
+                eventId: lessonEvent.id,
+                title: lessonEvent.title,
+                startAt: lessonEvent.startAt,
+                endAt: lessonEvent.endAt,
+                notes: lessonEvent.notes ?? null,
+              })
+            } catch {
+              /* never break the app over auto-start */
+            }
+          }
+        }
       }
     }
     void check()
