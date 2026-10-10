@@ -295,15 +295,9 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                       }).then(() => {
                         setPickEventId(null)
                         void refresh()
-                        if (pickEvent.matchStatus !== 'not_lesson') {
-                          onStartLesson([a.id], null, {
-                            eventId: pickEvent.id,
-                            title: pickEvent.title,
-                            startAt: pickEvent.startAt,
-                            endAt: pickEvent.endAt,
-                            notes: pickEvent.notes ?? null,
-                          })
-                        }
+                        // Do NOT auto-start the lesson here. The coach just
+                        // wanted to link the athlete to the event; starting
+                        // is a separate action via the Start lesson button.
                       })
                     }}
                   >
