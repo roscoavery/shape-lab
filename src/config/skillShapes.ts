@@ -18,7 +18,7 @@ export interface SkillShapeRef {
 
 export const SKILL_SHAPES: Record<string, SkillShapeRef[]> = {
   layout: [{ shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }, { shapeId: 'candlestick' }],
-  'back-tuck': [{ shapeId: 'tuck_open_shoulders' }, { shapeId: 'hollow_arms_up' }, { shapeId: 'candlestick' }],
+  'back-tuck': [{ shapeId: 'tuck_open_shoulders' }, { shapeId: 'hollow_arms_up' }, { shapeId: 'arch' }, { shapeId: 'candlestick' }],
   'round-off': [
     { shapeId: 'mountain_climber' },
     { shapeId: 'lunge_start' },

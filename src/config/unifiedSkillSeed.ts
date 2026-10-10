@@ -125,8 +125,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "A good tuck on trampoline from a passe fall round off, and/or a standalone tuck from bounces with arms up"
     ],
     "canBend": [
-      "Some athletes get the tuck without a strong series, because the feet-behind problem on their series actually helps the tuck set. They generally stall moving into layouts afterward.",
-      "Ryan has seen plenty of back tucks from athletes who cannot do a backward roll."
+      "Some athletes get the tuck without a strong series, because the feet-behind problem on their series actually helps the tuck set. They generally stall moving into layouts afterward."
     ],
     "ask": "Ask your coach whether your series meets the standard: feet in front three times, accelerating without getting shorter on the second and third handspring, power staying long and fast, and a strong hollow rebound out of one, two, or three. If you have that plus a good tramp tuck, you can get this skill."
   },
