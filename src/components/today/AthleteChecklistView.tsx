@@ -8,6 +8,7 @@ import {
   movePlanTask,
   bumpTaskReps,
   subscribeClassPlans,
+  pullClassPlans,
   todayKey,
   type ClassPlan,
   type ClassPlanTask,
@@ -39,6 +40,11 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setTick((n) => n + 1)), [])
+  // Pull fresh plans when the checklist opens so tasks written on another
+  // device show up immediately.
+  useEffect(() => {
+    void pullClassPlans()
+  }, [])
 
   const offerings = useMemo(() => {
     const weekday = WEEKDAYS[new Date().getDay()]

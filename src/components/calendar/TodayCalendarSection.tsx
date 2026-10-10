@@ -13,7 +13,7 @@ import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
-import { subscribeClassPlans, todayKey } from '../../lib/classPlans'
+import { subscribeClassPlans, pullClassPlans, todayKey } from '../../lib/classPlans'
 
 type Props = {
   coachId: string
@@ -46,6 +46,9 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
+  useEffect(() => {
+    void pullClassPlans()
+  }, [])
 
   const roster = useMemo(
     () =>

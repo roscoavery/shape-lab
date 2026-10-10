@@ -15,6 +15,7 @@ import {
   carryOverTasks,
   pastTasksForAthlete,
   subscribeClassPlans,
+  pullClassPlans,
   todayKey,
   type ClassPlan,
 } from '../../lib/classPlans'
@@ -56,6 +57,10 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
+  // Pull fresh plans when the brief opens.
+  useEffect(() => {
+    void pullClassPlans()
+  }, [])
 
   useEffect(() => {
     let cancelled = false

@@ -33,6 +33,7 @@ import {
   togglePlanTask,
   movePlanTask,
   subscribeClassPlans,
+  pullClassPlans,
   todayKey,
 } from '../../lib/classPlans'
 
@@ -85,6 +86,9 @@ export function LessonWorkspace({
   }, [session.calendarEventId, coach?.id, plansTick])
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
+  useEffect(() => {
+    void pullClassPlans()
+  }, [])
 
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()

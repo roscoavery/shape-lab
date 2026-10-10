@@ -127,10 +127,8 @@ function mergePlans(local: ClassPlan[], remote: ClassPlan[]): ClassPlan[] {
   return [...byId.values()]
 }
 
-/** Pull server plans and merge with local. Runs once per session. */
-export async function syncClassPlans(): Promise<void> {
-  if (syncStarted) return
-  syncStarted = true
+/** Pull server plans and merge with local. Safe to call repeatedly. */
+export async function pullClassPlans(): Promise<void> {
   try {
     const res = await markedFetch('/api/class-plans')
     if (!res.ok) return
@@ -138,20 +136,30 @@ export async function syncClassPlans(): Promise<void> {
     const remote = Array.isArray(data.plans) ? data.plans : []
     const local = loadClassPlans()
     const merged = mergePlans(local, remote)
-    // Only write + push when something changed.
     const localIds = new Set(local.map((p) => p.id))
     const changed =
       merged.length !== local.length ||
-      remote.some((p) => !localIds.has(p.id))
+      remote.some((p) => !localIds.has(p.id)) ||
+      merged.some((m) => {
+        const l = local.find((x) => x.id === m.id)
+        return l && l.updatedAt !== m.updatedAt
+      })
     if (changed) {
       writeJson(PLANS_KEY, merged)
       emit()
     }
-    // Push merged state so the server converges too.
-    await pushClassPlansNow()
   } catch {
     /* offline */
   }
+}
+
+/** Pull server plans and merge with local. Runs once per session. */
+export async function syncClassPlans(): Promise<void> {
+  if (syncStarted) return
+  syncStarted = true
+  await pullClassPlans()
+  // Push merged state so the server converges too.
+  await pushClassPlansNow()
 }
 
 /** Push local plans to the server immediately. */
@@ -179,6 +187,24 @@ function schedulePush() {
     pushTimer = null
     void pushClassPlansNow()
   }, 1500)
+}
+
+/** Flush any pending debounced push immediately. Call on pagehide. */
+export function flushPendingPlanPush(): void {
+  if (pushTimer) {
+    clearTimeout(pushTimer)
+    pushTimer = null
+    void pushClassPlansNow()
+  }
+}
+
+// Flush pending pushes when the app goes to background so tasks added
+// right before switching devices still reach the server.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => flushPendingPlanPush())
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingPlanPush()
+  })
 }
 
 /** Get or create the plan for an offering on a date. */
