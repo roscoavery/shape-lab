@@ -5,13 +5,14 @@ import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/
 import { fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from './LessonPlanCard'
+import { useDragList, DragGrip } from './useDragList'
 import {
   getOrCreateClassPlan,
   setPlanNotes,
   addPlanTask,
   togglePlanTask,
   removePlanTask,
-  movePlanTask,
+  reorderPlanTask,
   carryOverTasks,
   pastTasksForAthlete,
   subscribeClassPlans,
@@ -301,6 +302,11 @@ function ClassPlanCard({
 
   const [repsInput, setRepsInput] = useState('')
 
+  const { handleProps, rowStyle } = useDragList((from, to) => {
+    const task = plan.tasks[from]
+    if (task) reorderPlanTask(plan.id, task.id, to)
+  })
+
   const addTask = () => {
     if (!taskInput.trim()) return
     const reps = parseInt(repsInput, 10)
@@ -429,8 +435,10 @@ function ClassPlanCard({
                 return (
                   <li
                     key={task.id}
+                    style={rowStyle(i)}
                     className="flex items-center gap-2 rounded-lg border border-[var(--panel-border)] px-3 py-2"
                   >
+                    <DragGrip {...handleProps(i)} />
                     <button
                       type="button"
                       onClick={() => togglePlanTask(plan.id, task.id)}
@@ -463,26 +471,6 @@ function ClassPlanCard({
                           carried over
                         </span>
                       )}
-                    </span>
-                    <span className="flex shrink-0 items-center">
-                      <button
-                        type="button"
-                        onClick={() => movePlanTask(plan.id, task.id, 'up')}
-                        disabled={i === 0}
-                        className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                        aria-label="Move up"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => movePlanTask(plan.id, task.id, 'down')}
-                        disabled={i === plan.tasks.length - 1}
-                        className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                        aria-label="Move down"
-                      >
-                        ▼
-                      </button>
                     </span>
                     <button
                       type="button"

@@ -31,11 +31,12 @@ import { SessionClock } from '../today/SessionClock'
 import {
   getOrCreateClassPlan,
   togglePlanTask,
-  movePlanTask,
+  reorderPlanTask,
   subscribeClassPlans,
   pullClassPlans,
   todayKey,
 } from '../../lib/classPlans'
+import { useDragList, DragGrip } from '../today/useDragList'
 
 type Props = {
   session: LessonSession
@@ -89,6 +90,13 @@ export function LessonWorkspace({
   useEffect(() => {
     void pullClassPlans()
   }, [])
+
+  const { handleProps, rowStyle } = useDragList((from, to) => {
+    if (!session.calendarEventId || !coach) return
+    const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
+    const task = lessonTasks[from]
+    if (task) reorderPlanTask(p.id, task.id, to)
+  })
 
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()
@@ -148,7 +156,12 @@ export function LessonWorkspace({
             </p>
             <ul className="mt-1 space-y-1">
               {lessonTasks.map((t, i) => (
-                <li key={t.id} className="flex items-center gap-1.5 text-sm">
+                <li
+                  key={t.id}
+                  style={rowStyle(i)}
+                  className="flex items-center gap-1.5 text-sm"
+                >
+                  <DragGrip {...handleProps(i)} />
                   <button
                     type="button"
                     onClick={() => {
@@ -168,34 +181,6 @@ export function LessonWorkspace({
                   <span className={`min-w-0 flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
                     {t.text}
                     {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
-                  </span>
-                  <span className="flex shrink-0 items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!session.calendarEventId || !coach) return
-                        const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
-                        movePlanTask(p.id, t.id, 'up')
-                      }}
-                      disabled={i === 0}
-                      className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                      aria-label="Move up"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!session.calendarEventId || !coach) return
-                        const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
-                        movePlanTask(p.id, t.id, 'down')
-                      }}
-                      disabled={i === lessonTasks.length - 1}
-                      className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                      aria-label="Move down"
-                    >
-                      ▼
-                    </button>
                   </span>
                 </li>
               ))}

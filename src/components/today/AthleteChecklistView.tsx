@@ -5,7 +5,6 @@ import { loadOfferingsForCoach, WEEKDAYS } from '../../lib/coachClasses'
 import {
   plansForDate,
   togglePlanTask,
-  movePlanTask,
   bumpTaskReps,
   subscribeClassPlans,
   pullClassPlans,
@@ -220,37 +219,9 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                     : 'border-white/10 bg-[#111418]'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-white/50">
-                    {time} · {offeringName}
-                  </p>
-                  {(() => {
-                    const idx = plan.tasks.findIndex((t) => t.id === task.id)
-                    if (idx < 0) return null
-                    return (
-                      <span className="flex shrink-0 items-center">
-                        <button
-                          type="button"
-                          onClick={() => movePlanTask(plan.id, task.id, 'up')}
-                          disabled={idx === 0}
-                          className="px-2 py-1 text-sm text-white/50 disabled:opacity-20"
-                          aria-label="Move up"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => movePlanTask(plan.id, task.id, 'down')}
-                          disabled={idx === plan.tasks.length - 1}
-                          className="px-2 py-1 text-sm text-white/50 disabled:opacity-20"
-                          aria-label="Move down"
-                        >
-                          ▼
-                        </button>
-                      </span>
-                    )
-                  })()}
-                </div>
+                <p className="text-sm text-white/50">
+                  {time} · {offeringName}
+                </p>
                 {selectedId === 'all' && (
                   <p className="mt-1 text-sm font-semibold text-[var(--accent)]">
                     {task.athleteIds.includes('all')

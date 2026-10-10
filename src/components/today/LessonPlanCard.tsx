@@ -6,9 +6,10 @@ import {
   addPlanTask,
   togglePlanTask,
   removePlanTask,
-  movePlanTask,
+  reorderPlanTask,
   type ClassPlan,
 } from '../../lib/classPlans'
+import { useDragList, DragGrip } from './useDragList'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -60,6 +61,11 @@ export function LessonPlanCard({
   )
   const [repsInput, setRepsInput] = useState('')
 
+  const { handleProps, rowStyle } = useDragList((from, to) => {
+    const task = plan.tasks[from]
+    if (task) reorderPlanTask(plan.id, task.id, to)
+  })
+
   const addTask = () => {
     if (!taskInput.trim()) return
     const reps = parseInt(repsInput, 10)
@@ -79,7 +85,12 @@ export function LessonPlanCard({
       {plan.tasks.length > 0 && (
         <ul className="mb-2 space-y-1">
           {plan.tasks.map((t, i) => (
-            <li key={t.id} className="flex items-center gap-1.5 text-sm">
+            <li
+              key={t.id}
+              style={rowStyle(i)}
+              className="flex items-center gap-1.5 text-sm"
+            >
+              <DragGrip {...handleProps(i)} />
               <button
                 type="button"
                 onClick={() => togglePlanTask(plan.id, t.id)}
@@ -96,30 +107,10 @@ export function LessonPlanCard({
                 {t.text}
                 {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
               </span>
-              <span className="flex shrink-0 items-center">
-                <button
-                  type="button"
-                  onClick={() => movePlanTask(plan.id, t.id, 'up')}
-                  disabled={i === 0}
-                  className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                  aria-label="Move up"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePlanTask(plan.id, t.id, 'down')}
-                  disabled={i === plan.tasks.length - 1}
-                  className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
-                  aria-label="Move down"
-                >
-                  ▼
-                </button>
-              </span>
               <button
                 type="button"
                 onClick={() => removePlanTask(plan.id, t.id)}
-                className="shrink-0 text-xs text-[var(--muted)] hover:text-red-400"
+                className="shrink-0 px-1 text-xs text-[var(--muted)] hover:text-red-400"
                 aria-label="Remove task"
               >
                 ✕

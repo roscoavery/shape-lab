@@ -333,6 +333,24 @@ export function movePlanTask(
   })
 }
 
+/** Move a task to a specific index in the plan's task order (for drag reorder). */
+export function reorderPlanTask(
+  planId: string,
+  taskId: string,
+  toIndex: number,
+): ClassPlan | null {
+  return updatePlan(planId, (p) => {
+    const from = p.tasks.findIndex((t) => t.id === taskId)
+    if (from < 0) return p
+    const clamped = Math.max(0, Math.min(toIndex, p.tasks.length - 1))
+    if (clamped === from) return p
+    const tasks = [...p.tasks]
+    const [task] = tasks.splice(from, 1)
+    tasks.splice(clamped, 0, task)
+    return { ...p, tasks }
+  })
+}
+
 /** All tasks for an athlete on a date, across all class plans. For the athlete view.
  * 'Everyone' tasks only apply to athletes in that task's class, not every
  * athlete the coach sees that day. */
