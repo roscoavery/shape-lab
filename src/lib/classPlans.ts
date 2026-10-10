@@ -289,6 +289,24 @@ export function removePlanTask(planId: string, taskId: string): ClassPlan | null
   }))
 }
 
+/** Move a task up or down in the plan's task order. */
+export function movePlanTask(
+  planId: string,
+  taskId: string,
+  direction: 'up' | 'down',
+): ClassPlan | null {
+  return updatePlan(planId, (p) => {
+    const idx = p.tasks.findIndex((t) => t.id === taskId)
+    if (idx < 0) return p
+    const next = idx + (direction === 'up' ? -1 : 1)
+    if (next < 0 || next >= p.tasks.length) return p
+    const tasks = [...p.tasks]
+    const [task] = tasks.splice(idx, 1)
+    tasks.splice(next, 0, task)
+    return { ...p, tasks }
+  })
+}
+
 /** All tasks for an athlete on a date, across all class plans. For the athlete view.
  * 'Everyone' tasks only apply to athletes in that task's class, not every
  * athlete the coach sees that day. */

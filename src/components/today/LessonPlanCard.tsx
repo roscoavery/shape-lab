@@ -6,6 +6,7 @@ import {
   addPlanTask,
   togglePlanTask,
   removePlanTask,
+  movePlanTask,
   type ClassPlan,
 } from '../../lib/classPlans'
 
@@ -77,8 +78,8 @@ export function LessonPlanCard({
     <>
       {plan.tasks.length > 0 && (
         <ul className="mb-2 space-y-1">
-          {plan.tasks.map((t) => (
-            <li key={t.id} className="flex items-center gap-2 text-sm">
+          {plan.tasks.map((t, i) => (
+            <li key={t.id} className="flex items-center gap-1.5 text-sm">
               <button
                 type="button"
                 onClick={() => togglePlanTask(plan.id, t.id)}
@@ -91,14 +92,34 @@ export function LessonPlanCard({
               >
                 {t.done ? '✓' : ''}
               </button>
-              <span className={`flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
+              <span className={`min-w-0 flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
                 {t.text}
                 {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
+              </span>
+              <span className="flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => movePlanTask(plan.id, t.id, 'up')}
+                  disabled={i === 0}
+                  className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
+                  aria-label="Move up"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => movePlanTask(plan.id, t.id, 'down')}
+                  disabled={i === plan.tasks.length - 1}
+                  className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
+                  aria-label="Move down"
+                >
+                  ▼
+                </button>
               </span>
               <button
                 type="button"
                 onClick={() => removePlanTask(plan.id, t.id)}
-                className="text-xs text-[var(--muted)] hover:text-red-400"
+                className="shrink-0 text-xs text-[var(--muted)] hover:text-red-400"
                 aria-label="Remove task"
               >
                 ✕

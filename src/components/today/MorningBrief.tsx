@@ -11,6 +11,7 @@ import {
   addPlanTask,
   togglePlanTask,
   removePlanTask,
+  movePlanTask,
   carryOverTasks,
   pastTasksForAthlete,
   subscribeClassPlans,
@@ -402,7 +403,7 @@ function ClassPlanCard({
           )}
           {plan.tasks.length > 0 && (
             <ul className="mt-2 space-y-1.5">
-              {plan.tasks.map((task) => {
+              {plan.tasks.map((task, i) => {
                 const names = task.athleteIds.includes('all')
                   ? ['Everyone']
                   : task.athleteIds.map(
@@ -445,6 +446,26 @@ function ClassPlanCard({
                           carried over
                         </span>
                       )}
+                    </span>
+                    <span className="flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        onClick={() => movePlanTask(plan.id, task.id, 'up')}
+                        disabled={i === 0}
+                        className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
+                        aria-label="Move up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePlanTask(plan.id, task.id, 'down')}
+                        disabled={i === plan.tasks.length - 1}
+                        className="px-1 text-xs text-[var(--muted)] disabled:opacity-20"
+                        aria-label="Move down"
+                      >
+                        ▼
+                      </button>
                     </span>
                     <button
                       type="button"
