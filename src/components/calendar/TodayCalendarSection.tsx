@@ -11,6 +11,9 @@ import {
 } from '../../lib/calendarClient'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
+import { classifySessionEvent } from '../../lib/sessionGlow'
+import { LessonPlanCard } from '../today/LessonPlanCard'
+import { subscribeClassPlans, todayKey } from '../../lib/classPlans'
 
 type Props = {
   coachId: string
@@ -38,6 +41,11 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
   const [needsAuth, setNeedsAuth] = useState(false)
   const [passcode, setPasscode] = useState('')
   const [openEventId, setOpenEventId] = useState<string | null>(null)
+  const [plansTick, setPlansTick] = useState(0)
+  const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
+  const dateKey = todayKey()
+
+  useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
 
   const roster = useMemo(
     () =>
@@ -257,6 +265,20 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                     <p className="whitespace-pre-wrap text-[var(--text)]/85">{ev.notes.trim()}</p>
                   ) : (
                     <p>No notes on this event.</p>
+                  )}
+                  {classifySessionEvent(ev) === 'lesson' && (
+                    <LessonPlanCard
+                      event={ev}
+                      athlete={ev.matchedAthleteId ? (athletes.find((a) => a.id === ev.matchedAthleteId) ?? null) : null}
+                      coachId={coachId}
+                      dateKey={dateKey}
+                      open={true}
+                      onToggle={() => {}}
+                      taskInput={taskInputs[`lesson:${ev.id}`] ?? ''}
+                      onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [`lesson:${ev.id}`]: v }))}
+                      plansTick={plansTick}
+                      hideHeader={true}
+                    />
                   )}
                 </div>
               )}

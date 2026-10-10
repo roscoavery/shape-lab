@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { mergeExtras } from '../../lib/classExercises'
 import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
 import {
@@ -28,6 +28,12 @@ import { publishTextPost } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { CoachHoldEntry } from '../family/CoachHoldEntry'
 import { SessionClock } from '../today/SessionClock'
+import {
+  getOrCreateClassPlan,
+  togglePlanTask,
+  subscribeClassPlans,
+  todayKey,
+} from '../../lib/classPlans'
 
 type Props = {
   session: LessonSession
@@ -65,6 +71,19 @@ export function LessonWorkspace({
   onEnded,
 }: Props) {
   const [tick, setTick] = useState(0)
+  const [plansTick, setPlansTick] = useState(0)
+
+  // Planned tasks for this lesson (written in the morning brief or calendar).
+  // The plan lives in the class-plan store under lesson:<calendarEventId>.
+  const lessonTasks = useMemo(() => {
+    void plansTick
+    if (!session.calendarEventId || !coach) return []
+    const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
+    return p.tasks
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.calendarEventId, coach?.id, plansTick])
+
+  useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
 
   const extras = useMemo(() => {
     const meeting = getActiveMeeting()
@@ -107,6 +126,39 @@ export function LessonWorkspace({
             <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
               {session.calendarNotes}
             </p>
+          </div>
+        )}
+        {lessonTasks.length > 0 && (
+          <div className="mt-2 rounded-lg bg-[#121820] px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+              Today's plan
+            </p>
+            <ul className="mt-1 space-y-1">
+              {lessonTasks.map((t) => (
+                <li key={t.id} className="flex items-center gap-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!session.calendarEventId || !coach) return
+                      const p = getOrCreateClassPlan(todayKey(), `lesson:${session.calendarEventId}`, coach.id)
+                      togglePlanTask(p.id, t.id)
+                    }}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                      t.done
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]'
+                        : 'border-white/30'
+                    }`}
+                    aria-label={t.done ? 'Mark not done' : 'Mark done'}
+                  >
+                    {t.done ? '✓' : ''}
+                  </button>
+                  <span className={`flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
+                    {t.text}
+                    {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         <p className="mt-1 text-sm text-[var(--muted)]">
