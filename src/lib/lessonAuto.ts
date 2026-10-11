@@ -60,6 +60,10 @@ export async function checkLessonAutoStart(
   const glow = getSessionGlow(events, now)
   const lessonEvent = glow.closest.lesson
   if (!glow.glowing.has('lesson') || !lessonEvent?.matchedAthleteId) return null
+  const startMs = Date.parse(lessonEvent.startAt)
+  // Start at the scheduled time, not 5 minutes early: the glow leads by 5
+  // minutes so he sees it coming, but the clock starts the lesson on time.
+  if (!Number.isFinite(startMs) || now.getTime() < startMs) return null
   // Don't start over something already live.
   if (getActiveMeeting(coachId) || findLiveLesson(coachId)) return null
   return {
