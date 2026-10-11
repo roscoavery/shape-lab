@@ -12,7 +12,7 @@ import {
 import { fetchCalendarRange, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { classLabel, getOffering, loadMeetings } from '../../lib/coachClasses'
 import { lessonAthleteIds, loadLessonSessions } from '../../lib/lessonStore'
-import { publishTextPost } from '../../lib/feedPosts'
+import { publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
 import { logClassSkillForAthlete } from '../../lib/classSessionLog'
 import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
@@ -220,6 +220,7 @@ function athletesWorkedToday(coachId: string, athletes: Athlete[]): Athlete[] {
 /**
  * Post a win for an athlete: skill log + wins feed + coach note, attached to
  * today's class or lesson when there is one. Same shape as the recap lists.
+ * Returns true on success, or an error message to show.
  */
 async function postWinForAthlete(
   coach: Athlete,
@@ -227,9 +228,9 @@ async function postWinForAthlete(
   onAthletesChange: (next: Athlete[]) => void,
   athlete: Athlete,
   text: string,
-): Promise<boolean> {
+): Promise<true | string> {
   const t = text.trim()
-  if (!t) return false
+  if (!t) return 'Write the win first.'
   const day = dateKey(new Date())
   let meetingId: string | undefined
   let lessonId: string | undefined
@@ -264,7 +265,7 @@ async function postWinForAthlete(
     ...(meetingId ? { meetingId } : {}),
     ...(className ? { className } : {}),
   })
-  const post = await publishTextPost({
+  const published = await publishTextPostResult({
     authorId: athlete.id,
     caption: t,
     taggedIds: [athlete.id],
@@ -272,7 +273,7 @@ async function postWinForAthlete(
     sharedById: coach.id,
     sharedByName: coachShareLabel(coach),
   })
-  if (!post) return false
+  if (!published.post) return published.error || 'Could not post the win. Try again.'
   onAthletesChange(
     addCoachNotesToAthletes(athletes, [athlete.id], {
       author: coach,
@@ -299,6 +300,7 @@ function WinsGuide({ athletes, onDone }: { athletes: Athlete[]; onDone: () => vo
     if (prevEl.current) {
       prevEl.current.style.outline = ''
       prevEl.current.style.outlineOffset = ''
+      prevEl.current.style.boxShadow = ''
       prevEl.current = null
     }
     if (!athlete) return
@@ -312,12 +314,14 @@ function WinsGuide({ athletes, onDone }: { athletes: Athlete[]; onDone: () => vo
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el.style.outline = '2px solid var(--accent)'
       el.style.outlineOffset = '2px'
+      el.style.boxShadow = '0 0 28px var(--accent)'
       prevEl.current = el
     }
     return () => {
       if (prevEl.current) {
         prevEl.current.style.outline = ''
         prevEl.current.style.outlineOffset = ''
+        prevEl.current.style.boxShadow = ''
         prevEl.current = null
       }
     }
@@ -376,11 +380,11 @@ export function CoachReminderBanners({
 }) {
   const [tick, setTick] = useState(0)
   const [calEvents, setCalEvents] = useState<TodayCalendarEvent[]>([])
-  const [winsOpen, setWinsOpen] = useState(false)
   const [guiding, setGuiding] = useState(false)
   const [winDrafts, setWinDrafts] = useState<Record<string, string>>({})
   const [winBusy, setWinBusy] = useState<Record<string, boolean>>({})
   const [winDone, setWinDone] = useState<Record<string, boolean>>({})
+  const [winError, setWinError] = useState<Record<string, string | undefined>>({})
   const reminders = getCoachReminders(coachId, new Date(), calEvents)
 
   useEffect(() => {
@@ -409,11 +413,25 @@ export function CoachReminderBanners({
   const submitWin = (a: Athlete) => {
     void (async () => {
       setWinBusy((s) => ({ ...s, [a.id]: true }))
-      const ok = await postWinForAthlete(coach, athletes, onAthletesChange, a, winDrafts[a.id] ?? '')
-      setWinBusy((s) => ({ ...s, [a.id]: false }))
-      if (ok) {
-        setWinDrafts((s) => ({ ...s, [a.id]: '' }))
-        setWinDone((s) => ({ ...s, [a.id]: true }))
+      setWinError((s) => ({ ...s, [a.id]: undefined }))
+      try {
+        const result = await postWinForAthlete(
+          coach,
+          athletes,
+          onAthletesChange,
+          a,
+          winDrafts[a.id] ?? '',
+        )
+        if (result === true) {
+          setWinDrafts((s) => ({ ...s, [a.id]: '' }))
+          setWinDone((s) => ({ ...s, [a.id]: true }))
+        } else {
+          setWinError((s) => ({ ...s, [a.id]: result }))
+        }
+      } catch {
+        setWinError((s) => ({ ...s, [a.id]: 'Could not post the win. Try again.' }))
+      } finally {
+        setWinBusy((s) => ({ ...s, [a.id]: false }))
       }
     })()
   }
@@ -440,7 +458,7 @@ export function CoachReminderBanners({
                     Day's done, log the wins
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--muted)]">
-                    {bits.join(' · ')} today. Drop the wins in the recaps below.
+                    {bits.join(' · ')} today. Post the wins here, or walk the recaps below.
                   </p>
                 </div>
                 <button
@@ -453,18 +471,6 @@ export function CoachReminderBanners({
                 </button>
               </div>
               {worked.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setWinsOpen((o) => !o)}
-                  className="mt-2 flex w-full items-center justify-between rounded-xl border border-amber-300/30 bg-black/20 px-3 py-2 text-left"
-                >
-                  <span className="text-sm font-semibold text-[var(--text)]">
-                    Post wins here · {worked.length} athlete{worked.length === 1 ? '' : 's'}
-                  </span>
-                  <span className="text-xs text-[var(--muted)]">{winsOpen ? '▾' : '▸'}</span>
-                </button>
-              )}
-              {winsOpen && worked.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {worked.map((a) => (
                     <div key={a.id} className="rounded-xl bg-black/25 p-2.5">
@@ -474,52 +480,57 @@ export function CoachReminderBanners({
                           Win posted ✓
                         </p>
                       ) : (
-                        <div className="flex gap-2">
-                          <input
-                            value={winDrafts[a.id] ?? ''}
-                            onChange={(e) =>
-                              setWinDrafts((s) => ({ ...s, [a.id]: e.target.value }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                submitWin(a)
+                        <>
+                          <div className="flex gap-2">
+                            <input
+                              value={winDrafts[a.id] ?? ''}
+                              onChange={(e) =>
+                                setWinDrafts((s) => ({ ...s, [a.id]: e.target.value }))
                               }
-                            }}
-                            placeholder={`A win for ${a.name.split(' ')[0]}…`}
-                            className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
-                          />
-                          <button
-                            type="button"
-                            disabled={!(winDrafts[a.id] ?? '').trim() || winBusy[a.id]}
-                            onClick={() => submitWin(a)}
-                            className="h-10 shrink-0 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
-                          >
-                            {winBusy[a.id] ? 'Posting…' : 'Post'}
-                          </button>
-                        </div>
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  submitWin(a)
+                                }
+                              }}
+                              placeholder={`A win for ${a.name.split(' ')[0]}…`}
+                              className="h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 text-sm"
+                            />
+                            <button
+                              type="button"
+                              disabled={!(winDrafts[a.id] ?? '').trim() || winBusy[a.id]}
+                              onClick={() => submitWin(a)}
+                              className="h-10 shrink-0 rounded-lg bg-[var(--accent)] px-3 text-sm font-bold text-[var(--on-accent)] disabled:opacity-40"
+                            >
+                              {winBusy[a.id] ? 'Posting…' : 'Post'}
+                            </button>
+                          </div>
+                          {winError[a.id] && (
+                            <p className="mt-1 text-xs text-red-300">{winError[a.id]}</p>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWinsOpen(false)
-                      setGuiding(true)
-                    }}
-                    className="w-full rounded-xl border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold text-[var(--text)]"
-                  >
-                    Walk me through each recap →
-                  </button>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={onJumpToRecaps}
-                className="mt-2 w-full rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-black"
-              >
-                Go to recaps
-              </button>
+              {worked.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setGuiding(true)}
+                  className="mt-2 w-full rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-black"
+                >
+                  Walk me through each recap →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onJumpToRecaps}
+                  className="mt-2 w-full rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-black"
+                >
+                  Go to recaps
+                </button>
+              )}
               {guiding && (
                 <WinsGuide
                   athletes={worked}
