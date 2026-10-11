@@ -9,6 +9,7 @@ import {
   lessonAthleteIds,
   lessonNameList,
   loadActiveLessonId,
+  loadLessonSessions,
   plansForAthlete,
   sessionsForAthlete,
   sessionsForCoach,
@@ -177,6 +178,31 @@ export function HomeDashboard({
     if (pickHint) setRosterOpen(true)
   }, [pickHint])
   useEffect(() => subscribeLessons(() => setRefresh((n) => n + 1)), [])
+  // Once the picked athletes' lesson has ended, clear the "who are you with"
+  // pick so the Start lesson / Write a plan card doesn't linger for a lesson
+  // that's already done. Only clears when the session ended after the pick
+  // was made, so picking someone for a later lesson isn't wiped by an
+  // earlier ended session.
+  const pickSetAtRef = useRef<number>(0)
+  useEffect(() => {
+    if (withIds.length === 0) return
+    const day = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
+    const pickAt = pickSetAtRef.current
+    let done = false
+    for (const s of loadLessonSessions()) {
+      if (!s.endedAt || s.startedAt.slice(0, 10) !== day) continue
+      if (Date.parse(s.endedAt) <= pickAt) continue
+      const ids = lessonAthleteIds(s)
+      if (withIds.every((id) => ids.includes(id))) {
+        done = true
+        break
+      }
+    }
+    if (done) {
+      setWithIds([])
+      setEditing(null)
+    }
+  }, [withIds, refresh])
   useEffect(() => subscribeCoachClasses(() => setRefresh((n) => n + 1)), [])
   useEffect(() => {
     void hydrateCoachClasses().then(() => setRefresh((n) => n + 1))
@@ -195,7 +221,11 @@ export function HomeDashboard({
       setGlowingKinds(glow.glowing)
       const lessonEvent = glow.closest.lesson
       if (lessonEvent?.matchedAthleteId) {
-        setWithIds((prev) => (prev.length ? prev : [lessonEvent.matchedAthleteId!]))
+        setWithIds((prev) => {
+          if (prev.length) return prev
+          pickSetAtRef.current = Date.now()
+          return [lessonEvent.matchedAthleteId!]
+        })
       }
       // Auto-start school/camp/clinic from the calendar when enabled.
       if (getAutoStartSessions()) {
@@ -307,6 +337,7 @@ export function HomeDashboard({
   const plans = withAthlete ? plansForAthlete(withAthlete.id) : []
   const toggleLessonAthlete = (id: string) => {
     setWithIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    pickSetAtRef.current = Date.now()
     setEditing(null)
     setPickHint(false)
   }
