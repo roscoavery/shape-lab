@@ -846,6 +846,11 @@ export type LessonSession = {
   calendarTitle?: string | null
   calendarStartAt?: string | null
   calendarEndAt?: string | null
+  /**
+   * True once the coach extends the lesson past its calendar end time.
+   * The end-of-lesson warning then fires 1 minute before the end instead of 2.
+   */
+  calendarEndExtended?: boolean
   /** Notes copied from the iCloud event when the lesson started. */
   calendarNotes?: string | null
 }

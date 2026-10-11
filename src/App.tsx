@@ -232,7 +232,7 @@ import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
 import { isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
-import { checkLessonAutoStart, checkLessonAutoEnd } from './lib/lessonAuto'
+import { checkLessonAutoStart, checkLessonAutoEnd, checkLessonEndWarning, extendLessonEnd } from './lib/lessonAuto'
 import { getAutoStartSessions } from './lib/sessionPrefs'
 import { childAthletes } from './lib/parentLink'
 import { resolveAthleteViewAthlete } from './lib/familyView'
@@ -339,6 +339,15 @@ export default function App() {
   const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [autoEndMeetingId, setAutoEndMeetingId] = useState<string | null>(null)
   const [planModalEvent, setPlanModalEvent] = useState<TodayCalendarEvent | null>(null)
+  // Lesson end warning: shown once per end time, about 2 minutes before the
+  // scheduled end (1 minute once the coach has extended).
+  const [lessonEndWarn, setLessonEndWarn] = useState<{ sessionId: string; endMs: number } | null>(null)
+  const lessonWarnedEndRef = useRef<number | null>(null)
+  const lessonEndWarnRef = useRef<{ sessionId: string; endMs: number } | null>(null)
+  const showLessonEndWarn = (v: { sessionId: string; endMs: number } | null) => {
+    lessonEndWarnRef.current = v
+    setLessonEndWarn(v)
+  }
   const [profileOpen, setProfileOpen] = useState(false)
   const [storyComposerOpen, setStoryComposerOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
@@ -564,7 +573,22 @@ export default function App() {
           if (coach && isCoachProfile(coach)) {
             try {
               const endedId = checkLessonAutoEnd(coach.id)
-              if (endedId) setLessonTick((n) => n + 1)
+              if (endedId) {
+                setLessonTick((n) => n + 1)
+                if (lessonEndWarnRef.current?.sessionId === endedId) showLessonEndWarn(null)
+              }
+            } catch {
+              /* never break the app over the lesson clock */
+            }
+            try {
+              const warn = checkLessonEndWarning(coach.id)
+              if (warn && lessonWarnedEndRef.current !== warn.endMs) {
+                lessonWarnedEndRef.current = warn.endMs
+                showLessonEndWarn({ sessionId: warn.sessionId, endMs: warn.endMs })
+              } else if (!warn && lessonEndWarnRef.current) {
+                // Lesson ended or end time moved past; clear a stale prompt.
+                showLessonEndWarn(null)
+              }
             } catch {
               /* never break the app over the lesson clock */
             }
@@ -2918,6 +2942,56 @@ export default function App() {
             setAutoEndMeetingId(null)
           }}
         />
+      )
+    })()}
+    {lessonEndWarn && (() => {
+      const session = getLessonSession(lessonEndWarn.sessionId)
+      if (!session || session.endedAt) {
+        showLessonEndWarn(null)
+        return null
+      }
+      const names =
+        lessonNameList(
+          lessonAthleteIds(session)
+            .map((id) => athletes.find((a) => a.id === id)?.name ?? '')
+            .filter(Boolean),
+        ) || 'Lesson'
+      const minsLeft = Math.max(1, Math.round((lessonEndWarn.endMs - Date.now()) / 60000))
+      return (
+        <div
+          className="fixed inset-x-0 top-0 z-[75] flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          role="dialog"
+          aria-label="Lesson ending soon"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-amber-300/40 bg-[#0d1218]/95 px-4 py-3 shadow-xl backdrop-blur">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">
+              Lesson ending
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-[var(--text)]">
+              {names} · about {minsLeft} minute{minsLeft === 1 ? '' : 's'} left
+            </p>
+            <div className="mt-2.5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => showLessonEndWarn(null)}
+                className="flex-1 rounded-xl border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold text-[var(--text)]"
+              >
+                OK
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  extendLessonEnd(session.id, 5)
+                  setLessonTick((n) => n + 1)
+                  showLessonEndWarn(null)
+                }}
+                className="flex-1 rounded-xl bg-[var(--accent)] px-3 py-2 text-sm font-bold text-[var(--on-accent)]"
+              >
+                Extend 5 minutes
+              </button>
+            </div>
+          </div>
+        </div>
       )
     })()}
     {skillPathsOpen && (

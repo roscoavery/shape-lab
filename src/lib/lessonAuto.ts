@@ -5,7 +5,13 @@ import {
   type TodayCalendarEvent,
 } from './calendarClient'
 import { getSessionGlow } from './sessionGlow'
-import { findLiveLesson, endLessonSession } from './lessonStore'
+import {
+  findLiveLesson,
+  endLessonSession,
+  getLessonSession,
+  saveLessonSession,
+} from './lessonStore'
+import type { LessonSession } from '../types'
 import { getActiveMeeting } from './coachClasses'
 
 /**
@@ -81,4 +87,45 @@ export function checkLessonAutoEnd(coachId: string, now: Date = new Date()): str
   if (now.getTime() <= endMs) return null
   const ended = endLessonSession(live.id)
   return ended ? ended.id : null
+}
+
+export type LessonEndWarning = {
+  sessionId: string
+  /** Effective end time (includes extensions) in ms. */
+  endMs: number
+  /** 2 minutes before a scheduled end, 1 minute once extended. */
+  warnMs: number
+}
+
+/**
+ * A lesson that is about to end and should prompt the coach, or null.
+ * First warning fires about 2 minutes before the scheduled end; after the
+ * coach extends, warnings fire 1 minute before each new end time.
+ */
+export function checkLessonEndWarning(
+  coachId: string,
+  now: Date = new Date(),
+): LessonEndWarning | null {
+  const live = findLiveLesson(coachId)
+  if (!live || live.endedAt || !live.calendarEndAt) return null
+  const endMs = Date.parse(live.calendarEndAt)
+  if (!Number.isFinite(endMs)) return null
+  const leadMs = (live.calendarEndExtended ? 1 : 2) * 60 * 1000
+  const nowMs = now.getTime()
+  if (nowMs < endMs - leadMs || nowMs >= endMs) return null
+  return { sessionId: live.id, endMs, warnMs: endMs - leadMs }
+}
+
+/** Push the lesson's end time 5 minutes later. Returns the updated session. */
+export function extendLessonEnd(sessionId: string, minutes = 5): LessonSession | null {
+  const session = getLessonSession(sessionId)
+  if (!session || session.endedAt) return null
+  const currentEnd = session.calendarEndAt ? Date.parse(session.calendarEndAt) : NaN
+  const base = Number.isFinite(currentEnd) ? currentEnd : Date.now()
+  const next = saveLessonSession({
+    ...session,
+    calendarEndAt: new Date(base + minutes * 60 * 1000).toISOString(),
+    calendarEndExtended: true,
+  })
+  return next
 }
