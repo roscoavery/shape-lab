@@ -19,7 +19,7 @@ export const TODAY_COACH_TOUR: TourStep[] = [
   },
   {
     target: 'tour-today-clock-floor',
-    title: 'Floor hold clock',
+    title: 'Hold clock',
     text: 'Search a name, pick the hold, start the clock — right there on the floor, no camera grade. Tap the glowing card to continue.',
   },
   {
@@ -48,6 +48,18 @@ export const TODAY_COACH_TOUR: TourStep[] = [
     text: 'Class and lesson recaps land here at the bottom. This is where the evening reminder sends you to log the wins. You are set — tap Done.',
   },
 ]
+
+/**
+ * Build the Today coach tour at launch so it only tours what's on screen.
+ * The hold clock lives in the active-group athlete view; the class clock,
+ * chalkboard, and collages live in the coach view. A step whose card isn't
+ * rendered is dropped (numbering adjusts on its own) instead of floating
+ * over the wrong card.
+ */
+export function buildTodayCoachTour(): TourStep[] {
+  if (typeof document === 'undefined') return TODAY_COACH_TOUR
+  return TODAY_COACH_TOUR.filter((s) => document.getElementById(s.target))
+}
 
 export const SCROLL_TOUR: TourStep[] = [
   {

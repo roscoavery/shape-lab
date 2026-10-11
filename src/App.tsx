@@ -56,7 +56,7 @@ import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { CoachReminderBanners } from './components/today/CoachReminderBanners'
 import { LessonPlanModal } from './components/today/LessonPlanModal'
 import { TourOfferButton } from './components/tour/TourOfferButton'
-import { TODAY_COACH_TOUR, LEARN_TOUR, SCROLL_TOUR, PROFILE_TOUR, ATHLETE_HOME_TOUR } from './config/surfaceTours'
+import { buildTodayCoachTour, LEARN_TOUR, SCROLL_TOUR, PROFILE_TOUR, ATHLETE_HOME_TOUR } from './config/surfaceTours'
 import { ClassStation } from './components/today/ClassStation'
 import { ClassSession } from './components/today/ClassSession'
 import { EndClassPrompt } from './components/today/EndClassPrompt'
@@ -1524,7 +1524,7 @@ export default function App() {
       {tab === 'today' && deskRole !== 'parent' && deskRole !== 'athlete' && (
         <div className="flex min-w-0 flex-col gap-4 pt-8 md:pt-4">
           <div className="px-5">
-            <TourOfferButton onTakeTour={() => openTour(TODAY_COACH_TOUR)} label="✨ Tour this page" />
+            <TourOfferButton onTakeTour={() => openTour(buildTodayCoachTour())} label="✨ Tour this page" />
           </div>
           {activeProfile && isCoachProfile(activeProfile) && (
             <div id="tour-today-banners">
