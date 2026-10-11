@@ -1513,7 +1513,6 @@ export function ReferencePane({
           quiet={Boolean(viewer)}
           markup={!pip}
           onVideoElement={onVideoElement}
-          onScrub={onScrub}
           onSwipeVertical={topSwipeNav}
           tapTogglesChrome={fill && !viewer}
           chromeOpen={fill && !viewer ? fsChromeOpen : undefined}

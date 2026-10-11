@@ -18,6 +18,7 @@ import {
   subscribeClassPlans,
   pullClassPlans,
   todayKey,
+  lessonPlanDateKey,
   type ClassPlan,
 } from '../../lib/classPlans'
 
@@ -29,16 +30,6 @@ type Props = {
 
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
   return athletes.find((a) => a.id === id)
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  let h = d.getHours()
-  const m = String(d.getMinutes()).padStart(2, '0')
-  const ampm = h >= 12 ? 'pm' : 'am'
-  h = h % 12 || 12
-  return `${h}:${m}${ampm}`
 }
 
 /**
@@ -61,18 +52,6 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
   // Pull fresh plans when the brief opens.
   useEffect(() => {
     void pullClassPlans()
-  }, [])
-
-  // Open a lesson's plan editor when the "needs a plan" banner is tapped.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ eventId?: string }>).detail
-      if (detail?.eventId) {
-        setOpenOfferingId(`lesson:${detail.eventId}`)
-      }
-    }
-    window.addEventListener('shapelab:open-calendar-event', handler)
-    return () => window.removeEventListener('shapelab:open-calendar-event', handler)
   }, [])
 
   useEffect(() => {
@@ -231,7 +210,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
                     event={ev}
                     athlete={athlete ?? null}
                     coachId={coach.id}
-                    dateKey={dateKey}
+                    dateKey={lessonPlanDateKey(ev)}
                     open={openOfferingId === planKey}
                     onToggle={() =>
                       setOpenOfferingId((id) => (id === planKey ? null : planKey))

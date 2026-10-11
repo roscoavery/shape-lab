@@ -78,13 +78,18 @@ export function LessonWorkspace({
   const [plansTick, setPlansTick] = useState(0)
 
   // Planned tasks for this lesson (written in the morning brief or calendar).
-  // The plan lives in the class-plan store under lesson:<calendarEventId>.
-  // Falls back to finding today's lesson plans for this athlete if the
-  // lesson wasn't started from a calendar event.
+  // The plan lives in the class-plan store under lesson:<calendarEventId>,
+  // keyed by the event's date so a plan written days ahead is still there
+  // on lesson day. Falls back to finding today's lesson plans for this
+  // athlete if the lesson wasn't started from a calendar event.
+  const planDate = useMemo(
+    () => (session.calendarStartAt ?? session.startedAt ?? '').slice(0, 10) || todayKey(),
+    [session.calendarStartAt, session.startedAt],
+  )
   const lessonTasks = useMemo(() => {
     void plansTick
     if (!coach) return []
-    const date = todayKey()
+    const date = planDate
     // Primary: plan linked to the calendar event.
     if (session.calendarEventId) {
       const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, coach.id)
@@ -105,7 +110,7 @@ export function LessonWorkspace({
     }
     return []
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.calendarEventId, session.id, coach?.id, athlete?.id, plansTick])
+  }, [session.calendarEventId, session.id, coach?.id, athlete?.id, plansTick, planDate])
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
   useEffect(() => {
@@ -115,7 +120,7 @@ export function LessonWorkspace({
   // Find the plan holding these tasks (for toggle/reorder).
   const findTaskPlan = () => {
     if (!coach) return null
-    const date = todayKey()
+    const date = planDate
     if (session.calendarEventId) {
       const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, coach.id)
       if (p.tasks.length > 0) return p

@@ -2,6 +2,7 @@ import type { LessonSession } from '../types'
 import { loadLessonSessions } from './lessonStore'
 import { loadMeetings, loadOfferingsForCoach, parseClassTimeMinutes, WEEKDAYS } from './coachClasses'
 import { estimateHoursForDay, getDayLog, pendingJackrabbitDays } from './coachHours'
+import { getClassPlan } from './classPlans'
 import type { TodayCalendarEvent } from './calendarClient'
 
 export type CoachReminder =
@@ -59,6 +60,12 @@ export function getCoachReminders(
   const sessions = loadLessonSessions().filter((s) => s.coachId === coachId)
   const unplanned = sessions.filter((s) => {
     if (s.endedAt || s.planId) return false
+    // Tasks written in the morning brief / calendar / live lesson count as a plan.
+    if (s.calendarEventId) {
+      const d = (s.calendarStartAt ?? s.startedAt ?? '').slice(0, 10)
+      const p = d ? getClassPlan(d, `lesson:${s.calendarEventId}`) : null
+      if (p && p.tasks.length > 0) return false
+    }
     const start = s.calendarStartAt ?? s.startedAt
     const day = start.slice(0, 10)
     return day === today || day === tomorrowKey
@@ -77,6 +84,9 @@ export function getCoachReminders(
     if (ev.lessonLinks.length > 0) return false
     const day = ev.startAt.slice(0, 10)
     if (day !== today && day !== tomorrowKey) return false
+    // A written task list counts as a plan, even before the lesson exists.
+    const plan = getClassPlan(day, `lesson:${ev.id}`)
+    if (plan && plan.tasks.length > 0) return false
     // Heuristic: lesson-like titles (private, lesson, athlete names).
     // Classes are handled separately via meetings.
     const t = ev.title.toLowerCase()

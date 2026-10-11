@@ -207,6 +207,16 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/**
+ * Date key a lesson's plan lives under. Lesson plans are keyed by the
+ * calendar event's date, not "today": a lesson planned on Saturday for a
+ * Sunday event must still be there when Sunday's live lesson looks it up.
+ */
+export function lessonPlanDateKey(event: { startAt: string }): string {
+  const d = (event.startAt ?? '').slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : todayKey()
+}
+
 /** Get or create the plan for an offering on a date. */
 export function getOrCreateClassPlan(
   date: string,

@@ -1524,7 +1524,6 @@ export function CameraPane({
                   markup
                   hudCorner={camHudCorner}
                   onVideoElement={onVideoElement}
-              onScrub={onScrub}
                   onSwipeVertical={stepBottomClip}
                   tapTogglesChrome={fullscreen}
                   chromeOpen={fullscreen ? replayChromeOpen : undefined}

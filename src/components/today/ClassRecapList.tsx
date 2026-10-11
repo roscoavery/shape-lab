@@ -414,6 +414,17 @@ function AthleteRecap({
   const [audience, setAudience] = useState<NoteAudience>('athlete')
   const [win, setWin] = useState('')
   const [bigWin, setBigWin] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+
+  // End-of-day guided wins: expand this athlete's notes/win box on request.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ athleteId?: string }>).detail?.athleteId
+      if (id && id === athlete.id) setNotesOpen(true)
+    }
+    window.addEventListener('shapelab:reveal-recap', handler)
+    return () => window.removeEventListener('shapelab:reveal-recap', handler)
+  }, [athlete.id])
 
   // Checked-off plan tasks for this athlete in this class.
   const planDate = meeting.startedAt.slice(0, 10)
@@ -425,7 +436,7 @@ function AthleteRecap({
   )
 
   return (
-    <article className="rounded-xl bg-black/25 p-3">
+    <article className="rounded-xl bg-black/25 p-3" data-recap-athlete={athlete.id}>
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold">
           <AthleteName athlete={athlete} size="sm" />
@@ -493,6 +504,8 @@ function AthleteRecap({
         <CollapsibleSection
           inset
           title="Notes"
+          open={notesOpen}
+          onOpenChange={setNotesOpen}
           hint={
             grouped.length
               ? grouped.map((g) => `${g.authorName.split(' ')[0]} · ${g.notes.length}`).join(' · ')

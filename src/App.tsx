@@ -54,6 +54,7 @@ import { StillCropProvider } from './components/StillCropContext'
 import { StillOverlayPicker } from './components/StillOverlayPicker'
 import { HomeDashboard } from './components/lesson/HomeDashboard'
 import { CoachReminderBanners } from './components/today/CoachReminderBanners'
+import { LessonPlanModal } from './components/today/LessonPlanModal'
 import { TourOfferButton } from './components/tour/TourOfferButton'
 import { TODAY_COACH_TOUR, LEARN_TOUR, SCROLL_TOUR, PROFILE_TOUR, ATHLETE_HOME_TOUR } from './config/surfaceTours'
 import { ClassStation } from './components/today/ClassStation'
@@ -199,7 +200,7 @@ import {
   lessonNameList,
 } from './lib/lessonStore'
 import { linkAthleteToCoach } from './lib/coachLink'
-import { linkLessonCalendarEvent } from './lib/calendarClient'
+import { linkLessonCalendarEvent, type TodayCalendarEvent } from './lib/calendarClient'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateSkillPaths } from './lib/skillPaths'
 import { hydrateChalkboards } from './lib/chalkboard'
@@ -231,6 +232,8 @@ import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
 import { isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
+import { checkLessonAutoStart, checkLessonAutoEnd } from './lib/lessonAuto'
+import { getAutoStartSessions } from './lib/sessionPrefs'
 import { childAthletes } from './lib/parentLink'
 import { resolveAthleteViewAthlete } from './lib/familyView'
 import { coachShareLabel } from './lib/coachShare'
@@ -335,6 +338,7 @@ export default function App() {
   const [stationOpen, setStationOpen] = useState(false)
   const [classSessionOpen, setClassSessionOpen] = useState(false)
   const [autoEndMeetingId, setAutoEndMeetingId] = useState<string | null>(null)
+  const [planModalEvent, setPlanModalEvent] = useState<TodayCalendarEvent | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [storyComposerOpen, setStoryComposerOpen] = useState(false)
   const [clockOpen, setClockOpen] = useState(false)
@@ -423,6 +427,16 @@ export default function App() {
   }, [])
   const authStatusRef = useRef(authStatus)
   authStatusRef.current = authStatus
+  // Latest coach profile + lesson starter for the every-minute session clock,
+  // which is defined before them in this file.
+  const activeProfileRef = useRef<Athlete | null>(null)
+  const startLessonRef = useRef<
+    (
+      athleteIds: string[],
+      planId?: string | null,
+      calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
+    ) => Promise<void>
+  >(async () => {})
   // Never lock during a live class or lesson. Otherwise 3h idle.
   // (liveClass/liveLesson are defined below; check directly here.)
   const lockSuppressed = (() => {
@@ -542,6 +556,27 @@ export default function App() {
             /* never break the app over the class clock */
           }
         })
+        // Lessons: auto-start 1-on-1s at calendar time and auto-end them at
+        // the calendar end time, on any tab. (The old check lived in the
+        // Today view and never ran while he was on the calendar.)
+        if (getAutoStartSessions()) {
+          const coach = activeProfileRef.current
+          if (coach && isCoachProfile(coach)) {
+            try {
+              const endedId = checkLessonAutoEnd(coach.id)
+              if (endedId) setLessonTick((n) => n + 1)
+            } catch {
+              /* never break the app over the lesson clock */
+            }
+            void checkLessonAutoStart(coach.id)
+              .then((action) => {
+                if (action) void startLessonRef.current(action.athleteIds, null, action.calendar)
+              })
+              .catch(() => {
+                /* never break the app over auto-start */
+              })
+          }
+        }
       } catch {
         /* never break the app over the class clock */
       }
@@ -803,6 +838,7 @@ export default function App() {
   }, [settings])
 
   const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
+  activeProfileRef.current = activeProfile
 
   // Family beta: athlete view through a parent login. Auth (authUser) stays
   // the parent — this only changes which experience renders. The id is
@@ -1032,6 +1068,7 @@ export default function App() {
     }
     setLessonTick((n) => n + 1)
   }
+  startLessonRef.current = startLesson
 
   const saveIgStill = useCallback((draft: IgCropDraft) => {
     const athlete = athletes.find((a) => a.id === activeAthleteId) ?? null
@@ -1469,19 +1506,27 @@ export default function App() {
             <div id="tour-today-banners">
             <CoachReminderBanners
               coachId={activeProfile.id}
+              coach={activeProfile}
+              athletes={athletes}
+              onAthletesChange={setAthleteRoster}
               onJumpToRecaps={() =>
                 document.getElementById('today-recaps')?.scrollIntoView({ behavior: 'smooth' })
               }
-              onPlanLesson={(eventId) => {
-                // Tell the morning brief to open this lesson's plan editor.
-                window.dispatchEvent(
-                  new CustomEvent('shapelab:open-calendar-event', { detail: { eventId } }),
-                )
-                // Scroll to the morning brief.
-                document.getElementById('morning-brief')?.scrollIntoView({ behavior: 'smooth' })
-              }}
+              onPlanLesson={(ev) => setPlanModalEvent(ev)}
             />
             </div>
+          )}
+          {planModalEvent && activeProfile && isCoachProfile(activeProfile) && (
+            <LessonPlanModal
+              event={planModalEvent}
+              athlete={
+                planModalEvent.matchedAthleteId
+                  ? (athletes.find((a) => a.id === planModalEvent.matchedAthleteId) ?? null)
+                  : null
+              }
+              coachId={activeProfile.id}
+              onClose={() => setPlanModalEvent(null)}
+            />
           )}
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
           <div className="min-w-0">

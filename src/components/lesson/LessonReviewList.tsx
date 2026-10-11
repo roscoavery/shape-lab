@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   addLessonNote,
   planForSession,
@@ -58,6 +58,18 @@ export function LessonReviewList({
   const [askHideId, setAskHideId] = useState<string | null>(null)
   const [undoId, setUndoId] = useState<string | null>(null)
   const [askNoteId, setAskNoteId] = useState<string | null>(null)
+
+  // End-of-day guided wins: open the session containing this athlete.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ athleteId?: string }>).detail?.athleteId
+      if (!id) return
+      const match = ended.find((s) => lessonAthleteIds(s).includes(id))
+      if (match) setOpenId(match.id)
+    }
+    window.addEventListener('shapelab:reveal-recap', handler)
+    return () => window.removeEventListener('shapelab:reveal-recap', handler)
+  }, [ended])
   const now = Date.now()
   const hidden = ended.filter((s) => s.hiddenAt)
   const showing = ended.filter((s) => !s.hiddenAt)
@@ -94,7 +106,11 @@ export function LessonReviewList({
         const groups = groupLessonWork(s)
         const hideable = canHideSession(s)
         return (
-          <li key={s.id} className="rounded-lg border border-[var(--panel-border)] bg-[#121820]">
+          <li
+            key={s.id}
+            className="rounded-lg border border-[var(--panel-border)] bg-[#121820]"
+            data-recap-athlete={lessonAthleteIds(s).join(' ')}
+          >
             <div className="flex items-stretch">
               <button
                 type="button"

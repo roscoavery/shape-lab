@@ -30,7 +30,7 @@ import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
-import { subscribeClassPlans, pullClassPlans, todayKey } from '../../lib/classPlans'
+import { subscribeClassPlans, pullClassPlans, lessonPlanDateKey } from '../../lib/classPlans'
 
 type Props = {
   coachId: string
@@ -193,7 +193,6 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [openEventId, setOpenEventId] = useState<string | null>(null)
   const [plansTick, setPlansTick] = useState(0)
   const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
-  const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
   useEffect(() => {
@@ -962,12 +961,15 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                 }
               />
               {classifySessionEvent(openEvent) === 'lesson' && (
-                <div className="mt-2">
+                <div className="mt-2 border-t border-white/10 pt-2">
+                  <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    Lesson plan
+                  </p>
                   <LessonPlanCard
                     event={openEvent}
                     athlete={openEvent.matchedAthleteId ? (athletes.find((a) => a.id === openEvent.matchedAthleteId) ?? null) : null}
                     coachId={coachId}
-                    dateKey={dateKey}
+                    dateKey={lessonPlanDateKey(openEvent)}
                     open={true}
                     onToggle={() => {}}
                     taskInput={taskInputs[`lesson:${openEvent.id}`] ?? ''}
