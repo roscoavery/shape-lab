@@ -1046,7 +1046,8 @@ function WiggleToggle({
   on: boolean
 }) {
   const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failMsg, setFailMsg] = useState<string | null>(null)
+  const failed = failMsg !== null
   return (
     <button
       type="button"
@@ -1054,23 +1055,17 @@ function WiggleToggle({
       onClick={async (e) => {
         e.stopPropagation()
         setSaving(true)
-        setFailed(false)
+        setFailMsg(null)
         try {
-          const ok = await toggleKeyHelperWiggle(targetId, skillId, !on)
-          if (!ok) setFailed(true)
-        } catch {
-          setFailed(true)
+          const res = await toggleKeyHelperWiggle(targetId, skillId, !on)
+          if (!res.ok) setFailMsg(res.error ?? 'Save failed')
+        } catch (err) {
+          setFailMsg(err instanceof Error ? err.message : 'Save failed')
         } finally {
           setSaving(false)
         }
       }}
-      title={
-        failed
-          ? 'Could not save. Tap to try again.'
-          : on
-            ? 'Wiggle is on. This skill rocks on the map.'
-            : 'Turn wiggle on for this skill'
-      }
+      title={failed ? `Could not save: ${failMsg}. Tap to try again.` : on ? 'Wiggle is on. This skill rocks on the map.' : 'Turn wiggle on for this skill'}
       aria-pressed={on}
       className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
         failed

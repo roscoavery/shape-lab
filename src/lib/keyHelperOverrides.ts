@@ -107,20 +107,30 @@ export function keyHelperCombosForTarget(
 export async function saveKeyHelperCombos(
   targetSkillId: string,
   combos: string[][],
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch('/api/key-helpers', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ target: canonical(targetSkillId), combos }),
     })
-    if (!res.ok) return false
+    if (!res.ok) {
+      let detail = ''
+      try {
+        const errBody = (await res.json()) as { error?: string }
+        if (errBody?.error) detail = `: ${errBody.error}`
+      } catch {
+        // ignore
+      }
+      return { ok: false, error: `HTTP ${res.status}${detail}` }
+    }
     const data = (await res.json()) as { helpers?: unknown }
     overrides = sanitize(data.helpers)
     emit()
-    return true
-  } catch {
-    return false
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
   }
 }
 
@@ -152,10 +162,11 @@ export async function toggleKeyHelperWiggle(
   targetSkillId: string,
   skillId: string,
   on: boolean,
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const canon = canonical(targetSkillId)
   const skill = canonical(skillId)
-  if (!canon || !skill || !getRegistrySkill(skill)) return false
+  if (!canon || !skill) return { ok: false, error: 'Bad skill id' }
+  if (!getRegistrySkill(skill)) return { ok: false, error: `Not in registry: ${skill}` }
   const current = keyHelperCombosForTarget(canon, (id) => !!getRegistrySkill(id))
   const set = new Set(current.flat())
   if (on) set.add(skill)

@@ -80,10 +80,10 @@ export function KeyHelperEditor({
   const save = async () => {
     setSaving(true)
     setError(null)
-    const ok = await saveKeyHelperCombos(target, combos)
+    const res = await saveKeyHelperCombos(target, combos)
     setSaving(false)
-    if (!ok) {
-      setError('Could not save. Check the connection and try again.')
+    if (!res.ok) {
+      setError(res.error ? `Could not save: ${res.error}` : 'Could not save. Check the connection and try again.')
       return
     }
     setOverridden(hasKeyHelperOverride(target))
