@@ -12,7 +12,7 @@ import {
   type ClassPlan,
   type ClassPlanTask,
 } from '../../lib/classPlans'
-import { classMemberIds } from '../../lib/coachClasses'
+import { classMemberIds, listLiveMeetings, resolveAttendeeAthletes, subscribeCoachClasses } from '../../lib/coachClasses'
 
 type Props = {
   coach: Athlete
@@ -39,6 +39,8 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setTick((n) => n + 1)), [])
+  // Refresh when class attendance changes (athlete marked present during live class).
+  useEffect(() => subscribeCoachClasses(() => setTick((n) => n + 1)), [])
   // Pull fresh plans when the checklist opens so tasks written on another
   // device show up immediately.
   useEffect(() => {
@@ -108,6 +110,18 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
       .sort((a, b) => (a.firstName || a.name).localeCompare(b.firstName || b.name))
   }, [rows, athletes])
 
+  // When a class is live, only show athletes marked present in the name picker.
+  // (Coach can still use "Coach view: show everyone" to see all.)
+  const liveMeeting = useMemo(() => listLiveMeetings()[0] ?? null, [tick])
+  const presentIds = useMemo(() => {
+    if (!liveMeeting) return null
+    return new Set(resolveAttendeeAthletes(liveMeeting, athletes).map((a) => a.id))
+  }, [liveMeeting, athletes])
+  const visibleAthletes = useMemo(() => {
+    if (!presentIds) return athletesWithTasks
+    return athletesWithTasks.filter((a) => presentIds.has(a.id))
+  }, [athletesWithTasks, presentIds])
+
   // Rows visible for the current selection. 'Everyone' tasks only apply to
   // athletes in that task's class, not every athlete the coach sees that day.
   const visible: TaskRow[] = useMemo(() => {
@@ -164,7 +178,12 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
       {selectedId === null ? (
         <div className="grid gap-3">
           <p className="text-center text-lg text-white/70">Tap your name</p>
-          {athletesWithTasks.map((a) => {
+          {liveMeeting && presentIds && (
+            <p className="text-center text-sm text-white/50">
+              Showing athletes marked present in the live class
+            </p>
+          )}
+          {visibleAthletes.map((a) => {
             const myRows = rows.filter(
               (r) =>
                 r.task.athleteIds.includes(a.id) ||
@@ -188,10 +207,12 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
               </button>
             )
           })}
-          {athletesWithTasks.length === 0 && (
+          {visibleAthletes.length === 0 && (
             <div className="rounded-2xl border border-white/10 p-8 text-center">
               <p className="text-white/70">
-                No tasks planned yet. Your coach adds them in the morning brief.
+                {liveMeeting
+                  ? 'No present athletes have tasks yet.'
+                  : 'No tasks planned yet. Your coach adds them in the morning brief.'}
               </p>
             </div>
           )}

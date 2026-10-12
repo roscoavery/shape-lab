@@ -13,6 +13,7 @@
  */
 import { SKILL_KEY_HELPERS } from '../config/skillKeyHelpers'
 import { getRegistrySkill } from './skillRegistry'
+import { markedFetch } from './authSession'
 
 export type KeyHelperOverrides = Record<string, string[][]>
 
@@ -117,7 +118,7 @@ export async function saveKeyHelperCombos(
     emit()
   }
   try {
-    const res = await fetch('/api/key-helpers', {
+    const res = await markedFetch('/api/key-helpers', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
@@ -145,7 +146,7 @@ export async function saveKeyHelperCombos(
 /** Drop Ryan's override for one target, restoring the shipped defaults. */
 export async function resetKeyHelperCombos(targetSkillId: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/key-helpers', {
+    const res = await markedFetch('/api/key-helpers', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ target: canonical(targetSkillId), reset: true }),

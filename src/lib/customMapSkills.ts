@@ -3,6 +3,8 @@
  * Stored on the server (data/custom-map-skills.json), hydrated here.
  */
 
+import { markedFetch } from './authSession'
+
 export type CustomMapSkill = {
   id: string
   name: string
@@ -60,7 +62,7 @@ export async function addCustomMapSkill(
   skills = [...skills, temp]
   emit()
   try {
-    const res = await fetch('/api/custom-map-skills', {
+    const res = await markedFetch('/api/custom-map-skills', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
@@ -88,7 +90,7 @@ export async function deleteCustomMapSkill(id: string): Promise<boolean> {
   skills = skills.filter((s) => s.id !== id)
   emit()
   try {
-    const res = await fetch('/api/custom-map-skills', {
+    const res = await markedFetch('/api/custom-map-skills', {
       method: 'DELETE',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
