@@ -1046,6 +1046,7 @@ function WiggleToggle({
   on: boolean
 }) {
   const [saving, setSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
   return (
     <button
       type="button"
@@ -1053,21 +1054,33 @@ function WiggleToggle({
       onClick={async (e) => {
         e.stopPropagation()
         setSaving(true)
+        setFailed(false)
         try {
-          await toggleKeyHelperWiggle(targetId, skillId, !on)
+          const ok = await toggleKeyHelperWiggle(targetId, skillId, !on)
+          if (!ok) setFailed(true)
+        } catch {
+          setFailed(true)
         } finally {
           setSaving(false)
         }
       }}
-      title={on ? 'Wiggle is on. This skill rocks on the map.' : 'Turn wiggle on for this skill'}
+      title={
+        failed
+          ? 'Could not save. Tap to try again.'
+          : on
+            ? 'Wiggle is on. This skill rocks on the map.'
+            : 'Turn wiggle on for this skill'
+      }
       aria-pressed={on}
       className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
-        on
-          ? 'border-amber-300/70 bg-amber-300/15 text-amber-200'
-          : 'border-white/15 text-white/40 hover:text-white/70'
+        failed
+          ? 'border-red-400/70 bg-red-400/15 text-red-200'
+          : on
+            ? 'border-amber-300/70 bg-amber-300/15 text-amber-200'
+            : 'border-white/15 text-white/40 hover:text-white/70'
       } ${saving ? 'opacity-50' : ''}`}
     >
-      <span aria-hidden>{on ? '●' : '○'}</span> Wiggle
+      <span aria-hidden>{on ? '●' : '○'}</span> {failed ? 'Retry' : 'Wiggle'}
     </button>
   )
 }
