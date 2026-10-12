@@ -115,6 +115,7 @@ import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore
 import { readDeskMessagesFile, writeDeskMessagesFile } from './deskMessagesStore.ts'
 import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
 import { keyHelpersForClient, saveKeyHelperOverride } from './keyHelperStore.ts'
+import { listCustomMapSkills, addCustomMapSkill, deleteCustomMapSkill } from './customMapSkillsStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import {
   addHighlight,
@@ -254,6 +255,7 @@ const API_PATHS = new Set([
   '/api/class-plans',
   '/api/notices',
   '/api/key-helpers',
+  '/api/custom-map-skills',
   '/api/research',
   '/api/social',
   '/api/discuss',
@@ -1914,6 +1916,42 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/custom-map-skills') {
+    if (req.method === 'GET') {
+      sendJson(res, 200, { kind: 'shape-lab-custom-map-skills', skills: await listCustomMapSkills() })
+      return true
+    }
+    if (req.method === 'POST') {
+      const body = (JSON.parse(await readRequestBody(req)) ?? {}) as {
+        name?: unknown
+        rowIndex?: unknown
+        family?: unknown
+      }
+      const skill = await addCustomMapSkill(
+        typeof body.name === 'string' ? body.name : '',
+        typeof body.rowIndex === 'number' ? body.rowIndex : -1,
+        typeof body.family === 'string' ? (body.family as 'standing' | 'front' | 'cartwheel' | 'roundoff') : 'standing',
+      )
+      if (!skill) {
+        sendJson(res, 400, { error: 'Name, level, and family are required.' })
+        return true
+      }
+      sendJson(res, 201, { skill })
+      return true
+    }
+    if (req.method === 'DELETE') {
+      const body = (JSON.parse(await readRequestBody(req)) ?? {}) as { id?: unknown }
+      const ok = typeof body.id === 'string' ? await deleteCustomMapSkill(body.id) : false
+      if (!ok) {
+        sendJson(res, 404, { error: 'Skill not found.' })
+        return true
+      }
+      sendJson(res, 200, { ok: true })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
     return true
   }
   if (path === '/api/library') {

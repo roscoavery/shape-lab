@@ -15,7 +15,7 @@
  * The guiding-light data (glowMap) is theme/view-independent — only the
  * rendering changes. The LevelBar only renders in Map view.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
 import { canonicalSkillId, resolveGoalSkill } from '../../lib/skillPaths'
@@ -29,6 +29,14 @@ import {
 } from '../../lib/skillPathHighlight'
 import { isAthleteProfile } from '../../lib/profileRole'
 import type { Athlete, AthleteSkillGoal } from '../../types'
+import {
+  getCustomMapSkills,
+  hydrateCustomMapSkills,
+  subscribeCustomMapSkills,
+  addCustomMapSkill,
+  deleteCustomMapSkill,
+  type CustomMapSkill,
+} from '../../lib/customMapSkills'
 
 /** Look + layout options for the skill map page. Persisted in localStorage. */
 type MapTheme = 'neon' | 'midnight' | 'paper' | 'ember'
@@ -945,6 +953,76 @@ const ROWS: MapRow[] = [
   },
 ]
 
+/** Family to column range on the 8-col grid. */
+const FAMILY_COLS: Record<CustomMapSkill['family'], [number, number]> = {
+  standing: [1, 3],
+  front: [3, 5],
+  cartwheel: [5, 7],
+  roundoff: [7, 9],
+}
+
+/**
+ * Merge Ryan's custom map skills into the ROWS.
+ * Each custom skill goes into its rowIndex + family column range.
+ * If the range already has tiles, the space is split evenly.
+ */
+function mergeCustomSkills(rows: MapRow[], customs: CustomMapSkill[]): MapRow[] {
+  if (customs.length === 0) return rows
+  return rows.map((row, ri) => {
+    const mine = customs.filter((c) => c.rowIndex === ri)
+    if (mine.length === 0) return row
+    // Group customs by family
+    const byFamily = new Map<CustomMapSkill['family'], CustomMapSkill[]>()
+    for (const c of mine) {
+      const list = byFamily.get(c.family) ?? []
+      list.push(c)
+      byFamily.set(c.family, list)
+    }
+    const tiles = [...row.tiles]
+    for (const [family, list] of byFamily) {
+      const [start, end] = FAMILY_COLS[family]
+      // Find existing tiles overlapping this family's range
+      const overlapping = tiles.filter((t) => {
+        const m = t.col.match(/(\d+)\s*\/\s*(\d+)/)
+        if (!m) return false
+        const s = parseInt(m[1], 10)
+        const e = parseInt(m[2], 10)
+        return s < end && e > start
+      })
+      const total = overlapping.length + list.length
+      const width = end - start
+      // Remove overlapping, re-add split
+      const overlappingIds = new Set(overlapping.map((t) => t.skillId + t.label))
+      const kept = tiles.filter((t) => !overlappingIds.has(t.skillId + t.label))
+      const newTiles: MapTile[] = []
+      // Split the range evenly among overlapping + new
+      let cursor = start
+      const each = width / total
+      for (const t of overlapping) {
+        const cs = Math.round(cursor)
+        const ce = Math.round(cursor + each)
+        newTiles.push({ ...t, col: `${cs} / ${ce}` })
+        cursor += each
+      }
+      for (const c of list) {
+        const cs = Math.round(cursor)
+        const ce = Math.round(cursor + each)
+        // For the last one, snap to end to avoid rounding gaps
+        newTiles.push({
+          skillId: c.id,
+          label: c.name,
+          col: `${cs} / ${c === list[list.length - 1] ? end : ce}`,
+        })
+        cursor += each
+      }
+      // Replace tiles: kept + newTiles (sorted by col start)
+      tiles.length = 0
+      tiles.push(...kept, ...newTiles)
+    }
+    return { ...row, tiles }
+  })
+}
+
 /** Collapsed by default: everything above the triple-full line. Killer sits alone at the very top. */
 const BEYOND_ROWS: MapRow[] = [
   {
@@ -1240,6 +1318,137 @@ function reflowRowTiles(row: MapRow, headers?: { label: string; col: string }[])
     .map((p, i) => ({ ...p.tile, col: parts[i] }))
 }
 
+/** Tile for Ryan's custom map skills. Coach can delete via the X. */
+function CustomSkillTile({
+  tile,
+}: {
+  tile: MapTile
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const doDelete = async () => {
+    if (!confirming) {
+      setConfirming(true)
+      setTimeout(() => setConfirming(false), 3000)
+      return
+    }
+    await deleteCustomMapSkill(tile.skillId)
+  }
+  return (
+    <div
+      className="relative flex items-center justify-center rounded-xl border border-dashed border-white/30 bg-white/5 px-2 py-3 text-center"
+      style={{ gridColumn: tile.col }}
+    >
+      <span className="text-xs font-bold text-white/80">{tile.label}</span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          doDelete()
+        }}
+        className={`absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+          confirming ? 'bg-red-500 text-white' : 'bg-white/20 text-white/70 hover:bg-white/30'
+        }`}
+        title={confirming ? 'Tap again to delete' : 'Delete this custom skill'}
+      >
+        {confirming ? '?' : '×'}
+      </button>
+    </div>
+  )
+}
+
+function AddCustomSkillForm({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState('')
+  const [rowIndex, setRowIndex] = useState(12) // default mid-level
+  const [family, setFamily] = useState<CustomMapSkill['family']>('standing')
+  const [saving, setSaving] = useState(false)
+  const rowCount = ROWS.length
+
+  const save = async () => {
+    if (!name.trim() || saving) return
+    setSaving(true)
+    const skill = await addCustomMapSkill(name.trim(), rowIndex, family)
+    setSaving(false)
+    if (skill) onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-2xl bg-[#1a1a1a] p-5 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-bold text-white">Add skill to map</h3>
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-white/60">
+            Skill name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Round off whip"
+            className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-white/60">
+            Level (row, top = hardest)
+          </label>
+          <select
+            value={rowIndex}
+            onChange={(e) => setRowIndex(parseInt(e.target.value, 10))}
+            className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          >
+            {Array.from({ length: rowCount }, (_, i) => (
+              <option key={i} value={i}>
+                Level {rowCount - i} {i === 0 ? '(top, hardest)' : i === rowCount - 1 ? '(bottom)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-white/60">
+            Track
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['standing', 'front', 'cartwheel', 'roundoff'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFamily(f)}
+                className={`rounded-xl border px-3 py-2 text-sm font-bold capitalize ${
+                  family === f
+                    ? 'border-amber-300/70 bg-amber-300/15 text-amber-200'
+                    : 'border-white/15 text-white/60 hover:text-white'
+                }`}
+              >
+                {f === 'front' ? 'Front' : f === 'roundoff' ? 'Round off' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-white/15 px-4 py-2 text-white/70"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={!name.trim() || saving}
+            className="flex-1 rounded-xl bg-amber-300/20 border border-amber-300/50 px-4 py-2 font-bold text-amber-200 disabled:opacity-50"
+          >
+            {saving ? 'Adding...' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MapRows({
   rows,
   onTap,
@@ -1268,20 +1477,31 @@ function MapRows({
         >
           {reflowRowTiles(row, headers).map((tile) => {
             const skill = getRegistrySkill(tile.skillId)
-            if (!skill) return null
-            return (
-              <Tile
-                key={`${tile.skillId}-${tile.label}`}
-                tile={tile}
-                skill={skill}
-                onTap={onTap}
-                glowDist={glowMap?.dist.get(tile.skillId)}
-                isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
-                theme={theme}
-                infoOnly={infoOnly}
-                hl={hl}
-              />
-            )
+            if (skill) {
+              return (
+                <Tile
+                  key={`${tile.skillId}-${tile.label}`}
+                  tile={tile}
+                  skill={skill}
+                  onTap={onTap}
+                  glowDist={glowMap?.dist.get(tile.skillId)}
+                  isHighlight={glowMap?.highlights.has(tile.skillId) ?? false}
+                  theme={theme}
+                  infoOnly={infoOnly}
+                  hl={hl}
+                />
+              )
+            }
+            // Custom map skill (not in registry)
+            if (tile.skillId.startsWith('custom_') || tile.skillId.startsWith('temp_')) {
+              return (
+                <CustomSkillTile
+                  key={`${tile.skillId}-${tile.label}`}
+                  tile={tile}
+                />
+              )
+            }
+            return null
           })}
         </div>
       ))}
@@ -2271,6 +2491,16 @@ export function SkillMapView({
     saveInfoFilter(f)
   }
   const infoOnly = infoFilter === 'info'
+  // Ryan's custom map skills
+  const [customTick, setCustomTick] = useState(0)
+  useEffect(() => {
+    hydrateCustomMapSkills()
+    return subscribeCustomMapSkills(() => setCustomTick((t) => t + 1))
+  }, [])
+  const mergedRows = useMemo(
+    () => mergeCustomSkills(ROWS, getCustomMapSkills()),
+    [customTick],
+  )
   // Guiding light: null when no athlete is signed in, no active athlete, and
   // no class roster — the map renders exactly as before. Otherwise the union
   // of everyone's goals lights up (shortest distance wins across athletes).
@@ -2316,6 +2546,7 @@ export function SkillMapView({
   const pathTick = usePathTick()
   const [hlTarget, setHlTarget] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [addSkillOpen, setAddSkillOpen] = useState(false)
   const [directPath, setDirectPath] = useState(loadDirectPath)
   const [comboIdx, setComboIdx] = useState(0)
   const hl = useMemo(
@@ -2407,6 +2638,19 @@ export function SkillMapView({
           labelOf={labelOf}
         />
       )}
+      {addSkillOpen && <AddCustomSkillForm onClose={() => setAddSkillOpen(false)} />}
+
+      {view === 'map' && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setAddSkillOpen(true)}
+            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white"
+          >
+            + Add skill
+          </button>
+        </div>
+      )}
 
       {view === 'map' && <ColumnHeaders theme={theme} />}
 
@@ -2431,7 +2675,7 @@ export function SkillMapView({
 
             {/* Skill tree */}
             <div className="space-y-2.5">
-              <MapRows rows={ROWS.slice(0, 13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={mergedRows.slice(0, 13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-1">
                 <RollsSection onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               </div>
@@ -2444,7 +2688,7 @@ export function SkillMapView({
                     'radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.28), rgba(251,191,36,0.08) 55%, transparent 75%)',
                 }}
               />
-              <MapRows rows={ROWS.slice(13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
+              <MapRows rows={mergedRows.slice(13)} headers={HEADERS} onTap={handleTileTap} glowMap={glowMap} theme={theme} infoOnly={infoOnly} hl={hl} />
               <div className="pt-2" />
             </div>
           </div>
