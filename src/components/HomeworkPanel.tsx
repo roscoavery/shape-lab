@@ -228,15 +228,22 @@ function HomeworkProgressStrip({
     (count, item) => count + (logsByItem.get(item.id) ?? []).length,
     0,
   )
-  let bestJump: { name: string; delta: number } | null = null
+  let bestJump: {
+    name: string
+    best: number
+    first: number
+    total: number
+    count: number
+  } | null = null
   for (const item of items) {
     const itemLogs = logsByItem.get(item.id) ?? []
     if (itemLogs.length < 2) continue
     const first = itemLogs[itemLogs.length - 1]?.totalHoldSeconds ?? 0
     const best = bestHoldSeconds(itemLogs)
     const delta = best - first
-    if (delta > 0.4 && (!bestJump || delta > bestJump.delta)) {
-      bestJump = { name: homeworkTitle(item), delta }
+    const total = itemLogs.reduce((s, l) => s + (l.totalHoldSeconds ?? 0), 0)
+    if (delta > 0.4 && (!bestJump || delta > bestJump.best - bestJump.first)) {
+      bestJump = { name: homeworkTitle(item), best, first, total, count: itemLogs.length }
     }
   }
   const goalHits = items.filter((item) => {
@@ -248,7 +255,7 @@ function HomeworkProgressStrip({
     trained.length === 0
       ? 'Your first logged hold starts the story. Tap Train and put time on the mat.'
       : bestJump
-        ? `${bestJump.name} is up ${formatSeconds(bestJump.delta)} from your first hold. That is real progress.`
+        ? `${bestJump.name}: ${formatSeconds(bestJump.total)} total across ${bestJump.count} hold${bestJump.count === 1 ? '' : 's'}. Longest single hold ${formatSeconds(bestJump.best)}. That is real progress.`
         : `${trained.length} drill${trained.length === 1 ? '' : 's'} with logged time. Keep stacking holds.`
 
   return (

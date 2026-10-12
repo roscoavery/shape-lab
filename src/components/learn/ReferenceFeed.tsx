@@ -509,13 +509,30 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
         </p>
       </CollapsibleSection>
       <div id="tour-scroll-search">
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search a shape, name, or collection…"
-        aria-label="Search reference videos"
-        className="w-full rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
-      />
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          // Dismiss the iPad keyboard so the results are visible.
+          ;(document.activeElement as HTMLElement | null)?.blur?.()
+        }}
+      >
+        <input
+          type="search"
+          enterKeyHint="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search a shape, name, or collection…"
+          aria-label="Search reference videos"
+          className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-bold text-[var(--on-accent)]"
+        >
+          Search
+        </button>
+      </form>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button

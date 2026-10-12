@@ -109,16 +109,92 @@ export function daysSinceHomework(athleteId: string): number | null {
 }
 
 /**
- * Rotating homework nudge copy. Picks a different message each day so it's
- * not the same alert on repeat. Mixes:
- * - Profile-based coaching (superman gap, open shoulders, back pain)
- * - Pain prevention ("easier to stay out of pain than to get out of pain")
- * - Consistency encouragement (references their own log streaks)
- * - Specific exercise recharge (from the foundation facts deck)
+ * True when the athlete has back pain, was consistent on 2-minute back
+ * extensions, and then stopped for over a week. The ONLY case where the
+ * "stay out of pain" nudge fires.
  */
+function lapsedBackExtension(athleteId: string): boolean {
+  const itemIds = new Set(
+    loadAllHomework()
+      .filter((h) => h.athleteId === athleteId && h.catalogId === 'back_extension')
+      .map((h) => h.id),
+  )
+  if (itemIds.size === 0) return false
+  const now = Date.now()
+  const logs = loadHomeworkLogs().filter(
+    (l) =>
+      l.athleteId === athleteId &&
+      itemIds.has(l.homeworkId) &&
+      Number.isFinite(Date.parse(l.date || '')) &&
+      now - Date.parse(l.date || '') < 90 * 86400000,
+  )
+  if (logs.length === 0) return false
+  // "done 2 minutes consistently": at least 3 logs hitting the 2:00 standard
+  const twoMin = logs.filter((l) => (l.totalHoldSeconds ?? 0) >= 120).length
+  if (twoMin < 3) return false
+  // "stopped for over a week": nothing logged in the last 7 days
+  const last = logs.reduce((a, b) => ((a.date || '') >= (b.date || '') ? a : b))
+  return now - Date.parse(last.date || '') > 7 * 86400000
+}
+
+/**
+ * Starter holds in Ryan's priority order, each with a known benefit from the
+ * foundation facts. Used to nudge athletes who haven't logged any of these.
+ */
+const STARTER_HOLDS: { label: string; benefit?: string; match: (h: HomeworkItem) => boolean }[] = [
+  {
+    label: 'Hollow',
+    benefit: 'It all starts with a strong hollow.',
+    match: (h) => h.autoKey === 'hollow',
+  },
+  {
+    label: 'Superman',
+    match: (h) => h.autoKey === 'superman',
+  },
+  {
+    label: 'Side plank',
+    benefit: 'Develops the lateral core and is a useful shape for twist drills.',
+    match: (h) => h.autoKey === 'side_plank',
+  },
+  {
+    label: 'Push-ups',
+    benefit: 'Push ups build stronger shoulder support for handstands, round offs and back handsprings.',
+    match: (h) => h.catalogId === 'pushup',
+  },
+  {
+    label: 'V-ups',
+    benefit: 'Strong V ups lead to stronger standing tucks and stronger layouts. Build them early on!',
+    match: (h) => h.catalogId === 'v_up',
+  },
+]
+
+/**
+ * If the athlete hasn't logged any of the starter holds, suggest the first
+ * unlogged one with its benefit. Returns null when they've started.
+ */
+function unstartedHoldSuggestion(athleteId: string): string | null {
+  const items = loadAllHomework().filter((h) => h.athleteId === athleteId)
+  const logs = loadHomeworkLogs().filter((l) => l.athleteId === athleteId)
+  const loggedHomeworkIds = new Set(logs.map((l) => l.homeworkId))
+  for (const starter of STARTER_HOLDS) {
+    const item = items.find(starter.match)
+    // Suggest it when there's no item yet, or the item has no logs.
+    if (!item || !loggedHomeworkIds.has(item.id)) {
+      const why = starter.benefit ? ` ${starter.benefit}` : ''
+      return `${starter.label} is a good place to start.${why} Log your first one today.`
+    }
+  }
+  return null
+}
 export function homeworkNudgeCopy(athlete: Athlete): string {
   const firstName = athlete.name.split(' ')[0]
   const dayOfYear = Math.floor(Date.now() / 86400000)
+
+  // Back-pain re-engagement: ONLY for athletes with back pain who were
+  // consistent on 2-minute back extensions and then stopped for over a week.
+  if (athlete.hasBackPain && lapsedBackExtension(athlete.id)) {
+    return `It's easier to stay out of pain than it is to get out of pain. Stay on top of back extension work.`
+  }
 
   // Check consistency: longest streak in the last 60 days
   const logs = loadHomeworkLogs().filter((l) => l.athleteId === athlete.id)
@@ -131,20 +207,18 @@ export function homeworkNudgeCopy(athlete: Athlete): string {
   // Pool of nudge angles — rotates daily
   const pool: string[] = []
 
-  // 1. Profile-based (original logic, kept)
+  // 1. Profile-based
   if (athlete.harderShape === 'superman') {
     pool.push(`${firstName}, Superman should feel as easy as hollow. A few holds today close that gap.`)
   }
   if ((athlete.openShoulderHardness ?? 0) >= 4) {
     pool.push(`Open shoulders get easier with bridge and handstand work. One round today.`)
   }
-  if (athlete.hasBackPain) {
-    pool.push(`Iso holds are how you stay out of pain. Hollow or Superman for a minute beats skipping.`)
-  }
 
-  // 2. Pain prevention (Ryan's wording)
-  pool.push(`It's easier to stay out of pain than to get out of pain. Back extension work today keeps you there.`)
-  pool.push(`Your back will thank you later. Superman holds or bridges, just a few minutes.`)
+  // 2. Starter holds: hasn't logged any of the core holds yet. Rotates in
+  // with everything else so it encourages without flooding.
+  const starter = unstartedHoldSuggestion(athlete.id)
+  if (starter) pool.push(starter)
 
   // 3. Consistency encouragement
   if (wasConsistent) {

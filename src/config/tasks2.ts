@@ -363,7 +363,7 @@ function mcHsLungeAssisted(): FlowBeat[] {
     { speak: '2.', pauseMs: 400 },
     {
       speak: 'Back to lunge and hold for 3.',
-      shapeId: 'lunge_land',
+      shapeId: 'lunge_start',
       stance: 'right',
       pauseMs: 350,
     },
@@ -417,7 +417,7 @@ function mcHsLeverLunge(): FlowBeat[] {
     },
     {
       speak: 'Back to lunge.',
-      shapeId: 'lunge_land',
+      shapeId: 'lunge_start',
       stance: 'right',
       pauseMs: 250,
     },

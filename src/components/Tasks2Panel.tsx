@@ -1362,6 +1362,16 @@ export function Tasks2Panel({
         marker?: 'playhead',
         rep?: number,
       ) => {
+        // Wait for the scorer to actually switch to this shape (up to 1.5s)
+        // before starting the window, so the whole window hunts the shape
+        // instead of burning time while the scorer catches up. This keeps the
+        // peak frame (e.g. the best handstand) inside the hunt.
+        const switchDeadline = performance.now() + 1500
+        while (performance.now() < switchDeadline) {
+          if (!alive()) return
+          if (shapeIdRef.current === shapeId) break
+          await wait(70)
+        }
         const started = performance.now()
         let matchRank = -1
         let matchFrozen: ScoreResult | null = null
