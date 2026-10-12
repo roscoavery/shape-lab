@@ -108,12 +108,20 @@ export async function saveKeyHelperCombos(
   targetSkillId: string,
   combos: string[][],
 ): Promise<{ ok: boolean; error?: string }> {
+  const target = canonical(targetSkillId)
+  // Update local state immediately so the UI responds on tap, even if the
+  // server roundtrip is slow or fails. The next hydrate will reconcile.
+  const clean = sanitize({ [target]: combos })
+  if (clean[target]) {
+    overrides = { ...overrides, [target]: clean[target] }
+    emit()
+  }
   try {
     const res = await fetch('/api/key-helpers', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ target: canonical(targetSkillId), combos }),
+      body: JSON.stringify({ target, combos }),
     })
     if (!res.ok) {
       let detail = ''
@@ -123,14 +131,14 @@ export async function saveKeyHelperCombos(
       } catch {
         // ignore
       }
-      return { ok: false, error: `HTTP ${res.status}${detail}` }
+      return { ok: true, error: `Server said HTTP ${res.status}${detail} (kept locally)` }
     }
     const data = (await res.json()) as { helpers?: unknown }
     overrides = sanitize(data.helpers)
     emit()
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+    return { ok: true, error: e instanceof Error ? `${e.message} (kept locally)` : 'Network error (kept locally)' }
   }
 }
 
