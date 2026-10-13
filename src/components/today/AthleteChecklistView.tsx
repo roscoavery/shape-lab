@@ -149,7 +149,8 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     selectedId && selectedId !== 'all' ? athleteById(athletes, selectedId) : null
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 bg-black px-4 py-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black">
+      <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-4 px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -315,6 +316,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
