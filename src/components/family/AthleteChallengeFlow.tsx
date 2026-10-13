@@ -3,7 +3,7 @@ import type { Athlete, HomeworkLog } from '../../types'
 import { createId, loadHomeworkLogs, saveHomeworkLogs } from '../../lib/storage'
 import { usePoseCamera } from '../../hooks/usePoseCamera'
 import { poseLooksHollow, poseLooksLongBody, poseLooksWallSit, poseLooksSidePlank, poseLooksLever } from '../../lib/homeworkPose'
-import { RepDetector, PUSHUP_REP_CONFIG, VUP_REP_CONFIG, elbowAngleDeg, hipFoldAngleDeg } from '../../lib/repDetect'
+import { RepDetector, PUSHUP_REP_CONFIG, VUP_REP_CONFIG, elbowAngleDeg, hipFoldAngleDeg, isFrontSupport } from '../../lib/repDetect'
 import { perShapeHoldStats, formatSecondsShort } from '../../lib/holdStats'
 import {
   FOUNDATION_EXERCISES,
@@ -306,6 +306,7 @@ function CameraRepCounter({
   const detectorRef = useRef<RepDetector | null>(null)
   const [angle, setAngle] = useState<number | null>(null)
   const [running, setRunning] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   if (!detectorRef.current) {
     detectorRef.current = new RepDetector(ex.id === 'pushup' ? PUSHUP_REP_CONFIG : VUP_REP_CONFIG)
@@ -324,8 +325,19 @@ function CameraRepCounter({
       const lm = pose.landmarks
       const a = ex.id === 'pushup' ? elbowAngleDeg(lm) : hipFoldAngleDeg(lm)
       setAngle(a != null ? Math.round(a) : null)
-      if (detectorRef.current?.push(a, performance.now())) {
-        onRep()
+      const detector = detectorRef.current
+      if (detector) {
+        // For push-ups, require front support before counting. For v-ups,
+        // the hip angle itself is the rep signal, so no gate needed.
+        if (ex.id === 'pushup') {
+          detector.updateReady(isFrontSupport(lm))
+        } else {
+          detector.updateReady(true)
+        }
+        setIsReady(detector.isReady)
+        if (detector.push(a, performance.now())) {
+          onRep()
+        }
       }
       raf = requestAnimationFrame(tick)
     }
@@ -364,6 +376,11 @@ function CameraRepCounter({
           </p>
           {best > 0 && (
             <p className="mt-1 text-xs font-bold tabular-nums text-white/70">best {best}</p>
+          )}
+          {ex.id === 'pushup' && !isReady && (
+            <p className="mt-2 text-sm font-bold text-amber-200">
+              Get into front support to start counting
+            </p>
           )}
         </div>
       </div>

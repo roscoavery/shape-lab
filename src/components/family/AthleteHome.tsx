@@ -4,7 +4,6 @@ import { ensureAutoHomework, loadHomeworkLogs } from '../../lib/storage'
 import { pendingIntake } from '../../lib/intakeQuestions'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteUpcomingCard, AthleteProgressCard, AthleteActivityCard } from './AthleteDeskFeed'
-import { DeskMessageCarousel } from './DeskMessageCarousel'
 import { AthleteHomeworkGuide } from './AthleteHomeworkGuide'
 import { AthletePathSection } from './AthletePathSection'
 import { AthleteHoldStats } from './AthleteHoldStats'
@@ -171,11 +170,6 @@ export function AthleteHome({
       <AthleteUpcomingCard athlete={athlete} defaultOpen={false} />
       </div>
       {/* Secondary */}
-      <div id="tour-athlete-messages">
-      <CollapsibleSection title="Messages">
-        <DeskMessageCarousel audience="athlete" surface="home" />
-      </CollapsibleSection>
-      </div>
       <div id="tour-athlete-activity">
       <AthleteActivityCard athlete={athlete} />
       </div>

@@ -152,7 +152,9 @@ function fullNameHits(hay: string, athletes: Athlete[]): Athlete[] {
   for (const a of athletes) {
     const full = normalizePersonName(athleteFullName(a))
     if (full.split(/\s+/).length < 2) continue
-    const re = new RegExp(`(?:^|\\s)${full}(?:\\s|$)`)
+    // Escape regex special chars in the name, allow punctuation after.
+    const escaped = full.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`(?:^|\\s)${escaped}(?:[\\s.,;:!?]|$)`)
     if (re.test(hay) || hay === full) hits.push(a)
   }
   return hits

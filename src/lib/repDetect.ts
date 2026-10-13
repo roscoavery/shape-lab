@@ -76,6 +76,12 @@ export class RepDetector {
   private lastRepAt = 0
   private window: number[] = []
   readonly config: RepDetectorConfig
+  /** Whether we've seen a valid starting position yet. */
+  private ready = false
+  /** Frames of consecutive front-support seen (to debounce). */
+  private readyFrames = 0
+  /** Frames since last front-support (to un-ready if they leave). */
+  private awayFrames = 0
 
   constructor(config: RepDetectorConfig) {
     this.config = config
@@ -85,17 +91,53 @@ export class RepDetector {
     this.phase = 'extended'
     this.lastRepAt = 0
     this.window = []
+    this.ready = false
+    this.readyFrames = 0
+    this.awayFrames = 0
   }
 
   get smoothedPhase(): RepPhase {
     return this.phase
   }
 
+  /** True once the detector has seen the starting position. */
+  get isReady(): boolean {
+    return this.ready
+  }
+
+  /**
+   * Tell the detector whether the person is currently in the starting
+   * position (front support for push-ups). Call every frame with the
+   * result of isFrontSupport(). The detector won't count reps until
+   * it's seen the position for a few consecutive frames.
+   */
+  updateReady(inPosition: boolean): void {
+    if (inPosition) {
+      this.awayFrames = 0
+      this.readyFrames++
+      // Need ~10 consecutive frames (~1/3 sec at 30fps) in position to arm.
+      if (this.readyFrames >= 10) {
+        this.ready = true
+      }
+    } else {
+      this.readyFrames = 0
+      this.awayFrames++
+      // If they leave position for ~2 seconds, disarm (they stood up, etc).
+      if (this.awayFrames >= 60) {
+        this.ready = false
+        this.phase = 'extended'
+      }
+    }
+  }
+
   /**
    * Feed a raw joint angle (degrees). Returns true when a full rep completes.
+   * Does nothing until updateReady() has armed the detector.
    * `nowMs` should be performance.now().
    */
   push(angle: number | null, nowMs: number): boolean {
+    // Don't count anything until we've seen the starting position.
+    if (!this.ready) return false
     if (angle == null || !Number.isFinite(angle)) return false
     this.window.push(angle)
     if (this.window.length > this.config.smoothFrames) this.window.shift()
@@ -129,4 +171,21 @@ export class RepDetector {
     }
     return false
   }
+}
+
+/**
+ * Front support (plank) detection for the push-up counter.
+ * The counter should not start counting until the person is actually in
+ * the starting position — elbows extended, body in a straight line.
+ * Works for knee push-ups too (hips stay straight, knees on ground).
+ */
+export function isFrontSupport(
+  lm: Landmark[] | null | undefined,
+): boolean {
+  const elbow = elbowAngleDeg(lm)
+  const hip = hipFoldAngleDeg(lm)
+  if (elbow == null || hip == null) return false
+  // Arms extended, body straight-ish. Thresholds are lenient to account
+  // for camera angle and clothing; the rep detector handles the rest.
+  return elbow > 135 && hip > 145
 }
