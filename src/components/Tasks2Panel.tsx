@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { GymClipPlayer } from './GymClipPlayer'
 import {
   FLOW_SEQUENCES,
   getFlowSequence,
@@ -3039,14 +3040,9 @@ export function Tasks2Panel({
             </div>
           </div>
           {replayUrl ? (
-            <video
-              ref={replayVideoRef}
-              src={replayUrl}
-              className="min-h-0 flex-1 w-full bg-black object-contain"
-              controls
-              autoPlay
-              playsInline
-            />
+            <div className="min-h-0 w-full flex-1 overflow-hidden bg-black">
+              <GymClipPlayer url={replayUrl} markup fill active />
+            </div>
           ) : (
             <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-white/70">
               No video this time, keep the camera on for the whole run. Your snapshots and grades are
@@ -3126,12 +3122,9 @@ export function Tasks2Panel({
             </div>
           )}
           {replayUrl && (
-            <video
-              src={replayUrl}
-              className="mt-2 max-h-48 w-full rounded-lg bg-black object-contain"
-              controls
-              playsInline
-            />
+            <div className="mt-2 max-h-48 w-full overflow-hidden rounded-lg bg-black">
+              <GymClipPlayer url={replayUrl} markup fill active />
+            </div>
           )}
           <ol className="mt-3 space-y-2">
             {snaps.map((s, i) => (

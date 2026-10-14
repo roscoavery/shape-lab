@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { GymClipPlayer } from './GymClipPlayer'
 import {
   deleteAthleteVideo,
   formatVideoDay,
@@ -317,12 +318,9 @@ export function VideoLibraryPanel({
                       </div>
                     </div>
                     {playing === v.id && (
-                      <video
-                        src={v.url}
-                        controls
-                        playsInline
-                        className="max-h-72 w-full bg-black object-contain"
-                      />
+                      <div className="max-h-72 w-full overflow-hidden bg-black">
+                        <GymClipPlayer url={v.url} markup fill active />
+                      </div>
                     )}
                     {savingId === v.id && coachId && coachName && (
                       <div className="px-3 pb-3">

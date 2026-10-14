@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { formatSeconds, holdMediaWindow } from '../lib/handstandHold'
+import { GymClipPlayer } from './GymClipPlayer'
 import {
   burnedOverlayKey,
   burnOverlayVideo,
@@ -79,6 +80,7 @@ export function HoldReplayPlayer({
   const [videoReady, setVideoReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
+  const [showMarkup, setShowMarkup] = useState(false)
   const [viewStart, setViewStart] = useState(0)
   const [duration, setDuration] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -406,6 +408,13 @@ export function HoldReplayPlayer({
       <div className={`mt-2 flex flex-wrap items-center gap-2 ${fill ? 'px-1' : ''}`}>
         <button
           type="button"
+          onClick={() => setShowMarkup(true)}
+          className="rounded-lg border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold"
+        >
+          Markup
+        </button>
+        <button
+          type="button"
           disabled={!blob || quickState === 'burning' || quickState === 'sharing'}
           onClick={() => void quickSave()}
           className={`rounded-lg px-3 py-2 text-sm font-bold disabled:opacity-50 ${HOLD_PINK_BTN}`}
@@ -581,6 +590,23 @@ export function HoldReplayPlayer({
         </div>
       </details>
       {flash && <p className={`mt-1 text-[11px] text-[var(--accent)] ${fill ? 'px-1' : ''}`}>{flash}</p>}
+      {showMarkup && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-black">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-sm font-bold text-white">Markup</span>
+            <button
+              type="button"
+              onClick={() => setShowMarkup(false)}
+              className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white"
+            >
+              Done
+            </button>
+          </div>
+          <div className="min-h-0 flex-1">
+            <GymClipPlayer url={src} markup fill active />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
