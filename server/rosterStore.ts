@@ -348,3 +348,38 @@ export async function appendCalendarAthlete(athlete: {
   })
   return { id: athlete.id, created: true }
 }
+
+/**
+ * Correct the name of a calendar-auto-created athlete when the original
+ * extraction was wrong (e.g., "Tumbler" captured as a last name).
+ * Only updates athletes with createdFromCalendar=true.
+ */
+export async function correctCalendarAthleteName(
+  athleteId: string,
+  firstName: string,
+  lastName: string,
+  fullName: string,
+): Promise<boolean> {
+  const stored = await readRawRoster()
+  const athletes = Array.isArray(stored.athletes) ? [...stored.athletes] : []
+  const idx = athletes.findIndex((row) => {
+    if (!row || typeof row !== 'object') return false
+    const a = row as { id?: string; createdFromCalendar?: boolean }
+    return a.id === athleteId && a.createdFromCalendar === true
+  })
+  if (idx < 0) return false
+  const now = new Date().toISOString()
+  athletes[idx] = {
+    ...(athletes[idx] as object),
+    name: fullName,
+    firstName,
+    lastName,
+    updatedAt: now,
+  }
+  await writeJson(FILE, {
+    ...stored,
+    athletes,
+    exportedAt: now,
+  })
+  return true
+}

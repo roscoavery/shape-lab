@@ -27,7 +27,7 @@ export function athleteFullName(a: Athlete): string {
   return a.name.trim()
 }
 
-const SKIP_NAME_TOKENS = new Set([
+export const SKIP_NAME_TOKENS = new Set([
   'lesson',
   'private',
   'tumble',

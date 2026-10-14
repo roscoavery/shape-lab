@@ -5,9 +5,9 @@ function newId(prefix: string): string {
   return `${prefix}_${randomBytes(10).toString('hex')}`
 }
 import { decryptSecret } from './crypto.ts'
-import { coachingLikelyTitle, extractContactBits, extractUnmatchedPersonName, matchEventToAthlete, unescapeCalendarText } from './matching.ts'
+import { coachingLikelyTitle, extractContactBits, extractUnmatchedPersonName, matchEventToAthlete, unescapeCalendarText, SKIP_NAME_TOKENS } from './matching.ts'
 import { decodeCredential, icloudCalendarProvider } from './providers/icloud.ts'
-import { appendCalendarAthlete } from '../rosterStore.ts'
+import { appendCalendarAthlete, correctCalendarAthleteName } from '../rosterStore.ts'
 import {
   getSyncState,
   persistDb,
@@ -108,6 +108,32 @@ export async function syncConnectionForCoach(
       let athleteId = existing?.matchedAthleteId ?? match.athleteId
       let matchStatus = existing?.matchedAthleteId ? 'matched' : match.matchStatus
       let matchConfidence = existing?.matchedAthleteId ? 1 : match.matchConfidence
+
+      // Auto-correct calendar-created athletes with bad names from buggy
+      // extraction (e.g., "Tumbler" captured as a last name). Re-run the
+      // fixed extraction and update the profile if we get a better name.
+      if (athleteId && existing?.matchedAthleteId) {
+        const rosterAthlete = roster.find((a) => a.id === athleteId) as
+          | (Athlete & { createdFromCalendar?: boolean; lastName?: string })
+          | undefined
+        const badLast = (rosterAthlete?.lastName || '').trim().toLowerCase()
+        if (rosterAthlete?.createdFromCalendar && badLast && SKIP_NAME_TOKENS.has(badLast)) {
+          const person = extractUnmatchedPersonName(norm.title, norm.description, coachAthleteList)
+          if (person && person.fullName.toLowerCase() !== (rosterAthlete.name || '').toLowerCase()) {
+            const ok = await correctCalendarAthleteName(
+              athleteId,
+              person.firstName,
+              person.lastName,
+              person.fullName,
+            )
+            if (ok) {
+              rosterAthlete.name = person.fullName
+              rosterAthlete.firstName = person.firstName
+              rosterAthlete.lastName = person.lastName
+            }
+          }
+        }
+      }
 
       if (!athleteId && matchStatus === 'needs_athlete') {
         const person = extractUnmatchedPersonName(norm.title, norm.description, coachAthleteList)
