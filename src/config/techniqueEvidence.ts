@@ -768,6 +768,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Back full reference from Ryan on the tumble track. There is a subtle quarter turn that happens on the way up with arms up. Both arms drop through the twist plane at the top to wrap into full twist.',
     },
+    {
+      who: 'Coach Ryan Williams',
+      url: '/videos/ryan-back-full-arm-drop.mp4',
+      watchFor:
+        'Same takeoff as a layout with enough contact twist to hit a quarter turn on the way up. At the quarter turn at the highest point, both arms drop through the twist plane and wrap in with straight arms. Not pure tilt twist mechanics. Head stays in, shaping stays the same as a layout.',
+    },
   ],
   basics: [
     {
