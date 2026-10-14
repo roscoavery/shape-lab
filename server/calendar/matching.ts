@@ -88,6 +88,16 @@ const SKIP_NAME_TOKENS = new Set([
   'vault',
   'about',
   'notes',
+  'on',
+  'water',
+  'bottle',
+  'roundoffs',
+  'roundoff',
+  'back',
+  'handspring',
+  'tuck',
+  'layout',
+  'full',
 ])
 
 export type MatchInput = {
