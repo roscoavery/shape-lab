@@ -438,6 +438,20 @@ export function endLessonSession(id: string): LessonSession | null {
   return next
 }
 
+/** Add an athlete to an existing lesson (semi-private). No-op if already in it. */
+export function addAthleteToLesson(sessionId: string, athleteId: string): LessonSession | null {
+  const found = getLessonSession(sessionId)
+  if (!found || !athleteId) return null
+  const ids = lessonAthleteIds(found)
+  if (ids.includes(athleteId)) return found
+  const next: LessonSession = {
+    ...found,
+    athleteIds: [...ids, athleteId],
+  }
+  saveLessonSession(next)
+  return next
+}
+
 export function addLessonNote(
   sessionId: string,
   text: string,

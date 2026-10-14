@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { mergeExtras } from '../../lib/classExercises'
 import { getActiveMeeting, getOffering } from '../../lib/coachClasses'
 import {
+  addAthleteToLesson,
   addLessonNote,
   endLessonSession,
   getLessonSession,
@@ -78,6 +79,8 @@ export function LessonWorkspace({
 }: Props) {
   const [tick, setTick] = useState(0)
   const [plansTick, setPlansTick] = useState(0)
+  const [showAddAthlete, setShowAddAthlete] = useState(false)
+  const [addAthleteQuery, setAddAthleteQuery] = useState('')
 
   // Planned tasks for this lesson (written in the morning brief or calendar).
   // The plan lives in the class-plan store under lesson:<calendarEventId>,
@@ -260,6 +263,13 @@ export function LessonWorkspace({
           )}
           <button
             type="button"
+            onClick={() => setShowAddAthlete((v) => !v)}
+            className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white"
+          >
+            + Add athlete
+          </button>
+          <button
+            type="button"
             onClick={() => {
               endLessonSession(session.id)
               onEnded()
@@ -269,6 +279,42 @@ export function LessonWorkspace({
             End lesson
           </button>
         </div>
+        {showAddAthlete && (
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+            <input
+              type="text"
+              value={addAthleteQuery}
+              onChange={(e) => setAddAthleteQuery(e.target.value)}
+              placeholder="Search athletes..."
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40"
+            />
+            <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+              {athletes
+                .filter((a) => !lessonAthleteIds(session).includes(a.id))
+                .filter((a) =>
+                  addAthleteQuery
+                    ? a.name.toLowerCase().includes(addAthleteQuery.toLowerCase())
+                    : true,
+                )
+                .slice(0, 20)
+                .map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => {
+                      addAthleteToLesson(session.id, a.id)
+                      setShowAddAthlete(false)
+                      setAddAthleteQuery('')
+                      onSessionChange({ ...session, athleteIds: [...lessonAthleteIds(session), a.id] })
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-white/10"
+                  >
+                    {a.name}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {plan && (plan.blocks.length > 0 || (plan.extraExercises?.length ?? 0) > 0) && (
