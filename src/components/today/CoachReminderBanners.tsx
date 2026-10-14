@@ -10,7 +10,7 @@ import {
   subscribeCoachHours,
 } from '../../lib/coachHours'
 import { fetchCalendarRange, type TodayCalendarEvent } from '../../lib/calendarClient'
-import { classLabel, getOffering, loadMeetings } from '../../lib/coachClasses'
+import { classLabel, classMemberIds, getOffering, loadMeetings } from '../../lib/coachClasses'
 import { lessonAthleteIds, loadLessonSessions } from '../../lib/lessonStore'
 import { publishTextPostResult } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
@@ -196,16 +196,33 @@ function HoursLogPanel({ coachId }: { coachId: string }) {
 /** Athletes from today's ended classes and lessons, in coaching order. */
 function athletesWorkedToday(coachId: string, athletes: Athlete[]): Athlete[] {
   const seen = new Map<string, number>()
-  const day = dateKey(new Date())
+  const now = new Date()
+  const isToday = (iso: string) => {
+    const dt = new Date(iso)
+    return (
+      dt.getFullYear() === now.getFullYear() &&
+      dt.getMonth() === now.getMonth() &&
+      dt.getDate() === now.getDate()
+    )
+  }
   for (const m of loadMeetings(coachId)) {
-    if (!m.endedAt || m.startedAt.slice(0, 10) !== day) continue
+    if (!m.endedAt || !isToday(m.startedAt)) continue
     const at = Date.parse(m.startedAt) || 0
+    let hasAttendees = false
     for (const a of m.attendees) {
       if (a.athleteId && !seen.has(a.athleteId)) seen.set(a.athleteId, at)
+      if (a.athleteId) hasAttendees = true
+    }
+    // If the class auto-started/ended with no attendance marked, fall back
+    // to the class roster so the wins banner still lists the athletes.
+    if (!hasAttendees && m.offeringId) {
+      for (const id of classMemberIds(m.offeringId, athletes)) {
+        if (!seen.has(id)) seen.set(id, at)
+      }
     }
   }
   for (const s of loadLessonSessions()) {
-    if (s.coachId !== coachId || !s.endedAt || s.startedAt.slice(0, 10) !== day) continue
+    if (s.coachId !== coachId || !s.endedAt || !isToday(s.startedAt)) continue
     const at = Date.parse(s.startedAt) || 0
     for (const id of lessonAthleteIds(s)) {
       if (!seen.has(id)) seen.set(id, at)
@@ -231,17 +248,20 @@ async function postWinForAthlete(
 ): Promise<true | string> {
   const t = text.trim()
   if (!t) return 'Write the win first.'
-  const day = dateKey(new Date())
   let meetingId: string | undefined
   let lessonId: string | undefined
   let className: string | undefined
   const meeting = loadMeetings(coach.id)
-    .filter(
-      (m) =>
-        m.endedAt &&
-        m.startedAt.slice(0, 10) === day &&
-        m.attendees.some((a) => a.athleteId === athlete.id),
-    )
+    .filter((m) => {
+      if (!m.endedAt || !m.attendees.some((a) => a.athleteId === athlete.id)) return false
+      const dt = new Date(m.startedAt)
+      const now = new Date()
+      return (
+        dt.getFullYear() === now.getFullYear() &&
+        dt.getMonth() === now.getMonth() &&
+        dt.getDate() === now.getDate()
+      )
+    })
     .pop()
   if (meeting) {
     meetingId = meeting.id
@@ -249,13 +269,17 @@ async function postWinForAthlete(
     if (offering) className = classLabel(offering)
   } else {
     const lesson = loadLessonSessions()
-      .filter(
-        (s) =>
-          s.coachId === coach.id &&
-          s.endedAt &&
-          s.startedAt.slice(0, 10) === day &&
-          lessonAthleteIds(s).includes(athlete.id),
-      )
+      .filter((s) => {
+        if (s.coachId !== coach.id || !s.endedAt || !lessonAthleteIds(s).includes(athlete.id))
+          return false
+        const dt = new Date(s.startedAt)
+        const now = new Date()
+        return (
+          dt.getFullYear() === now.getFullYear() &&
+          dt.getMonth() === now.getMonth() &&
+          dt.getDate() === now.getDate()
+        )
+      })
       .pop()
     if (lesson) lessonId = lesson.id
   }

@@ -14,7 +14,15 @@ export type CoachReminder =
 const dateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-const sameDay = (iso: string, d: Date) => iso.slice(0, 10) === dateKey(d)
+const sameDay = (iso: string, d: Date) => {
+  // Compare in local time, not UTC string slice (7pm CDT = midnight UTC next day).
+  const dt = new Date(iso)
+  return (
+    dt.getFullYear() === d.getFullYear() &&
+    dt.getMonth() === d.getMonth() &&
+    dt.getDate() === d.getDate()
+  )
+}
 
 function dismissed(kind: string, d: Date): boolean {
   try {
