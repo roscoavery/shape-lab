@@ -42,6 +42,7 @@ export function LessonPlanModal({
   }, [onClose])
 
   const label = athlete?.name || event.title || 'Lesson'
+  const needsMoreAthletes = /add athlete/i.test(event.notes ?? '')
 
   return (
     <div
@@ -62,6 +63,11 @@ export function LessonPlanModal({
             </p>
             <p className="mt-0.5 truncate text-base font-bold text-[var(--text)]">{label}</p>
             <p className="text-xs text-[var(--muted)]">{formatWhen(event.startAt)}</p>
+            {needsMoreAthletes && (
+              <p className="mt-1 text-xs font-semibold text-amber-300">
+                Notes say "add athlete" — this lesson may have multiple athletes. Add them once the lesson starts.
+              </p>
+            )}
           </div>
           <button
             type="button"

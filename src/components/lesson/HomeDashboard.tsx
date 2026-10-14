@@ -382,7 +382,7 @@ export function HomeDashboard({
     setAddQuery('')
     setRosterOpen(false)
   }
-  const startTrainingKind = (kind: 'school' | 'camp' | 'clinic') => {
+  const startTrainingKind = (kind: 'school' | 'camp' | 'clinic' | 'other') => {
     const matches = events.filter((e) => e.kind === kind)
     if (matches[0]) {
       setGymScope({ kind: 'event', eventId: matches[0].id })
@@ -908,6 +908,16 @@ export function HomeDashboard({
               Group
             </span>
             <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start clinic</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => startTrainingKind('other')}
+            className="rounded-xl border border-[var(--panel-border)] bg-[#121820] px-3 py-2.5 text-left"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Group
+            </span>
+            <span className="mt-0.5 block text-sm font-bold text-[var(--text)]">Start group</span>
           </button>
         </div>
         </>
