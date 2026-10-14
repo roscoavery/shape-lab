@@ -176,15 +176,70 @@ export function extractUnmatchedPersonName(
   description: string,
   athletes: Athlete[],
 ): { firstName: string; lastName: string; fullName: string } | null {
-  // Check both title and description for a person name.
+  // Ryan's Acuity convention: the event title carries the parent's name, the
+  // notes carry the athlete's name (often as "Athlete name: First Last").
+  // Prefer the athlete name from the notes so we don't auto-create a profile
+  // for the parent.
+  const descText = unescapeCalendarText(description ?? '').trim()
+  if (descText) {
+    // Look for an explicit "Athlete name:" marker first.
+    const marker = descText.match(/athlete\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+    if (marker) {
+      const first = marker[1]!.replace(/^./, (c) => c.toUpperCase())
+      const last = marker[2] ? marker[2].replace(/^./, (c) => c.toUpperCase()) : ''
+      const full = normalizePersonName(last ? `${first} ${last}` : first)
+      const exists = athletes.some((a) =>
+        normalizePersonName(athleteFullName(a)) === full ||
+        (!last && normalizePersonName((a.firstName?.trim() || a.name.trim().split(/\s+/)[0] || '')) === full),
+      )
+      if (!exists && !SKIP_NAME_TOKENS.has(first.toLowerCase()) && !(last && SKIP_NAME_TOKENS.has(last.toLowerCase()))) {
+        return { firstName: first, lastName: last, fullName: last ? `${first} ${last}` : first }
+      }
+    }
+    // Otherwise, if the notes contain exactly one person name, that's the athlete.
+    // If there are two or more, it's ambiguous — return null.
+    const descNames = extractPersonNames(descText, athletes)
+    if (descNames.size === 1) {
+      const parts = [...descNames.values()][0]!
+      return {
+        firstName: parts.firstName,
+        lastName: parts.lastName,
+        fullName: parts.lastName ? `${parts.firstName} ${parts.lastName}` : parts.firstName,
+      }
+    }
+    if (descNames.size > 1) return null
+  }
+  // Fallback: check both title and description for a single person name.
+  // But never invent a profile from the title alone — the title carries the
+  // parent's name, not the athlete's.
   const raw = unescapeCalendarText(`${title}\n${description}`).trim()
   if (!raw) return null
+  const found = extractPersonNames(raw, athletes)
+  if (found.size !== 1) return null
+
+  // If the description was empty, the single name came from the title (parent).
+  // Don't auto-create a profile for the parent.
+  if (!descText) return null
+
+  const parts = [...found.values()][0]!
+  return {
+    firstName: parts.firstName,
+    lastName: parts.lastName,
+    fullName: parts.lastName ? `${parts.firstName} ${parts.lastName}` : parts.firstName,
+  }
+}
+
+/** Extract unique person names from text, skipping names that match existing athletes. */
+function extractPersonNames(
+  text: string,
+  athletes: Athlete[],
+): Map<string, { firstName: string; lastName: string }> {
   const found = new Map<string, { firstName: string; lastName: string }>()
 
   // Two-word names (first + last).
   const re = /\b([A-Za-z][A-Za-z'-]{1,24})\s+([A-Za-z][A-Za-z'-]{1,24})\b/g
   let m: RegExpExecArray | null
-  while ((m = re.exec(raw))) {
+  while ((m = re.exec(text))) {
     const first = m[1]!.replace(/^./, (c) => c.toUpperCase())
     const last = m[2]!.replace(/^./, (c) => c.toUpperCase())
     if (SKIP_NAME_TOKENS.has(first.toLowerCase()) || SKIP_NAME_TOKENS.has(last.toLowerCase())) {
@@ -201,7 +256,7 @@ export function extractUnmatchedPersonName(
   if (found.size === 0) {
     const single = /\b([A-Za-z][A-Za-z'-]{2,24})\b/g
     let s: RegExpExecArray | null
-    while ((s = single.exec(raw))) {
+    while ((s = single.exec(text))) {
       const name = s[1]!.replace(/^./, (c) => c.toUpperCase())
       if (SKIP_NAME_TOKENS.has(name.toLowerCase())) continue
       const norm = normalizePersonName(name)
@@ -214,13 +269,7 @@ export function extractUnmatchedPersonName(
     }
   }
 
-  if (found.size !== 1) return null
-  const parts = [...found.values()][0]!
-  return {
-    firstName: parts.firstName,
-    lastName: parts.lastName,
-    fullName: parts.lastName ? `${parts.firstName} ${parts.lastName}` : parts.firstName,
-  }
+  return found
 }
 
 export function matchEventToAthlete(input: MatchInput): MatchResult {
