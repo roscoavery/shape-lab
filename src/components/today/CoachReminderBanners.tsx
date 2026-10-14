@@ -630,33 +630,41 @@ export function CoachReminderBanners({
                   {r.events.length} lesson{r.events.length === 1 ? '' : 's'} on your calendar need{r.events.length === 1 ? 's' : ''} a plan
                 </p>
                 <ul className="mt-1 space-y-0.5 text-xs text-[var(--muted)]">
-                  {r.events.slice(0, 4).map((ev) => (
-                    <li key={ev.id}>
-                      {onPlanLesson ? (
-                        <button
-                          type="button"
-                          onClick={() => onPlanLesson(ev)}
-                          className="text-left underline decoration-sky-300/50 underline-offset-2"
-                        >
-                          {ev.title} ·{' '}
-                          {new Date(ev.startAt).toLocaleString([], {
-                            weekday: 'short',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </button>
-                      ) : (
-                        <span>
-                          {ev.title} ·{' '}
-                          {new Date(ev.startAt).toLocaleString([], {
-                            weekday: 'short',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </li>
-                  ))}
+                  {r.events.slice(0, 4).map((ev) => {
+                    // Show the athlete's name, not the parent's name from the
+                    // Acuity event title.
+                    const matched = ev.matchedAthleteId
+                      ? athletes.find((a) => a.id === ev.matchedAthleteId)
+                      : null
+                    const label = matched?.name ?? ev.title
+                    return (
+                      <li key={ev.id}>
+                        {onPlanLesson ? (
+                          <button
+                            type="button"
+                            onClick={() => onPlanLesson(ev)}
+                            className="text-left underline decoration-sky-300/50 underline-offset-2"
+                          >
+                            {label} ·{' '}
+                            {new Date(ev.startAt).toLocaleString([], {
+                              weekday: 'short',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </button>
+                        ) : (
+                          <span>
+                            {label} ·{' '}
+                            {new Date(ev.startAt).toLocaleString([], {
+                              weekday: 'short',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                      </li>
+                    )
+                  })}
                   {r.events.length > 4 && (
                     <li>+{r.events.length - 4} more</li>
                   )}
