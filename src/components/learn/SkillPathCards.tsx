@@ -536,6 +536,16 @@ export function ProofStrip({
         } catch {
           /* quota */
         }
+        // Sync to server so shared links get the loop points.
+        if (canEdit) {
+          void markedFetch('/api/admin/proof-loops', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(next),
+          }).catch(() => {
+            /* keep local; will retry next change */
+          })
+        }
         return next
       })
       // If an admin sets loop points on an admin-added video, save them as

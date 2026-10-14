@@ -172,19 +172,30 @@ export async function handleShareCard(
   const adminFile = await readJsonFile<Record<string, ProofVideo[]>>('skill-card-videos.json')
   const hiddenFile = await readJsonFile<Record<string, string[]>>('skill-card-hidden.json')
   const pinnedFile = await readJsonFile<Record<string, string[]>>('skill-card-pinned.json')
+  const loopsFile = await readJsonFile<Record<string, { a: number | null; b: number | null }>>('proof-loops.json')
   const adminVideos = (evidenceKey && adminFile?.[evidenceKey]) || []
   const hidden = new Set((evidenceKey && hiddenFile?.[evidenceKey]) || [])
   const pinned = new Set(
     ((evidenceKey && pinnedFile?.[evidenceKey]) || []).filter((u) => typeof u === 'string'),
   )
+  // Apply coach's in-app loop overrides (synced from localStorage).
+  const applyLoops = (v: ProofVideo): ProofVideo => {
+    const loop = loopsFile?.[v.url]
+    if (!loop) return v
+    return {
+      ...v,
+      startAt: loop.a ?? undefined,
+      endAt: loop.b ?? undefined,
+    }
+  }
 
   const videos = [
-    ...baseVideos.filter((v) => !hidden.has(v.url) && v.url !== featuredRaw?.url),
+    ...baseVideos.filter((v) => !hidden.has(v.url) && v.url !== featuredRaw?.url).map(applyLoops),
     ...adminVideos,
   ]
 
   const [featured, resolvedVideos] = await Promise.all([
-    featuredRaw ? toShareVideo(featuredRaw, false) : Promise.resolve(null),
+    featuredRaw ? toShareVideo(applyLoops(featuredRaw), false) : Promise.resolve(null),
     Promise.all(videos.map((v) => toShareVideo(v, pinned.has(v.url)))),
   ])
   // Pinned videos first, matching the in-app card order.

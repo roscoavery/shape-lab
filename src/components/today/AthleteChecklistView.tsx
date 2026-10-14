@@ -8,6 +8,7 @@ import {
   bumpTaskReps,
   subscribeClassPlans,
   pullClassPlans,
+  loadClassPlans,
   todayKey,
   type ClassPlan,
   type ClassPlanTask,
@@ -42,9 +43,11 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
   // Refresh when class attendance changes (athlete marked present during live class).
   useEffect(() => subscribeCoachClasses(() => setTick((n) => n + 1)), [])
   // Pull fresh plans when the checklist opens so tasks written on another
-  // device show up immediately.
+  // device show up immediately. Skip if we already have plans (iPad perf).
   useEffect(() => {
-    void pullClassPlans()
+    if (loadClassPlans().length === 0) {
+      void pullClassPlans()
+    }
   }, [])
 
   const offerings = useMemo(() => {
@@ -149,7 +152,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     selectedId && selectedId !== 'all' ? athleteById(athletes, selectedId) : null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black md:left-[76px] xl:left-60">
       <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-4 px-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <button

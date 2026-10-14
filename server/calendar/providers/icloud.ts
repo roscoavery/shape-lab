@@ -42,8 +42,11 @@ function parseVeventBlocks(ics: string): string[] {
 }
 
 function field(block: string, name: string): string | null {
+  // RFC 5545: long lines are folded (CRLF + space/tab). Unfold first so
+  // DESCRIPTION etc. aren't truncated at the first fold.
+  const unfolded = block.replace(/\r?\n[ \t]/g, '')
   const re = new RegExp(`^${name}[^:]*:(.*)$`, 'im')
-  const m = block.match(re)
+  const m = unfolded.match(re)
   return m?.[1]?.trim() ?? null
 }
 
