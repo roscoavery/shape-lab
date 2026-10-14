@@ -1030,6 +1030,8 @@ export default function App() {
     if (sessionIsKiosk(authUser) && isOfficeOnlyTab(id)) return
     const role = navRoleFromSession(previewRole, sessionIsKiosk(authUser))
     if (authUser && !tabAllowedForNavRole(id, role, ryan, isOwnerView(athletes.find((a) => a.id === activeAthleteId) ?? null, deskPreview))) return
+    // Close the checklist overlay when navigating (e.g. tapping home).
+    setShowChecklist(false)
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
   }
@@ -1572,6 +1574,10 @@ export default function App() {
                 landmarks={null}
                 onRequestShape={(shapeId) => onJumpToShape(shapeId)}
                 onGoCompare={() => goTab('compare')}
+                onOpenSkillPathGuide={() => {
+                  stashMobileSearchJump({ kind: 'skillPath' })
+                  goTab('learn')
+                }}
                 onSessionChange={() => setLessonTick((n) => n + 1)}
                 onEnded={() => setLessonTick((n) => n + 1)}
               />

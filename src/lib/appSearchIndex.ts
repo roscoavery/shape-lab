@@ -100,6 +100,21 @@ function featureHits(needle: string, ryan: boolean, coach: boolean): AppSearchHi
       })
     }
   }
+  // Skill path guide — not a nav item, but coaches search for it.
+  const guideScore = Math.max(
+    tokenScore('Skill path guide', needle),
+    tokenScore('skill path guide what each skill needs', needle),
+  )
+  if (guideScore > 0 && ryan) {
+    out.push({
+      id: 'feature:skill-path-guide',
+      kind: 'feature',
+      title: 'Skill path guide',
+      subtitle: 'What each skill needs, what can bend, what to ask',
+      tab: 'learn',
+      score: guideScore,
+    })
+  }
   return out
 }
 

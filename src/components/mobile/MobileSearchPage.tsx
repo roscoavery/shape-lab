@@ -70,7 +70,11 @@ export function MobileSearchPage({
 
 
   const activate = (hit: AppSearchHit) => {
-    if (hit.kind === 'shape' && hit.shapeId) {
+    if (hit.id === 'feature:skill-path-guide') {
+      stashMobileSearchJump({ kind: 'skillPath' })
+      saveTab('learn')
+      onGo('learn')
+    } else if (hit.kind === 'shape' && hit.shapeId) {
       stashMobileSearchJump({ kind: 'shape', shapeId: hit.shapeId })
       saveTab('learn')
       onGo('learn')

@@ -56,6 +56,7 @@ type Props = {
   onRequestShape: (shapeId: string) => void
   onEnsureCamera?: () => void | Promise<void>
   onGoCompare: () => void
+  onOpenSkillPathGuide?: () => void
   onSessionChange: (session: LessonSession) => void
   onEnded: () => void
 }
@@ -71,6 +72,7 @@ export function LessonWorkspace({
   athletes,
   onAthletesChange,
   onGoCompare,
+  onOpenSkillPathGuide,
   onSessionChange,
   onEnded,
 }: Props) {
@@ -247,6 +249,15 @@ export function LessonWorkspace({
           >
             Open Compare
           </button>
+          {onOpenSkillPathGuide && (
+            <button
+              type="button"
+              onClick={onOpenSkillPathGuide}
+              className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white"
+            >
+              Skill path guide
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
