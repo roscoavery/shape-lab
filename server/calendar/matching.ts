@@ -98,6 +98,8 @@ const SKIP_NAME_TOKENS = new Set([
   'tuck',
   'layout',
   'full',
+  'tumbler',
+  'tumblers',
 ])
 
 export type MatchInput = {

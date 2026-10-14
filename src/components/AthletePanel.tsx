@@ -470,8 +470,12 @@ export function AthletePanel({
         >
         {(active.needsOnboarding || active.createdFromCalendar) && (
           <p className="mb-2 rounded-lg bg-[#102820] px-3 py-2 text-xs text-[var(--accent)]">
-            Created from a calendar lesson. New-athlete onboarding still needs the rest of
-            their info.
+            Created from a calendar lesson.
+            {!active.lastName?.trim() ? (
+              <> What is {active.firstName || 'their'}'s last name? Add it below.</>
+            ) : (
+              <> New-athlete onboarding still needs the rest of their info.</>
+            )}
           </p>
         )}
         <div className="mb-3">
