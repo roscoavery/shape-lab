@@ -136,9 +136,9 @@ describe('extractUnmatchedPersonName', () => {
     assert.equal(person?.fullName, 'Maya Chen')
   })
 
-  it('does not invent a profile from the title alone', () => {
+  it('uses the title name when the notes do not specify an athlete', () => {
     const person = extractUnmatchedPersonName('Maya Chen', '', athletes)
-    assert.equal(person, null)
+    assert.equal(person?.fullName, 'Maya Chen')
   })
 
   it('skips when two unmatched people are in the notes', () => {

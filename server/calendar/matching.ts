@@ -209,17 +209,12 @@ export function extractUnmatchedPersonName(
     }
     if (descNames.size > 1) return null
   }
-  // Fallback: check both title and description for a single person name.
-  // But never invent a profile from the title alone — the title carries the
-  // parent's name, not the athlete's.
+  // Fallback: if the notes didn't specify an athlete name, use the title.
+  // Some coaches put the athlete's name in the title instead of the parent's.
   const raw = unescapeCalendarText(`${title}\n${description}`).trim()
   if (!raw) return null
   const found = extractPersonNames(raw, athletes)
   if (found.size !== 1) return null
-
-  // If the description was empty, the single name came from the title (parent).
-  // Don't auto-create a profile for the parent.
-  if (!descText) return null
 
   const parts = [...found.values()][0]!
   return {
