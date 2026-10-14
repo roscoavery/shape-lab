@@ -192,8 +192,8 @@ export function extractUnmatchedPersonName(
   // for the parent.
   const descText = unescapeCalendarText(description ?? '').trim()
   if (descText) {
-    // Look for an explicit "Athlete name:" marker first.
-    const marker = descText.match(/athlete\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+    // Look for an explicit "Athlete name:" or "Tumbler name:" marker first.
+    const marker = descText.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
     if (marker) {
       const first = marker[1]!.replace(/^./, (c) => c.toUpperCase())
       const last = marker[2] ? marker[2].replace(/^./, (c) => c.toUpperCase()) : ''
