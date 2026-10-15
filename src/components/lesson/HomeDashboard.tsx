@@ -1509,7 +1509,13 @@ export function HomeDashboard({
           athletes={athletes}
           onAthletesChange={onAthletesChange}
           onClose={() => setQuickAddAthleteOpen(false)}
-          onAdded={() => setRefresh((n) => n + 1)}
+          onAdded={(athlete) => {
+            setRefresh((n) => n + 1)
+            // If a training event (clinic/group/school) is active, mark them present.
+            if (activeGroup && !activeGroup.athleteIds.includes(athlete.id)) {
+              toggleEventAthlete(activeGroup.id, athlete.id)
+            }
+          }}
         />
       )}
       {quickAddOpen && activeGroup && signedIn && onAthletesChange && (

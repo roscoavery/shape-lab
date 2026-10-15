@@ -48,6 +48,7 @@ import {
 } from '../../lib/skillPathHighlight'
 import { toggleKeyHelperWiggle } from '../../lib/keyHelperOverrides'
 import { FAMILY_BY_SKILL, SkillMapView, hlGlowStyle, type SkillFamily } from './SkillMapView'
+import { AcroMapView } from './AcroMapView'
 import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
@@ -1794,6 +1795,7 @@ export function SkillPathCards({
   const [modalSkill, setModalSkill] = useState<UnifiedSkill | null>(() =>
     resolveSkill(focusSkillId),
   )
+  const [mapKind, setMapKind] = useState<'main' | 'acro'>('main')
   const modalScrollRef = useRef<HTMLDivElement>(null)
 
   // Deep-linked from search or a shared card link: open the skill's card in the modal.
@@ -1881,14 +1883,43 @@ export function SkillPathCards({
     <div className="space-y-8">
       <section>
         <div>
-          <h2 className="text-xl font-extrabold">The skill map</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-extrabold">
+              {mapKind === 'main' ? 'The skill map' : 'The acro map'}
+            </h2>
+            <div className="flex rounded-full bg-white/10 p-0.5">
+              <button
+                type="button"
+                onClick={() => setMapKind('main')}
+                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  mapKind === 'main' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : ''
+                }`}
+              >
+                Tumbling
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapKind('acro')}
+                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  mapKind === 'acro' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : ''
+                }`}
+              >
+                Acro
+              </button>
+            </div>
+          </div>
           <p className="mt-1 text-sm opacity-80">
-            Foundations at the bottom, harder skills higher up. Tap any tile to
-            open its guide card.
+            {mapKind === 'main'
+              ? 'Foundations at the bottom, harder skills higher up. Tap any tile to open its guide card.'
+              : 'Acro foundations at the bottom, harder skills higher up. Tap a skill to light its path.'}
           </p>
         </div>
         <div className="mt-4">
-          <SkillMapView onTileTap={setModalSkill} viewer={viewer} classAthletes={classAthletes} activeAthlete={activeAthlete} />
+          {mapKind === 'main' ? (
+            <SkillMapView onTileTap={setModalSkill} viewer={viewer} classAthletes={classAthletes} activeAthlete={activeAthlete} />
+          ) : (
+            <AcroMapView />
+          )}
         </div>
       </section>
 
