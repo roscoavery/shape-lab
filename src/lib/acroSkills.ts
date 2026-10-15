@@ -61,11 +61,14 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('tricking_aerial', 'Tricking aerial', 4, 'side'),
   s('one_arm_front_walkover', 'One arm front walkover', 4, 'front'),
   s('front_toss', 'Front toss', 4, 'front'),
+  s('trampoline_back_handspring', 'Trampoline back handspring', 4, 'standing'),
   // Level 5
   s('headspring', 'Headspring', 5, 'front'),
   s('side_aerial', 'Side aerial', 5, 'side'),
   s('front_aerial', 'Front aerial', 5, 'front'),
   s('kip_up', 'Kip up', 5, 'other'),
+  s('tumble_trak_back_handspring', 'Tumble trak back handspring', 5, 'standing'),
+  s('airfloor_back_handspring', 'Airfloor back handspring', 5, 'standing'),
   // Level 6
   s('back_handspring', 'Back handspring', 6, 'standing'),
   s('front_handspring', 'Front handspring', 6, 'front'),
