@@ -43,6 +43,7 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('stand_from_bridge', 'Stand from bridge', 2, 'standing'),
   s('back_bend_kick_over', 'Back bend kick over', 2, 'standing'),
   s('headstand', 'Headstand', 2, 'front'),
+  s('inside_out_bridge', 'Inside out bridge', 2, 'other'),
   // Level 3
   s('back_walkover', 'Back walkover', 3, 'standing'),
   s('front_walkover', 'Front walkover', 3, 'front'),

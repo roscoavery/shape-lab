@@ -83,7 +83,16 @@ export function AcroMapView({ onTileTap }: Props) {
   const shineSkill = shineId ? getAcroSkill(shineId) : null
 
   return (
-    <div className="flex flex-col bg-black">
+    <div
+      className="flex flex-col bg-black"
+      onClick={(e) => {
+        // Tap-away clears the shine, just like the main map. Buttons have
+        // their own handlers; taps on background/gaps restore the full view.
+        if (shineId && !(e.target as HTMLElement).closest('button') && !(e.target as HTMLElement).closest('input')) {
+          setShineId(null)
+        }
+      }}
+    >
       {/* Controls: shine search + wiggle */}
       <div className="flex flex-wrap items-center gap-2 px-1 pb-3">
         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/70">

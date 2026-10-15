@@ -49,6 +49,7 @@ import {
 import { toggleKeyHelperWiggle } from '../../lib/keyHelperOverrides'
 import { FAMILY_BY_SKILL, SkillMapView, hlGlowStyle, type SkillFamily } from './SkillMapView'
 import { AcroMapView } from './AcroMapView'
+import { ACRO_SKILLS, acroSkillToUnified } from '../../lib/acroSkills'
 import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
@@ -1200,7 +1201,18 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
   const [shapeKind, setShapeKind] = useState<SkillNeedKind>('required')
   const [save, setSave] = useState<CardSave>({ state: 'idle' })
 
-  const skillResults = useMemo(() => searchSkills(skillQuery, 6).map((h) => h.skill), [skillQuery])
+  // Acro cards search the acro map; main-map cards search the main registry.
+  const isAcro = skillId.startsWith('acro_')
+  const skillResults = useMemo(() => {
+    const q = skillQuery.trim().toLowerCase()
+    if (!q) return []
+    if (isAcro) {
+      return ACRO_SKILLS.filter((s) => s.name.toLowerCase().includes(q))
+        .slice(0, 6)
+        .map((s) => acroSkillToUnified(s))
+    }
+    return searchSkills(skillQuery, 6).map((h) => h.skill)
+  }, [skillQuery, isAcro])
   const shapeResults = useMemo(() => {
     const q = shapeQuery.trim().toLowerCase()
     return SHAPES.filter((s) => !q || s.name.toLowerCase().includes(q)).slice(0, 6)
