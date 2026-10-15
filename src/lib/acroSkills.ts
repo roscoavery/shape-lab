@@ -70,6 +70,7 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('back_handspring', 'Back handspring', 6, 'standing'),
   s('front_handspring', 'Front handspring', 6, 'front'),
   s('standing_side_aerial', 'Standing side aerial', 6, 'side'),
+  s('barrel_jump', 'Barrel jump', 6, 'other'),
   // Level 7
   s('helicopter_cartwheel', 'Helicopter cartwheel', 7, 'side'),
   s('aerial_twist', 'Aerial twist', 7, 'side'),
