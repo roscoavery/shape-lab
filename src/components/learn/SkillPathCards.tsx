@@ -338,6 +338,8 @@ export function ProofStrip({
   const [showAddModal, setShowAddModal] = useState(false)
   const [hiddenUrls, setHiddenUrls] = useState<string[]>([])
   const [pinnedUrls, setPinnedUrls] = useState<string[]>([])
+  /** Seed-pinned videos the user explicitly unpinned — their action wins over the seed. */
+  const [unpinnedSeeds, setUnpinnedSeeds] = useState<string[]>([])
   /** Fullscreen carousel player: the video list + index, null = closed. */
   const [fullView, setFullView] = useState<{ list: ProofVideo[]; index: number } | null>(null)
 
@@ -392,8 +394,14 @@ export function ProofStrip({
       .then((r) => (r.ok ? r.json() : {}))
       .then((data) => {
         if (!cancelled && data && typeof data === 'object') {
-          const list = (data as Record<string, string[]>)[evidenceKey]
-          if (Array.isArray(list)) setPinnedUrls(list.filter((u) => typeof u === 'string'))
+          const rec = (data as Record<string, unknown>)[evidenceKey]
+          if (Array.isArray(rec)) {
+            setPinnedUrls(rec.filter((u) => typeof u === 'string'))
+          } else if (rec && typeof rec === 'object') {
+            const r = rec as { pinned?: unknown; unpinned?: unknown }
+            if (Array.isArray(r.pinned)) setPinnedUrls(r.pinned.filter((u) => typeof u === 'string'))
+            if (Array.isArray(r.unpinned)) setUnpinnedSeeds(r.unpinned.filter((u) => typeof u === 'string'))
+          }
         }
       })
       .catch(() => {})
@@ -404,6 +412,9 @@ export function ProofStrip({
 
   const hiddenSet = new Set(hiddenUrls)
   const pinSet = new Set(pinnedUrls)
+  const unpinSet = new Set(unpinnedSeeds)
+  /** Seed-pinned unless the user explicitly unpinned it; user pins always count. */
+  const isVideoPinned = (v: ProofVideo) => (pinSet.has(v.url) || v.pinned === true) && !unpinSet.has(v.url)
   const adjApi = useVideoAdjustmentsOptional()
   // Videos hidden via Adjust mode are excluded from the card entirely.
   const isAdjHidden = (url: string) => adjApi?.get(url)?.hidden === true
@@ -427,8 +438,9 @@ export function ProofStrip({
     videos.push(v)
   }
   // Pinned videos render above everything else in a bigger player.
-  const pinnedVideos = videos.filter((v) => pinSet.has(v.url))
-  const stripVideos = videos.filter((v) => !pinSet.has(v.url))
+  // Seed-level pinned flags (v.pinned) act as pinned too, unless the user unpinned them.
+  const pinnedVideos = videos.filter((v) => isVideoPinned(v))
+  const stripVideos = videos.filter((v) => !isVideoPinned(v))
   const adminUrls = new Set(adminVideos.map((v) => v.url))
   const shownUrls = new Set(videos.map((v) => v.url))
 
@@ -483,11 +495,15 @@ export function ProofStrip({
     }
   }
 
-  const savePinned = async (next: string[]) => {
+  const savePinned = async (next: string[], nextUnpinned: string[]) => {
     setPinnedUrls(next)
+    setUnpinnedSeeds(nextUnpinned)
     try {
       const current = await fetch('/api/skill-card-pinned').then((r) => (r.ok ? r.json() : {}))
-      const data = { ...(current as Record<string, string[]>), [evidenceKey]: next }
+      const data = {
+        ...(current as Record<string, unknown>),
+        [evidenceKey]: { pinned: next, unpinned: nextUnpinned },
+      }
       await markedFetch('/api/admin/skill-card-pinned', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -495,6 +511,23 @@ export function ProofStrip({
       })
     } catch {
       /* keep local state; will retry next change */
+    }
+  }
+
+  /** Toggle pin for a video, honoring seed pins and explicit unpins. */
+  const togglePin = (v: ProofVideo) => {
+    const userPinned = pinSet.has(v.url)
+    const seedUnpinned = unpinSet.has(v.url)
+    if (userPinned) {
+      void savePinned(pinnedUrls.filter((u) => u !== v.url), unpinnedSeeds)
+    } else if (v.pinned === true && !seedUnpinned) {
+      // Unpin a seed-pinned video: record the override so it stays unpinned.
+      void savePinned(pinnedUrls, [...unpinnedSeeds, v.url])
+    } else if (seedUnpinned) {
+      // Re-pin a seed video the user had unpinned.
+      void savePinned(pinnedUrls, unpinnedSeeds.filter((u) => u !== v.url))
+    } else {
+      void savePinned([...pinnedUrls, v.url], unpinnedSeeds)
     }
   }
 
@@ -626,7 +659,7 @@ export function ProofStrip({
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() => void savePinned(pinnedUrls.filter((u) => u !== v.url))}
+                    onClick={() => togglePin(v)}
                     className="mt-1 text-[11px] font-bold text-amber-400"
                   >
                     Unpin
@@ -686,7 +719,7 @@ export function ProofStrip({
           const local = isLocalVideo(v.url)
           const bust = bustMap[v.url]
           const playUrl = bust ? `${v.url}?t=${bust}` : v.url
-          const isPinned = pinSet.has(v.url)
+          const isPinned = isVideoPinned(v)
           const creator = videoCreator(v)
           return (
             <div key={v.url} className="w-64 shrink-0">
@@ -780,9 +813,7 @@ export function ProofStrip({
               {canEdit && (
                 <button
                   type="button"
-                  onClick={() =>
-                    void savePinned(isPinned ? pinnedUrls.filter((u) => u !== v.url) : [...pinnedUrls, v.url])
-                  }
+                  onClick={() => togglePin(v)}
                   className="mt-1 ml-2 text-[11px] font-bold text-emerald-400"
                 >
                   {isPinned ? 'Unpin' : '📌 Pin'}

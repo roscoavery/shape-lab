@@ -19,6 +19,8 @@ export interface ProofVideo {
   endAt?: number
   /** IG handle of the original poster, without @. Shown as a creator tag on the card. */
   creator?: string
+  /** Seed-level pin: pinned videos render above everything else in a bigger player. */
+  pinned?: boolean
 }
 
 /**
@@ -1058,6 +1060,26 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DEiifN8Bmo6/',
       watchFor: '540 trick reel with Sydney So.',
       creator: 'ctrlacrobatics',
+    },
+    {
+      who: 'AJ',
+      url: 'https://www.instagram.com/reel/DDQsdsSMDBS/',
+      watchFor: 'Small 540 jump tutorial, six numbered steps.',
+      creator: 'the.ashley.jade',
+    },
+    {
+      who: 'joey vice',
+      url: 'https://www.instagram.com/reel/ClrJsY9puGW/',
+      watchFor: '540 jump in acro dance routine.',
+      creator: 'joeythedancer',
+      pinned: true,
+    },
+    {
+      who: 'Coach Adam',
+      url: 'https://www.instagram.com/p/DRpRLWKDuf5/?img_index=4',
+      watchFor: '540 trick tutorial, step-by-step carousel.',
+      creator: 'adamcdevenport',
+      pinned: true,
     },
   ],
   'acro_twisted_aerial': [
