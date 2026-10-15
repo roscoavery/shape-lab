@@ -53,6 +53,7 @@ import {
 } from '../../lib/skillRegistry'
 import { guideCardColor, SkillGuideCardContent } from '../learn/SkillPathCards'
 import { GymClipPlayer } from '../GymClipPlayer'
+import { instagramSlideIndex } from '../../lib/socialUrls'
 import { CroppedStill } from '../CroppedStill'
 import { PortraitVideoPlayer } from '../PortraitVideoPlayer'
 import { CollageStage } from '../classes/CollageStage'
@@ -868,6 +869,9 @@ function ChalkboardCard({
   const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
   const [place, setPlace] = useState({ x: 72, y: 18 })
   const [editing, setEditing] = useState(false)
+  // Carousel slide currently open; per-slide A/B loops are stored on the item.
+  const [slideIndex, setSlideIndex] = useState(() => instagramSlideIndex(item.url ?? ''))
+  const slideLoop = item.slideLoops?.[String(slideIndex)]
   const frameRef = useRef<HTMLDivElement | null>(null)
   const onScreen = useOnScreen(frameRef)
   const [chromeOpen, setChromeOpen] = useState(true)
@@ -913,10 +917,10 @@ function ChalkboardCard({
   )
   const playerH =
     boardSize === 'full'
-      ? 'h-[min(50vh,28rem)]'
+      ? 'h-[min(62vh,34rem)]'
       : compact
         ? 'h-40 max-sm:h-36'
-        : 'h-[min(20rem,42vh)] max-sm:h-[min(16.5rem,38vh)]'
+        : 'h-[min(26rem,56vh)] max-sm:h-[min(21rem,52vh)]'
   const comment = item.comment?.trim() || ''
   const commentAbove = item.commentPlacement === 'above'
 
@@ -969,8 +973,14 @@ function ChalkboardCard({
       url={item.url}
       itemId={gymClip?.id}
       persistUrl={item.url}
-      loopA={item.loopA}
-      loopB={item.loopB}
+      loopA={slideLoop?.a ?? item.loopA}
+      loopB={slideLoop?.b ?? item.loopB}
+      onAbChange={(a, b) =>
+        updateChalkboardItem(item.id, {
+          slideLoops: { ...(item.slideLoops ?? {}), [String(slideIndex)]: { a, b } },
+        })
+      }
+      onSlideChange={setSlideIndex}
       compact
       fill
       fit="contain"
@@ -1408,6 +1418,9 @@ function ReelSlide({
   const [textStyle, setTextStyle] = useState<ChalkboardOverlay['style']>('script')
   const [place, setPlace] = useState({ x: 72, y: 18 })
   const [editing, setEditing] = useState(false)
+  // Carousel slide currently open; per-slide A/B loops are stored on the item.
+  const [slideIndex, setSlideIndex] = useState(() => instagramSlideIndex(item.url ?? ''))
+  const slideLoop = item.slideLoops?.[String(slideIndex)]
   const coachProfile = useMemo(
     () => loadAthletes().find((a) => a.id === item.createdById) ?? null,
     [item.createdById],
@@ -1461,10 +1474,12 @@ function ReelSlide({
       data-reel={item.id}
       className="flex min-h-full snap-start flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
-      {commentAbove && commentBlock}
+      {commentAbove && commentBlock && (
+        <div className="max-h-[20vh] shrink-0 overflow-y-auto">{commentBlock}</div>
+      )}
       {item.url ? (
         <div
-          className="relative mx-auto h-[min(52vh,30rem)] w-full max-w-3xl bg-black"
+          className="relative mx-auto w-full max-w-3xl flex-1 bg-black min-h-[min(58vh,30rem)]"
           onClick={(e) => {
             if (!coach || !editing) return
             const rect = e.currentTarget.getBoundingClientRect()
@@ -1478,8 +1493,14 @@ function ReelSlide({
             url={item.url}
             itemId={gymClip?.id}
             persistUrl={item.url}
-            loopA={item.loopA}
-            loopB={item.loopB}
+            loopA={slideLoop?.a ?? item.loopA}
+            loopB={slideLoop?.b ?? item.loopB}
+            onAbChange={(a, b) =>
+              updateChalkboardItem(item.id, {
+                slideLoops: { ...(item.slideLoops ?? {}), [String(slideIndex)]: { a, b } },
+              })
+            }
+            onSlideChange={setSlideIndex}
             fill
             fit="contain"
             smartFit={false}
@@ -1499,12 +1520,14 @@ function ReelSlide({
           />
         </div>
       ) : (
-        <div className="mx-auto flex h-[min(52vh,30rem)] w-full max-w-3xl items-center justify-center bg-black text-sm text-white/50">
+        <div className="mx-auto flex min-h-[min(58vh,30rem)] w-full max-w-3xl flex-1 items-center justify-center bg-black text-sm text-white/50">
           {item.title}
         </div>
       )}
-      {!commentAbove && commentBlock}
-      <div className="space-y-2 px-4 pt-3">
+      {!commentAbove && commentBlock && (
+        <div className="max-h-[20vh] shrink-0 overflow-y-auto">{commentBlock}</div>
+      )}
+      <div className="shrink-0 space-y-2 px-4 pt-3">
         <p className="text-sm font-semibold">{item.title}</p>
         <p className="text-xs text-white/55">
           Swipe or use Next for the next reel. Coach notes and text sit with this clip.

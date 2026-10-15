@@ -16,7 +16,7 @@ import { useFavorites } from '../lib/favorites'
 import { kindFromUrl, type RefItemKind } from '../lib/clipStore'
 import type { OrganizeEditor } from '../lib/organizeLibrary'
 import { prefetchNeighborClips } from '../lib/igCache'
-import { postedByFromUrl, socialPlatform, youtubeEmbedSrc } from '../lib/socialUrls'
+import { postedByFromUrl, socialPlatform, urlWithIgSlide, youtubeEmbedSrc } from '../lib/socialUrls'
 import { useGymLibrary } from '../lib/gymLibrary'
 import { TOUR_CHROME_EVENT, tourChromeNeeded } from './homework/GlowTour'
 
@@ -101,6 +101,9 @@ const ReelSection = memo(function ReelSection({
     () => ({ gymEditor, personalEditor, profileId }),
     [gymEditor, personalEditor, profileId],
   )
+  // Carousel slide currently open (for slide-aware share).
+  const [slideIndex, setSlideIndex] = useState(0)
+  const shareUrl = urlWithIgSlide(clip.url, slideIndex)
   // IG-style chrome: hidden while scrolling, tap the video to show/hide.
   const [chrome, setChrome] = useState(false)
   const toggleChrome = useCallback(() => setChrome((c) => !c), [])
@@ -152,6 +155,7 @@ const ReelSection = memo(function ReelSection({
             startUnmuted
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.id, clip.url, next)}
+            onSlideChange={setSlideIndex}
             chromeOpen={chromeOpen}
             onToggleChrome={toggleChrome}
             tapTogglesChrome
@@ -194,7 +198,7 @@ const ReelSection = memo(function ReelSection({
             <div id="tour-player-share">
             <ShareReference
               variant="story"
-              draft={clipShareDraft(clip.name, clip.url, clip.loopA, clip.loopB)}
+              draft={clipShareDraft(clip.name, shareUrl, clip.loopA, clip.loopB)}
               onAddToSkillCard={
                 onAddToSkillCard ? () => onAddToSkillCard(clipForCard) : undefined
               }
@@ -206,8 +210,8 @@ const ReelSection = memo(function ReelSection({
                   variant="feed"
                   clip={{
                     name: clip.name,
-                    url: clip.url,
-                    kind: clip.kind ?? kindFromUrl(clip.url),
+                    url: shareUrl,
+                    kind: clip.kind ?? kindFromUrl(shareUrl),
                     keywords: clip.keywords,
                     sourceId: clip.id,
                     postedBy: handle ?? clip.postedBy,

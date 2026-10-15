@@ -181,6 +181,8 @@ type Props = {
   loopA?: number | null
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
+  /** Fires with the 0-based carousel slide whenever it changes (init included). */
+  onSlideChange?: (index: number) => void
   /** Begin playback at the loop start instead of 0 (collages). */
   startAtLoop?: boolean
   compact?: boolean
@@ -233,6 +235,7 @@ export function InstagramEmbed({
   loopA,
   loopB,
   onAbChange,
+  onSlideChange,
   startAtLoop = false,
   compact = false,
   quiet = false,
@@ -285,6 +288,10 @@ export function InstagramEmbed({
 
   const slideCount = slides.length
   const safeSlide = slideCount > 0 ? Math.min(slide, slideCount - 1) : 0
+
+  useEffect(() => {
+    onSlideChange?.(safeSlide)
+  }, [safeSlide, onSlideChange])
 
   useEffect(() => {
     setSlide(instagramSlideIndex(url))

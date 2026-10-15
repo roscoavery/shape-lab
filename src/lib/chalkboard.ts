@@ -73,6 +73,8 @@ export type ChalkboardItem = {
   url?: string
   loopA?: number | null
   loopB?: number | null
+  /** Per-carousel-slide A/B loops, keyed by 0-based slide index. */
+  slideLoops?: Record<string, { a: number | null; b: number | null }>
   stillId?: string
   shapeId?: string
   photoSrc?: string
@@ -180,6 +182,21 @@ function normalizeItem(raw: Partial<ChalkboardItem>): ChalkboardItem | null {
     url: raw.url,
     loopA: raw.loopA ?? null,
     loopB: raw.loopB ?? null,
+    slideLoops:
+      raw.slideLoops && typeof raw.slideLoops === 'object'
+        ? Object.fromEntries(
+            Object.entries(raw.slideLoops)
+              .filter(
+                ([k, v]) =>
+                  /^\d+$/.test(k) &&
+                  v &&
+                  typeof v === 'object' &&
+                  (typeof (v as { a?: unknown }).a === 'number' || (v as { a?: unknown }).a == null) &&
+                  (typeof (v as { b?: unknown }).b === 'number' || (v as { b?: unknown }).b == null),
+              )
+              .map(([k, v]) => [k, { a: (v as { a: number | null }).a ?? null, b: (v as { b: number | null }).b ?? null }]),
+          )
+        : undefined,
     stillId: raw.stillId,
     shapeId: raw.shapeId,
     photoSrc: raw.photoSrc,
@@ -630,7 +647,7 @@ export function postToChalkboard(input: {
 export function updateChalkboardItem(
   itemId: string,
   patch: Partial<
-    Pick<ChalkboardItem, 'comment' | 'commentPlacement' | 'overlays' | 'title'>
+    Pick<ChalkboardItem, 'comment' | 'commentPlacement' | 'overlays' | 'title' | 'slideLoops' | 'loopA' | 'loopB'>
   >,
 ): ChalkboardItem | null {
   const file = read()

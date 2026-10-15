@@ -17,7 +17,7 @@ import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 import { itemMatchesQuery } from '../../lib/clipStore'
 import type { Athlete } from '../../types'
 import { prefetchNeighborClips } from '../../lib/igCache'
-import { postedByFromUrl } from '../../lib/socialUrls'
+import { postedByFromUrl, urlWithIgSlide } from '../../lib/socialUrls'
 import { StoryRail } from '../stories/StoryRail'
 import { takeMobileSearchJump } from '../../lib/mobileSearchNav'
 import { isSameReferenceUrl } from '../../lib/clipStore'
@@ -173,6 +173,9 @@ const FeedArticle = memo(function FeedArticle({
   onCopied,
 }: FeedArticleProps) {
   const handle = clip.postedBy || postedByFromUrl(clip.url)
+  // Carousel slide currently open in the player (for slide-aware share/collage).
+  const [slideIndex, setSlideIndex] = useState(0)
+  const shareUrl = urlWithIgSlide(clip.url, slideIndex)
   return (
     <article data-feed-index={index} className="relative h-full snap-start overflow-hidden bg-black">
       {/* Full-bleed video: no dead panel below, IG-style. */}
@@ -191,6 +194,7 @@ const FeedArticle = memo(function FeedArticle({
             markupSwipeSafe
             postedBy={handle}
             onPostedBy={(next) => onPostedBy(clip.url, next)}
+            onSlideChange={setSlideIndex}
             hudCorner={
               <span id="tour-scroll-fullscreen" className="inline-flex">
               <HudCircle label="" onClick={() => onOpenReel(index)}>
@@ -241,7 +245,7 @@ const FeedArticle = memo(function FeedArticle({
       <div className="absolute bottom-3 right-3 z-20 flex flex-col items-center gap-2.5">
         <ShareReference
           variant="story"
-          draft={clipShareDraft(clip.name, clip.url)}
+          draft={clipShareDraft(clip.name, shareUrl)}
           onAddToSkillCard={editor.profileId ? () => onAddToSkillCard(clip) : undefined}
           onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
           extraActions={
@@ -249,7 +253,7 @@ const FeedArticle = memo(function FeedArticle({
               variant="feed"
               clip={{
                 name: clip.name,
-                url: clip.url,
+                url: shareUrl,
                 kind: clip.kind,
                 keywords: clip.keywords,
                 sourceId: clip.id,
@@ -272,7 +276,7 @@ const FeedArticle = memo(function FeedArticle({
           variant="reel"
           clip={{
             name: clip.name,
-            url: clip.url,
+            url: shareUrl,
             kind: clip.kind,
             keywords: clip.keywords,
             sourceId: clip.id,

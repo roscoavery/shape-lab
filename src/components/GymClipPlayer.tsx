@@ -1,7 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { InstagramEmbed } from './compare/InstagramEmbed'
 import { VideoWorkbench } from './compare/VideoWorkbench'
-import { socialPlatform, youtubeEmbedSrc } from '../lib/socialUrls'
+import { socialPlatform, youtubeEmbedSrc, instagramSlideIndex, urlWithIgSlide } from '../lib/socialUrls'
 import { prefetchInstagram } from '../lib/igCache'
 import { ClipWatchMeta } from './ClipWatchMeta'
 import { ShareReference } from './share/ShareReference'
@@ -20,6 +20,8 @@ type Props = {
   onAbChange?: (a: number | null, b: number | null) => void
   /** Begin playback at the loop start instead of 0 (collages). */
   startAtLoop?: boolean
+  /** Fires with the 0-based carousel slide whenever it changes. */
+  onSlideChange?: (index: number) => void
   compact?: boolean
   quiet?: boolean
   bare?: boolean
@@ -60,6 +62,7 @@ export function GymClipPlayer({
   loopB,
   onAbChange,
   startAtLoop = false,
+  onSlideChange,
   compact = false,
   quiet = false,
   bare = false,
@@ -87,6 +90,19 @@ export function GymClipPlayer({
     if (socialPlatform(url) && itemId) void prefetchInstagram(url, itemId)
   }, [url, itemId])
   const persist = persistUrl || url
+  // Carousel slide for share drafts: which slide was open when shared.
+  const [slideIndex, setSlideIndex] = useState(() => instagramSlideIndex(url))
+  useEffect(() => {
+    setSlideIndex(instagramSlideIndex(url))
+  }, [url])
+  const shareUrl = urlWithIgSlide(persist, slideIndex)
+  const handleSlideChange = useCallback(
+    (i: number) => {
+      setSlideIndex(i)
+      onSlideChange?.(i)
+    },
+    [onSlideChange],
+  )
   const { nameForUrl, clipForUrl, clips } = useGymLibrary()
   const gymClip = (itemId && clips.find((c) => c.id === itemId)) || clipForUrl(url)
   const hosted = gymClip?.savedUrl && isGymHostedClipUrl(gymClip.savedUrl) ? gymClip.savedUrl : null
@@ -98,7 +114,7 @@ export function GymClipPlayer({
     <div className="pointer-events-auto absolute right-2 bottom-[5.75rem] z-30 sm:bottom-24">
       <ShareReference
         variant="story"
-        draft={clipShareDraft(nameForUrl(persist) || 'Reference clip', persist, loopA, loopB)}
+        draft={clipShareDraft(nameForUrl(persist) || 'Reference clip', shareUrl, loopA, loopB)}
       />
     </div>
   ) : null
@@ -156,6 +172,7 @@ export function GymClipPlayer({
         mirror={mirror}
         onFlip={onFlip}
         startAtLoop={startAtLoop}
+        onSlideChange={handleSlideChange}
       />
     )
     return fill ? (
