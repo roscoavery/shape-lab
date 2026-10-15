@@ -17,7 +17,7 @@ type Props = {
 
 /** Track colors matching the main map's ember UI. */
 const TRACK_RGB: Record<AcroTrack, string> = {
-  standing: '255,120,50', // ember
+  standing: '192,132,252', // purple (standing in main map)
   front: '251,146,60', // orange (forwards in main map)
   side: '96,165,250', // blue (cartwheel in main map)
   other: '74,222,128', // green (roundoff in main map)
