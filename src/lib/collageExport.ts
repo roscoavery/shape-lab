@@ -10,8 +10,7 @@ import {
   hintMotion,
   startRecorder,
 } from './saveMedia'
-import { evenGrid } from './collages'
-import { collageCellAspect, packedCellRects } from './collageLayout'
+import { collageCellAspect, packedCellRects, bestGridFit } from './collageLayout'
 
 export const COLLAGE_EXPORT_PRESETS = [5, 8, 10, 15, 20, 30, 60] as const
 
@@ -67,6 +66,9 @@ export type RecordCollageOpts = {
   videos: HTMLVideoElement[]
   seconds: number
   landscape: boolean
+  /** When set, the export uses the on-screen arrangement so the saved video matches. */
+  cols?: number
+  rows?: number
   cancelled?: () => boolean
   onProgress?: (p: number) => void
 }
@@ -74,17 +76,15 @@ export type RecordCollageOpts = {
 export async function recordCollagePlayback(opts: RecordCollageOpts): Promise<Blob> {
   const seconds = clampExportSeconds(opts.seconds)
   const n = Math.max(1, opts.videos.length)
-  const { cols, rows } = evenGrid(n, opts.landscape)
+  const cellAspect = collageCellAspect(videoAspects(opts.videos))
+  const { cols, rows } =
+    opts.cols && opts.rows
+      ? { cols: opts.cols, rows: opts.rows }
+      : bestGridFit(n, cellAspect, opts.landscape ? 1920 : 1080, opts.landscape ? 1080 : 1920)
   const landscape = cols >= rows
   const width = landscape ? 1920 : 1080
   const height = landscape ? 1080 : 1920
-  const rects = packedCellRects(
-    n,
-    { cols, rows },
-    collageCellAspect(videoAspects(opts.videos)),
-    width,
-    height,
-  )
+  const rects = packedCellRects(n, { cols, rows }, cellAspect, width, height)
 
   for (const video of opts.videos) {
     video.muted = true

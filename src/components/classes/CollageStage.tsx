@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GymClipPlayer } from '../GymClipPlayer'
 import { CollageSlotFill } from './CollageSlotFill'
-import { evenGrid, type Collage, type CollageSlot } from '../../lib/collages'
+import { type Collage, type CollageSlot } from '../../lib/collages'
 import { useGymLibrary } from '../../lib/gymLibrary'
 import {
   clampExportSeconds,
@@ -10,7 +10,7 @@ import {
   COLLAGE_EXPORT_PRESETS,
   recordCollagePlayback,
 } from '../../lib/collageExport'
-import { collageCellAspect, packedGridSize } from '../../lib/collageLayout'
+import { collageCellAspect, packedGridSize, bestGridFit } from '../../lib/collageLayout'
 import { saveResultMessage, saveVideoToDevice, shareFileOnly, isAppleMobile, isAndroid } from '../../lib/saveMedia'
 import { PhoneReelViewer } from '../PhoneReelViewer'
 import { ShareReference } from '../share/ShareReference'
@@ -92,7 +92,7 @@ export function CollageStage({
   const [reelIndex, setReelIndex] = useState(0)
 
   const landscape = viewport.w > viewport.h
-  const { cols, rows } = evenGrid(collage.slots.length, landscape || fullscreen)
+  const { cols, rows } = bestGridFit(collage.slots.length, cellAspect, viewport.w, viewport.h)
   const cinema = fullscreen || exporting
   const showBar = !fullscreen || chrome || exporting
   const packed = useMemo(
@@ -184,6 +184,8 @@ export function CollageStage({
         videos,
         seconds,
         landscape: landscape || fullscreen,
+        cols,
+        rows,
         cancelled: () => cancelRef.current,
         onProgress: setProgress,
       })

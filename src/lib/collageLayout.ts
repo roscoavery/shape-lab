@@ -63,6 +63,39 @@ export function packedGridSize(
   }
 }
 
+/**
+ * Pick the cols x rows arrangement that puts the most video pixels on the
+ * given area. A fixed portrait/landscape rule can leave half the screen
+ * black (e.g. six portrait clips in 2x3 on a portrait iPad pack into a narrow
+ * column, while 3x2 nearly fills it).
+ */
+export function bestGridFit(
+  count: number,
+  cellAspect: number,
+  maxWidth: number,
+  maxHeight: number,
+): GridSize {
+  const n = Math.max(1, Math.round(count))
+  const viewAspect = maxWidth / Math.max(1, maxHeight)
+  let best: GridSize = { cols: 1, rows: n }
+  let bestScore = -1
+  let bestAspectDiff = Infinity
+  for (let cols = 1; cols <= n; cols += 1) {
+    const rows = Math.ceil(n / cols)
+    const packed = packedGridSize({ cols, rows }, cellAspect, maxWidth, maxHeight)
+    // Video pixels on screen; empty cells don't count.
+    const score = n * packed.cellWidth * packed.cellHeight
+    const gridAspect = (cols * Math.max(0.05, cellAspect)) / rows
+    const aspectDiff = Math.abs(gridAspect - viewAspect)
+    if (score > bestScore + 1 || (Math.abs(score - bestScore) <= 1 && aspectDiff < bestAspectDiff)) {
+      bestScore = score
+      bestAspectDiff = aspectDiff
+      best = { cols, rows }
+    }
+  }
+  return best
+}
+
 export function packedCellRects(
   count: number,
   grid: GridSize,
