@@ -98,19 +98,23 @@ export function AcroMapView({ onTileTap }: Props) {
         )}
       </div>
 
-      {/* 7 level rows, level 7 at top, level 1 at bottom */}
-      <div className="space-y-2">
+      {/* 7 level bands, level 7 at top, level 1 at bottom. One band per level. */}
+      <div className="space-y-1.5">
         {[7, 6, 5, 4, 3, 2, 1].map((level) => (
-          <div key={level}>
-            <p className="pb-1 text-[10px] font-bold uppercase tracking-wider text-white/50">
-              Level {level}
+          <div key={level} className="flex items-stretch gap-1.5">
+            <p className="flex w-8 shrink-0 items-center justify-center text-[10px] font-bold uppercase tracking-wider text-white/50">
+              L{level}
             </p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid flex-1 grid-cols-4 gap-1.5">
               {ACRO_TRACKS.map((track: AcroTrack) => {
                 const skills = ACRO_SKILLS.filter((s) => s.track === track && s.level === level)
                 const rgb = TRACK_RGB[track]
+                const dense = skills.length > 2
                 return (
-                  <div key={track} className="space-y-2">
+                  <div
+                    key={track}
+                    className={dense ? 'grid grid-cols-2 gap-1' : 'flex flex-col gap-1'}
+                  >
                     {skills.map((skill) => {
                       const isShine = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
@@ -120,12 +124,12 @@ export function AcroMapView({ onTileTap }: Props) {
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className="relative flex min-h-[60px] w-full items-center justify-center rounded-2xl border-2 px-1 py-2 text-center text-[10px] font-bold leading-snug tracking-[0.02em] text-white transition-transform active:scale-95 sm:text-[11px]"
+                          className={`relative flex w-full items-center justify-center rounded-xl border-2 px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
+                            dense ? 'min-h-[44px] py-1 text-[9px]' : 'min-h-[60px] flex-1 py-2 text-[10px] sm:text-[11px]'
+                          }`}
                           style={{
                             background: '#000000',
-                            borderColor: isShine
-                              ? `rgba(${rgb},1)`
-                              : `rgba(${rgb},0.85)`,
+                            borderColor: isShine ? `rgba(${rgb},1)` : `rgba(${rgb},0.85)`,
                             boxShadow: isShine
                               ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
                               : 'none',
@@ -133,7 +137,7 @@ export function AcroMapView({ onTileTap }: Props) {
                         >
                           {!hasCard && (
                             <span
-                              className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+                              className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400"
                               title="Guide coming"
                               aria-hidden
                             />
