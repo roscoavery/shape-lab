@@ -1003,4 +1003,237 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Tramp handspring to zombie.',
     },
   ],
+  // Acro map reference videos (Ryan's acro collection)
+  'acro_butterfly_kick': [
+    {
+      who: 'Ryan Owen',
+      url: 'https://www.instagram.com/reel/DYkdE01Aysv/',
+      watchFor: 'Butterfly kick with full twist breakdown.',
+      creator: 'ryannn_oxd',
+    },
+  ],
+  'acro_front_aerial': [
+    {
+      who: 'Kyoko',
+      url: 'https://www.instagram.com/p/DYryPMOGi0P/?img_index=2',
+      watchFor: 'Front aerial reference.',
+      creator: 'kyoko_negishi',
+    },
+    {
+      who: 'Aurora Kulp',
+      url: 'https://www.instagram.com/reel/DccUEDcMK_Q/',
+      watchFor: 'Front aerial drills for landing leg strength and technique.',
+      creator: 'acrobaticswithaurora',
+    },
+  ],
+  'acro_peter_pan': [
+    {
+      who: 'Acro with Maddi',
+      url: 'https://www.instagram.com/reel/DYtI57Ghqip/',
+      watchFor: 'Peter Pan tutorial with prerequisites and progressions.',
+      creator: 'acrowithmaddi',
+    },
+  ],
+  'acro_f540': [
+    {
+      who: 'ZERA',
+      url: 'https://www.instagram.com/reel/DYucVdngZbk/',
+      watchFor: '540 kick demonstration.',
+      creator: 'depth.of.expression',
+    },
+    {
+      who: 'Storm',
+      url: 'https://www.instagram.com/reel/DdFcbVRAIaL/',
+      watchFor: 'Reverse 540 kick demonstration, clean landings.',
+      creator: 'stormlanzoni',
+    },
+    {
+      who: 'Acrobatic Arts',
+      url: 'https://www.instagram.com/reel/DHvuaZuJeHL/',
+      watchFor: 'Viral 540 jump, step-by-step breakdown.',
+      creator: 'acrobaticarts',
+    },
+    {
+      who: 'CTRL Acrobatics',
+      url: 'https://www.instagram.com/reel/DEiifN8Bmo6/',
+      watchFor: '540 trick reel with Sydney So.',
+      creator: 'ctrlacrobatics',
+    },
+  ],
+  'acro_twisted_aerial': [
+    {
+      who: 'CTRL Acrobatics',
+      url: 'https://www.instagram.com/reel/Da_eUvkzF03/',
+      watchFor: 'Twisted aerial in fast and slow motion.',
+      creator: 'ctrlacrobatics',
+    },
+  ],
+  'acro_elbow_stand': [
+    {
+      who: 'Rosie',
+      url: 'https://www.instagram.com/reel/DcM-X3dgPU4/',
+      watchFor: 'Wall-assisted forearm stand progression.',
+      creator: 'rosiemovess',
+    },
+  ],
+  'acro_tucked_headstand': [
+    {
+      who: 'Miss Nancy Stretch',
+      url: 'https://www.instagram.com/reel/CpLVlqgAXeJ/',
+      watchFor: 'Headstand and acro flexibility reference.',
+      creator: 'missnancystretch',
+    },
+  ],
+  'acro_back_reverse_tinsica': [
+    {
+      who: 'Centre Pointe Performing Arts',
+      url: 'https://www.instagram.com/reel/DeVe3AMMsLi/',
+      watchFor: 'Back walkover and tinsica training.',
+      creator: 'centrepointeperformingarts',
+    },
+    {
+      who: 'Laura Gamell',
+      url: 'https://www.instagram.com/reel/DdjuO_doNPt/',
+      watchFor: 'Back walkover variation tutorial, step by step.',
+      creator: 'lauragamell',
+    },
+  ],
+  'acro_raiz': [
+    {
+      who: 'Derek Piquette',
+      url: 'https://www.instagram.com/reel/CY1x89bFfXC/',
+      watchFor: 'Raiz progressions with Acrobatic Arts.',
+      creator: 'derekpiquette',
+    },
+  ],
+  'acro_wall_handstand': [
+    {
+      who: 'Aurora Kulp',
+      url: 'https://www.instagram.com/reel/DUlS1JjDG0P/',
+      watchFor: 'Hand-balancing tutorial, kicking up to wall.',
+      creator: 'acrobaticswithaurora',
+    },
+  ],
+  'acro_spider_cartwheel': [
+    {
+      who: 'Miss Jayde',
+      url: 'https://www.instagram.com/reel/DJJrhPbArHq/',
+      watchFor: 'Inside-out hand-dot drill for hand rotation and landing precision.',
+      creator: 'missjaydeacro',
+    },
+    {
+      who: 'Miss Jayde',
+      url: 'https://www.instagram.com/reel/DeEhrJwx5T8/',
+      watchFor: 'Rolling tinsica drills on stacked mats and against a wall.',
+      creator: 'missjaydeacro',
+    },
+  ],
+  'acro_illusion': [
+    {
+      who: 'Acrobatic Arts',
+      url: 'https://www.instagram.com/p/B1l50APh3og/',
+      watchFor: 'Illusion flowing into back walkover, technique tips.',
+      creator: 'acrobaticarts',
+    },
+  ],
+  'acro_back_walkover': [
+    {
+      who: 'Acrobatic Arts',
+      url: 'https://www.instagram.com/p/B1l50APh3og/',
+      watchFor: 'Illusion flowing into back walkover, technique tips.',
+      creator: 'acrobaticarts',
+    },
+  ],
+  'acro_kip_up': [
+    {
+      who: 'Zita Demarest',
+      url: 'https://www.instagram.com/reel/DeKEFx7sMnr/',
+      watchFor: 'Kick up variations, rolls and handstand transitions.',
+      creator: 'zitademarest',
+    },
+  ],
+  'acro_helicopter_cartwheel': [
+    {
+      who: 'Acrobatic Arts',
+      url: 'https://www.instagram.com/reel/CjsckEOAKou/',
+      watchFor: 'Cartwheel with helicopter motion, transitions.',
+      creator: 'acrobaticarts',
+    },
+    {
+      who: 'Acrobatic Arts',
+      url: 'https://www.instagram.com/reel/Cu9ngq7vKws/',
+      watchFor: 'Heli spotting edition, with inside-out bridge and one-handed cartwheel.',
+      creator: 'acrobaticarts',
+    },
+    {
+      who: 'Miss Mayra',
+      url: 'https://www.instagram.com/reel/CW1YG7SBr_X/',
+      watchFor: 'Leg swing drill for helicopter cartwheel, keeping the swing leg low.',
+      creator: 'gatonegro_acro',
+    },
+  ],
+  'acro_side_aerial': [
+    {
+      who: 'Seed Dance Studios',
+      url: 'https://www.instagram.com/reel/DTsqA1HjGtv/',
+      watchFor: 'Aerial cartwheel drills: kneeling back kicks, explosive back kicks, compact cartwheel.',
+      creator: 'seed_dance_studios',
+    },
+  ],
+  'acro_headspring': [
+    {
+      who: 'Mac Gymnastics Club Midoribashi',
+      url: 'https://www.instagram.com/reel/DUvHCtiD0Y-/',
+      watchFor: 'Headspring practice clip.',
+      creator: 'macmidoribashi',
+    },
+    {
+      who: 'Aurora Kulp',
+      url: 'https://www.instagram.com/reel/DTasfhiDHJ6/',
+      watchFor: 'Headspring tutorial: headstand, knees on elbows, push into hands.',
+      creator: 'acrobaticswithaurora',
+    },
+    {
+      who: 'Kids P.E. Gymnastics',
+      url: 'https://www.instagram.com/reel/DUGFLx-k1mD/',
+      watchFor: 'Headspring tutorial, hip positioning through bridge to jump.',
+      creator: 'kids_p.e',
+    },
+    {
+      who: 'Daniel Sundell',
+      url: 'https://www.instagram.com/reel/DZJlhmytZ6Q/',
+      watchFor: 'Headspring as precursor to front handspring, explosivity drills.',
+      creator: 'coach_dan_gymnastics',
+    },
+    {
+      who: 'Pat Redfern',
+      url: 'https://www.instagram.com/reel/CoWweTtBNrQ/',
+      watchFor: 'Headspring progression, hair line placement for neck safety.',
+      creator: 'coachredders',
+    },
+    {
+      who: 'Savchuk Ivan',
+      url: 'https://www.instagram.com/reel/DDFK1DyNLyn/',
+      watchFor: 'Front headspring drills, steps 1 to 5.',
+      creator: 'ivan.savchuk',
+    },
+    {
+      who: 'Yuto Iyogi',
+      url: 'https://www.instagram.com/p/Cow1mElBixm/',
+      watchFor: 'Headspring training carousel.',
+      creator: 'iyogi_gym_life',
+    },
+    {
+      who: 'Daniel Sundell',
+      url: 'https://www.instagram.com/reel/CqE4KgzIXKA/',
+      watchFor: 'Headspring builds explosivity, teaches heel drive for front handspring.',
+      creator: 'coach_dan_gymnastics',
+    },
+    {
+      who: 'Miss Caro',
+      url: 'https://www.instagram.com/reel/ClW32jOO9a-/',
+      watchFor: 'Handstand to squat, point of power sequence.',
+      creator: 'misscarodealva',
+    },
+  ],
 }
