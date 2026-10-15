@@ -8,7 +8,8 @@ import {
   type AcroSkill,
   type AcroTrack,
 } from '../../lib/acroSkills'
-import { getRegistrySkillByName, type UnifiedSkill } from '../../lib/skillRegistry'
+import { getRegistrySkillByName, getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
+import { needsForSkillConsolidated } from '../../lib/skillPathHighlight'
 
 type Props = {
   /** Called when a tile is tapped with the resolved skill. */
@@ -41,11 +42,42 @@ export function AcroMapView({ onTileTap }: Props) {
     return ACRO_SKILLS.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 8)
   }, [shineQuery])
 
+  // Shine path: for the shined skill, find prerequisites via main-map
+  // name match, then map them back to acro skills by name.
+  const shinePathIds = useMemo(() => {
+    if (!shineId) return new Set<string>()
+    const acroSkill = getAcroSkill(shineId)
+    if (!acroSkill) return new Set<string>([shineId])
+    const mainSkill = getRegistrySkillByName(acroSkill.name)
+    if (!mainSkill) return new Set<string>([shineId])
+    const ids = new Set<string>([shineId])
+    try {
+      const needs = needsForSkillConsolidated(mainSkill.id)
+      for (const need of needs) {
+        if (!need.needSkillId) continue
+        const needSkill = getRegistrySkill(need.needSkillId)
+        if (!needSkill) continue
+        // Find acro skill with matching name
+        const acroMatch = ACRO_SKILLS.find(
+          (a) => a.name.toLowerCase() === needSkill.name.toLowerCase(),
+        )
+        if (acroMatch) ids.add(acroMatch.id)
+      }
+    } catch {
+      /* no path data */
+    }
+    return ids
+  }, [shineId])
+
   const handleTap = (skill: AcroSkill) => {
-    const mainSkill = getRegistrySkillByName(skill.name)
-    // Shared main-map card when names match; otherwise a minimal acro card
-    // with PathTab (wiggle toggles), harder versions, and reference videos.
-    onTileTap(mainSkill ?? acroSkillToUnified(skill))
+    // Tap-to-preview: first tap shines the path, second tap on the same skill opens its card.
+    if (shineId === skill.id) {
+      const mainSkill = getRegistrySkillByName(skill.name)
+      onTileTap(mainSkill ?? acroSkillToUnified(skill))
+    } else {
+      setShineId(skill.id)
+      setShineQuery('')
+    }
   }
 
   const shineSkill = shineId ? getAcroSkill(shineId) : null
@@ -116,7 +148,8 @@ export function AcroMapView({ onTileTap }: Props) {
                     className={dense ? 'grid grid-cols-2 gap-1' : 'flex flex-col gap-1'}
                   >
                     {skills.map((skill) => {
-                      const isShine = skill.id === shineId
+                      const isShine = shinePathIds.has(skill.id)
+                      const isTarget = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
                       const hasCard = !!mainSkill?.guideId
                       return (
@@ -129,10 +162,17 @@ export function AcroMapView({ onTileTap }: Props) {
                           }`}
                           style={{
                             background: '#000000',
-                            borderColor: isShine ? `rgba(${rgb},1)` : `rgba(${rgb},0.85)`,
-                            boxShadow: isShine
+                            borderColor: isTarget
+                              ? `rgba(${rgb},1)`
+                              : isShine
+                                ? `rgba(${rgb},0.9)`
+                                : `rgba(${rgb},0.35)`,
+                            boxShadow: isTarget
                               ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
-                              : 'none',
+                              : isShine
+                                ? `0 0 8px rgba(${rgb},0.5)`
+                                : 'none',
+                            opacity: shineId && !isShine ? 0.35 : 1,
                           }}
                         >
                           {!hasCard && (
