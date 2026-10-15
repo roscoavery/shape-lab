@@ -79,6 +79,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_cartwheel_step_in: 'cartwheel-step-in',
   skl_front_full: 'front-full',
   skl_front_15: 'front-15',
+  skl_whips: 'whips',
 }
 
 /**
@@ -1271,6 +1272,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/ClW32jOO9a-/',
       watchFor: 'Handstand to squat, point of power sequence.',
       creator: 'misscarodealva',
+    },
+  ],
+  'whips': [
+    {
+      who: 'Elliot Helms',
+      url: 'https://www.instagram.com/reel/DehsJBiPEwX/',
+      watchFor: 'Kaden Brown whip series. Notice how much he gets his feet in front on each punch.',
+      creator: 'cirque_coach_elliot',
     },
   ],
 }
