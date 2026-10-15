@@ -23,6 +23,8 @@ type Props = {
   editor: OrganizeEditor
   gymAdmin?: boolean
   variant?: 'row' | 'feed' | 'reel' | 'icon'
+  /** Show only the collage action (e.g. drill library, skill card videos). */
+  collageOnly?: boolean
   onCopied?: (message: string) => void
 }
 
@@ -31,6 +33,7 @@ export function ClipOrganizeMenu({
   editor,
   gymAdmin = editor.gymEditor,
   variant = 'row',
+  collageOnly = false,
   onCopied,
 }: Props) {
   const [panel, setPanel] = useState<Panel>(null)
@@ -272,24 +275,26 @@ export function ClipOrganizeMenu({
                 : 'flex-wrap items-center gap-0.5'
         }`}
       >
-        <button
-          type="button"
-          title={lockTitle ?? 'Copy this clip into a collection you can edit'}
-          aria-label={lockTitle ?? 'Save to a collection'}
-          disabled={locked && variant === 'row'}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (!canCollect) {
-              setFlash('Unlock a coach profile to collect this clip.')
-              setPanel('collection')
-              return
-            }
-            open('collection')
-          }}
-          className={btn}
-        >
-          {variant === 'icon' ? <BookmarkIcon /> : variant === 'feed' ? 'Add to collection' : 'Collect'}
-        </button>
+        {collageOnly ? null : (
+          <button
+            type="button"
+            title={lockTitle ?? 'Copy this clip into a collection you can edit'}
+            aria-label={lockTitle ?? 'Save to a collection'}
+            disabled={locked && variant === 'row'}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!canCollect) {
+                setFlash('Unlock a coach profile to collect this clip.')
+                setPanel('collection')
+                return
+              }
+              open('collection')
+            }}
+            className={btn}
+          >
+            {variant === 'icon' ? <BookmarkIcon /> : variant === 'feed' ? 'Add to collection' : 'Collect'}
+          </button>
+        )}
         {clip.url ? (
           <button
             type="button"

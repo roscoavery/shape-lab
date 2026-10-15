@@ -3,7 +3,7 @@
  * Linking a shape publishes that video on the shape in Learn for everyone.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SHAPES, getShape } from '../config/shapes'
 import { SHIPPED_DRILL_IDS } from '../config/drills'
 import {
@@ -20,6 +20,9 @@ import { videoFileAccept } from '../lib/saveMedia'
 import { ExpandableNotes, firstCue } from './ExpandableNotes'
 import { PortraitVideoPlayer } from './PortraitVideoPlayer'
 import { ShareReference } from './share/ShareReference'
+import { ClipOrganizeMenu } from './library/ClipOrganizeMenu'
+import type { OrganizeEditor } from '../lib/organizeLibrary'
+import { isCoachProfile, isShapelabAdmin } from '../lib/profileRole'
 
 type Props = {
   signedIn: Athlete | null
@@ -53,6 +56,15 @@ export function DrillLibraryPanel({ signedIn }: Props) {
   const cardDrills = listSkillCardDrillVideos()
   const watching =
     screen.kind === 'watch' ? drills.find((d) => d.id === screen.id) : undefined
+
+  const editor: OrganizeEditor = useMemo(
+    () => ({
+      gymEditor: isShapelabAdmin(signedIn),
+      personalEditor: isCoachProfile(signedIn) && !isShapelabAdmin(signedIn),
+      profileId: signedIn.id,
+    }),
+    [signedIn],
+  )
 
   if (screen.kind === 'watch' && watching) {
     return (
@@ -137,7 +149,7 @@ export function DrillLibraryPanel({ signedIn }: Props) {
                 </span>
                 <span className="shrink-0 text-xs font-semibold text-[var(--muted)]">Open</span>
               </button>
-              <div className="px-2.5 pb-2">
+              <div className="flex items-center gap-2 px-2.5 pb-2">
                 <ShareReference
                   viewer={signedIn}
                   variant="compact"
@@ -149,6 +161,14 @@ export function DrillLibraryPanel({ signedIn }: Props) {
                     shapeId: d.shapeId,
                   }}
                 />
+                {d.src ? (
+                  <ClipOrganizeMenu
+                    collageOnly
+                    variant="row"
+                    clip={{ name: d.title || 'Drill', url: d.src, sourceId: d.id }}
+                    editor={editor}
+                  />
+                ) : null}
               </div>
             </li>
           ))}
@@ -241,16 +261,30 @@ function DrillWatch({
         </div>
       )}
 
-      <ShareReference
-        viewer={signedIn}
-        draft={{
-          kind: 'drill',
-          title: drill.title || 'Drill',
-          url: drill.src || undefined,
-          drillId: drill.id,
-          shapeId: drill.shapeId,
-        }}
-      />
+      <div className="flex items-center gap-2">
+        <ShareReference
+          viewer={signedIn}
+          draft={{
+            kind: 'drill',
+            title: drill.title || 'Drill',
+            url: drill.src || undefined,
+            drillId: drill.id,
+            shapeId: drill.shapeId,
+          }}
+        />
+        {drill.src ? (
+          <ClipOrganizeMenu
+            collageOnly
+            variant="row"
+            clip={{ name: drill.title || 'Drill', url: drill.src, sourceId: drill.id }}
+            editor={{
+              gymEditor: isShapelabAdmin(signedIn),
+              personalEditor: isCoachProfile(signedIn) && !isShapelabAdmin(signedIn),
+              profileId: signedIn.id,
+            }}
+          />
+        ) : null}
+      </div>
 
       {!SHIPPED_DRILL_IDS.has(drill.id) && (
         <button

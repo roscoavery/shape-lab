@@ -60,6 +60,9 @@ import { VariationCards } from './VariationCards'
 import { markedFetch } from '../../lib/authSession'
 import { shareBaseUrl } from '../../lib/gymLink'
 import { useVideoAdjustmentsOptional } from '../../lib/videoAdjustments'
+import { ClipOrganizeMenu } from '../library/ClipOrganizeMenu'
+import type { OrganizeEditor } from '../../lib/organizeLibrary'
+import { isCoachProfile, isShapelabAdmin } from '../../lib/profileRole'
 
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
@@ -321,11 +324,14 @@ export function ProofStrip({
   matchName,
   coach,
   canEdit,
+  editor,
 }: {
   evidenceKey: string
   matchName?: string
   coach: boolean
   canEdit: boolean
+  /** When provided, each video gets an "Add to collage" action. */
+  editor?: OrganizeEditor | null
 }) {
   const baseVideos = TECHNIQUE_EVIDENCE[evidenceKey] ?? []
   const [adminVideos, setAdminVideos] = useState<ProofVideo[]>([])
@@ -536,6 +542,19 @@ export function ProofStrip({
     setShowAddModal(false)
   }
 
+  /** "Add to collage" action for a card video, when we know who is asking. */
+  const collageMenu = (v: ProofVideo) =>
+    editor ? (
+      <span className="mt-1 ml-2 inline-block align-middle">
+        <ClipOrganizeMenu
+          collageOnly
+          variant="row"
+          clip={{ name: v.who || 'Reference video', url: v.url, sourceId: v.url }}
+          editor={editor}
+        />
+      </span>
+    ) : null
+
   const handleRemoveVideo = (url: string) => {
     if (adminUrls.has(url)) {
       // Admin-added: delete it.
@@ -656,6 +675,7 @@ export function ProofStrip({
                   {creator && <CreatorTag handle={creator} />}
                 </div>
                 <div className="text-[11px] opacity-70">{v.watchFor}</div>
+                {collageMenu(v)}
                 {canEdit && (
                   <button
                     type="button"
@@ -780,6 +800,7 @@ export function ProofStrip({
                 {creator && <CreatorTag handle={creator} />}
               </div>
               <div className="text-[11px] opacity-70">{v.watchFor}</div>
+              {collageMenu(v)}
               {(loopA != null || loopB != null) && !editing && (
                 <div className="text-[10px] opacity-60">
                   Loops {loopA != null ? fmtLoopTime(loopA) : '0:00'}–
@@ -1545,6 +1566,7 @@ export function SkillGuideCardContent({
   canEdit,
   onSelectSkill,
   initialTab,
+  editor,
 }: {
   skill: UnifiedSkill
   color: string
@@ -1554,6 +1576,8 @@ export function SkillGuideCardContent({
   onSelectSkill?: (s: UnifiedSkill) => void
   /** Deep links can open straight on the Path tab. */
   initialTab?: 'guide' | 'path'
+  /** When provided, card videos get an "Add to collage" action. */
+  editor?: OrganizeEditor | null
 }) {
   const [tab, setTab] = useState<'guide' | 'path'>(initialTab ?? 'guide')
   return (
@@ -1580,7 +1604,7 @@ export function SkillGuideCardContent({
         ))}
       </div>
       {tab === 'guide' ? (
-        <GuideTabContent skill={skill} color={color} coach={coach} canEdit={canEdit} />
+        <GuideTabContent skill={skill} color={color} coach={coach} canEdit={canEdit} editor={editor} />
       ) : (
         <div className="p-4">
           <PathTab skill={skill} canEdit={canEdit} onSelectSkill={onSelectSkill} />
@@ -1596,11 +1620,13 @@ function GuideTabContent({
   color,
   coach,
   canEdit,
+  editor,
 }: {
   skill: UnifiedSkill
   color: string
   coach: boolean
   canEdit: boolean
+  editor?: OrganizeEditor | null
 }) {
   const guideId = skill.guideId!
   const needs = skill.guideNeeds ?? []
@@ -1652,7 +1678,7 @@ function GuideTabContent({
         </div>
       )}
       <div data-card-section="proof" className="scroll-mt-4">
-        <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} />
+        <ProofStrip evidenceKey={guideId} matchName={skill.name} coach={coach} canEdit={canEdit} editor={editor} />
       </div>
       {skill.ryanNote && (
         <p data-card-section="ryan" className="scroll-mt-4 whitespace-pre-line border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: color }}>
@@ -1841,6 +1867,19 @@ export function SkillPathCards({
   const [mapKind, setMapKind] = useState<'main' | 'acro'>('main')
   const modalScrollRef = useRef<HTMLDivElement>(null)
 
+  /** Who is asking: drives "Add to collage" on card videos. */
+  const editor = useMemo<OrganizeEditor | null>(
+    () =>
+      viewer
+        ? {
+            gymEditor: isShapelabAdmin(viewer),
+            personalEditor: isCoachProfile(viewer) && !isShapelabAdmin(viewer),
+            profileId: viewer.id,
+          }
+        : null,
+    [viewer],
+  )
+
   // Deep-linked from search or a shared card link: open the skill's card in the modal.
   useEffect(() => {
     if (!focusSkillId) return
@@ -2017,6 +2056,7 @@ export function SkillPathCards({
                   coach={coach}
                   canEdit={canEdit}
                   onSelectSkill={setModalSkill}
+                  editor={editor}
                   initialTab={
                     focusSection === 'path' && modalSkill.id === focusSkillId ? 'path' : 'guide'
                   }
@@ -2037,6 +2077,7 @@ export function SkillPathCards({
                     matchName={modalSkill.name}
                     coach={coach}
                     canEdit={canEdit}
+                    editor={editor}
                   />
                   <PathTab skill={modalSkill} canEdit={canEdit} onSelectSkill={setModalSkill} />
                 </div>
