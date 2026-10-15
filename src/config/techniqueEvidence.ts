@@ -288,6 +288,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/charlie-standing-bhs-series.mp4',
       watchFor: 'Standing 2 on tramp, noodle between the feet to focus on feet together.',
     },
+    {
+      who: 'Hangtime TNT Gymnastics',
+      url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
+      watchFor: 'Back handspring zombie fall to hollow.',
+    },
   ],
   'cart-full': [
     {
@@ -538,6 +543,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-bhs-carpet-foam-transition.mp4',
       watchFor:
         'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
+    },
+    {
+      who: 'Hangtime TNT Gymnastics',
+      url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
+      watchFor: 'Back handspring zombie fall to hollow.',
     },
   ],
   'ro-bhs-series': [
@@ -809,6 +819,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-standing-bhs-zombie.mp4',
       watchFor: 'Standing back handspring finishing in a zombie shape.',
+    },
+    {
+      who: 'Hangtime TNT Gymnastics',
+      url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
+      watchFor: 'Back handspring zombie fall to hollow.',
     },
   ],
   'standing-tuck': [
