@@ -11,7 +11,7 @@ import {
   recordCollagePlayback,
 } from '../../lib/collageExport'
 import { collageCellAspect, packedGridSize } from '../../lib/collageLayout'
-import { saveResultMessage, saveVideoToDevice } from '../../lib/saveMedia'
+import { saveResultMessage, saveVideoToDevice, shareFileOnly, isAppleMobile, isAndroid } from '../../lib/saveMedia'
 import { PhoneReelViewer } from '../PhoneReelViewer'
 import { ShareReference } from '../share/ShareReference'
 import { kindFromUrl } from '../../lib/clipStore'
@@ -65,6 +65,22 @@ export function CollageStage({
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
+  /** Finished export waiting for a fresh tap: the render eats the tap gesture
+   *  iOS needs for the share sheet, so the sheet only opens on the next tap. */
+  const [exported, setExported] = useState<{ blob: Blob; filename: string } | null>(null)
+  // A changed collage (or length) invalidates a waiting export.
+  const exportFingerprint = useMemo(
+    () =>
+      JSON.stringify({
+        name: collage.name,
+        sec: exportSec,
+        slots: collage.slots.map((s) => [s.clipId, s.url, s.loopA ?? null, s.loopB ?? null]),
+      }),
+    [collage, exportSec],
+  )
+  useEffect(() => {
+    setExported(null)
+  }, [exportFingerprint])
   const [viewport, setViewport] = useState(() =>
     typeof window === 'undefined'
       ? { w: 1280, h: 720 }
@@ -172,8 +188,15 @@ export function CollageStage({
         onProgress: setProgress,
       })
       const filename = collageExportFilename(collage.name, seconds, blob.type)
-      const result = await saveVideoToDevice(blob, filename)
-      setNotice(saveResultMessage(result))
+      if (!isAppleMobile() && !isAndroid()) {
+        const result = await saveVideoToDevice(blob, filename)
+        setNotice(saveResultMessage(result))
+        return
+      }
+      // Phones: the export ate the tap gesture the share sheet needs, so keep
+      // the file and open the sheet on the next tap instead.
+      setExported({ blob, filename })
+      setNotice('Export ready. Tap Save to Photos again to open the share sheet.')
     } catch (err) {
       if ((err as Error).message === 'cancelled') {
         setNotice('Export cancelled.')
@@ -184,6 +207,25 @@ export function CollageStage({
       setExporting(false)
       setProgress(0)
     }
+  }
+
+  const onSaveToPhotos = async () => {
+    // Fresh tap + ready export: the share sheet gets a live gesture.
+    if (exported && !exporting) {
+      setNotice(null)
+      try {
+        if (await shareFileOnly(exported.blob, exported.filename)) {
+          setExported(null)
+          setNotice('On the share sheet, pick Save Video.')
+        } else {
+          setNotice('Could not open the share sheet, tap Save to Photos again.')
+        }
+      } catch {
+        setNotice('Could not open the share sheet, tap Save to Photos again.')
+      }
+      return
+    }
+    void runExport()
   }
 
   const toolbar = (
@@ -283,7 +325,7 @@ export function CollageStage({
             </div>
             <button
               type="button"
-              onClick={() => void runExport()}
+              onClick={() => void onSaveToPhotos()}
               className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[var(--on-accent)]"
             >
               Save to Photos
