@@ -81,7 +81,7 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('standing_back_tuck', 'Standing back tuck', 7, 'standing'),
   s('standing_front_aerial', 'Standing front aerial', 7, 'side'),
   // Round off now lives on the side track (roundoff column removed per Ryan)
-  s('round_off', 'Round off', 2, 'side'),
+  s('round_off', 'Round off', 3, 'side'),
 ]
 
 export function getAcroSkill(id: string): AcroSkill | undefined {
