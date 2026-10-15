@@ -3,6 +3,7 @@ import {
   ACRO_SKILLS,
   ACRO_TRACKS,
   ACRO_TRACK_LABELS,
+  acroSkillToUnified,
   getAcroSkill,
   type AcroSkill,
   type AcroTrack,
@@ -10,8 +11,8 @@ import {
 import { getRegistrySkillByName, type UnifiedSkill } from '../../lib/skillRegistry'
 
 type Props = {
-  /** Called when a tile is tapped with the resolved skill (main-map card if name matches). */
-  onTileTap: (skill: UnifiedSkill | AcroSkill) => void
+  /** Called when a tile is tapped with the resolved skill. */
+  onTileTap: (skill: UnifiedSkill) => void
 }
 
 /** Track colors matching the main map's ember UI. */
@@ -20,26 +21,6 @@ const TRACK_RGB: Record<AcroTrack, string> = {
   front: '251,146,60', // orange (forwards in main map)
   side: '96,165,250', // blue (cartwheel in main map)
   other: '74,222,128', // green (roundoff in main map)
-}
-
-const WIGGLE_KEY = 'shapelab.acro.wiggle.v1'
-
-function loadWiggle(): Record<string, string[]> {
-  try {
-    const raw = localStorage.getItem(WIGGLE_KEY)
-    if (raw) return JSON.parse(raw) as Record<string, string[]>
-  } catch {
-    /* ignore */
-  }
-  return {}
-}
-
-function saveWiggle(v: Record<string, string[]>) {
-  try {
-    localStorage.setItem(WIGGLE_KEY, JSON.stringify(v))
-  } catch {
-    /* ignore */
-  }
 }
 
 /**
@@ -51,9 +32,6 @@ function saveWiggle(v: Record<string, string[]>) {
  * Wiggle mode: tap target, then helpers to make them wiggle.
  */
 export function AcroMapView({ onTileTap }: Props) {
-  const [wiggleMode, setWiggleMode] = useState(false)
-  const [wiggleTargetId, setWiggleTargetId] = useState<string | null>(null)
-  const [wiggle, setWiggle] = useState<Record<string, string[]>>(loadWiggle)
   const [shineQuery, setShineQuery] = useState('')
   const [shineId, setShineId] = useState<string | null>(null)
 
@@ -63,35 +41,13 @@ export function AcroMapView({ onTileTap }: Props) {
     return ACRO_SKILLS.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 8)
   }, [shineQuery])
 
-  const toggleWiggle = (targetId: string, skillId: string) => {
-    setWiggle((prev) => {
-      const next = { ...prev }
-      const list = new Set(next[targetId] ?? [])
-      if (list.has(skillId)) list.delete(skillId)
-      else list.add(skillId)
-      next[targetId] = [...list]
-      saveWiggle(next)
-      return next
-    })
-  }
-
   const handleTap = (skill: AcroSkill) => {
-    if (wiggleMode) {
-      if (!wiggleTargetId) {
-        setWiggleTargetId(skill.id)
-      } else if (skill.id === wiggleTargetId) {
-        setWiggleTargetId(null)
-      } else {
-        toggleWiggle(wiggleTargetId, skill.id)
-      }
-      return
-    }
     const mainSkill = getRegistrySkillByName(skill.name)
-    onTileTap(mainSkill ?? skill)
+    // Shared main-map card when names match; otherwise a minimal acro card
+    // with PathTab (wiggle toggles), harder versions, and reference videos.
+    onTileTap(mainSkill ?? acroSkillToUnified(skill))
   }
 
-  const wigglingForTarget = wiggleTargetId ? new Set(wiggle[wiggleTargetId] ?? []) : new Set<string>()
-  const wiggleTarget = wiggleTargetId ? getAcroSkill(wiggleTargetId) : null
   const shineSkill = shineId ? getAcroSkill(shineId) : null
 
   return (
@@ -140,29 +96,7 @@ export function AcroMapView({ onTileTap }: Props) {
             <span aria-hidden className="opacity-70">✕</span>
           </button>
         )}
-        <div className="ml-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setWiggleMode((v) => !v)
-              setWiggleTargetId(null)
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-              wiggleMode ? 'bg-amber-500 text-black' : 'bg-white/10 text-white'
-            }`}
-          >
-            {wiggleMode ? 'Wiggle: ON' : 'Wiggle'}
-          </button>
-        </div>
       </div>
-
-      {wiggleMode && (
-        <p className="px-1 pb-2 text-xs text-amber-300">
-          {wiggleTarget
-            ? `Wiggle for ${wiggleTarget.name}: tap skills to toggle`
-            : 'Tap a skill to pick the wiggle target'}
-        </p>
-      )}
 
       {/* 7 level rows, level 7 at top, level 1 at bottom */}
       <div className="space-y-2">
@@ -178,8 +112,6 @@ export function AcroMapView({ onTileTap }: Props) {
                 return (
                   <div key={track} className="space-y-2">
                     {skills.map((skill) => {
-                      const isWiggling = wigglingForTarget.has(skill.id)
-                      const isTarget = skill.id === wiggleTargetId
                       const isShine = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
                       const hasCard = !!mainSkill?.guideId
@@ -188,21 +120,15 @@ export function AcroMapView({ onTileTap }: Props) {
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className={`relative flex min-h-[60px] w-full items-center justify-center rounded-2xl border-2 px-1 py-2 text-center text-[10px] font-bold leading-snug tracking-[0.02em] text-white transition-transform active:scale-95 sm:text-[11px] ${
-                            isWiggling ? 'animate-[keyhelper-wiggle_1.7s_ease-in-out_infinite]' : ''
-                          }`}
+                          className="relative flex min-h-[60px] w-full items-center justify-center rounded-2xl border-2 px-1 py-2 text-center text-[10px] font-bold leading-snug tracking-[0.02em] text-white transition-transform active:scale-95 sm:text-[11px]"
                           style={{
                             background: '#000000',
-                            borderColor: isTarget
-                              ? '#f59e0b'
-                              : isShine
-                                ? `rgba(${rgb},1)`
-                                : `rgba(${rgb},0.85)`,
+                            borderColor: isShine
+                              ? `rgba(${rgb},1)`
+                              : `rgba(${rgb},0.85)`,
                             boxShadow: isShine
                               ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
-                              : isWiggling
-                                ? `0 0 12px rgba(${rgb},0.8)`
-                                : 'none',
+                              : 'none',
                           }}
                         >
                           {!hasCard && (

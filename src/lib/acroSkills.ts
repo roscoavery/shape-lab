@@ -97,3 +97,24 @@ export function acroSkillsByTrack(): { track: AcroTrack; skills: AcroSkill[] }[]
     skills: ACRO_SKILLS.filter((sk) => sk.track === track).sort((a, b) => a.level - b.level),
   }))
 }
+
+/**
+ * Convert an acro skill to a minimal UnifiedSkill for opening in the
+ * skill card modal. Used when the acro skill name doesn't match a
+ * main-map skill. The card will show "guide coming" but includes
+ * PathTab (with wiggle toggles), HarderVersions, and reference videos.
+ */
+export function acroSkillToUnified(skill: AcroSkill): import('../config/unifiedSkillSeed').UnifiedSkill {
+  const trackMap: Record<AcroTrack, import('../config/unifiedSkillSeed').UnifiedSkillTrack> = {
+    standing: 'standing',
+    front: 'walking',
+    side: 'walking',
+    other: 'foundation',
+  }
+  return {
+    id: skill.id,
+    name: skill.name,
+    aliases: [],
+    track: trackMap[skill.track],
+  }
+}
