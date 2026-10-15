@@ -181,6 +181,8 @@ type Props = {
   loopA?: number | null
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
+  /** Begin playback at the loop start instead of 0 (collages). */
+  startAtLoop?: boolean
   compact?: boolean
   quiet?: boolean
   active?: boolean
@@ -231,6 +233,7 @@ export function InstagramEmbed({
   loopA,
   loopB,
   onAbChange,
+  startAtLoop = false,
   compact = false,
   quiet = false,
   active,
@@ -773,6 +776,7 @@ export function InstagramEmbed({
         loopA={safeSlide === instagramSlideIndex(url) ? loopA : null}
         loopB={safeSlide === instagramSlideIndex(url) ? loopB : null}
         onAbChange={onAbChange}
+        startAtLoop={startAtLoop}
         markup={markup ?? (!compact && !bare)}
         markupSwipeSafe={markupSwipeSafe}
         mirror={mirror}

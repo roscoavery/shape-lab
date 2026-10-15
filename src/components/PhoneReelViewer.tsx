@@ -46,6 +46,8 @@ type Props = {
   onLinkToSpottingCard?: (clip: PhoneReelClip) => void
   /** When set, the action rail offers "Compare", opening this clip in the compare tool. */
   onCompareWithReference?: (clip: PhoneReelClip) => void
+  /** Begin playback at the loop start instead of 0 (collage fullscreen). */
+  startAtLoop?: boolean
 }
 
 type ReelSectionProps = {
@@ -66,6 +68,7 @@ type ReelSectionProps = {
   onAddToSkillCard?: (clip: PhoneReelClip) => void
   onLinkToSpottingCard?: (clip: PhoneReelClip) => void
   onCompareWithReference?: (clip: PhoneReelClip) => void
+  startAtLoop?: boolean
 }
 
 /**
@@ -92,6 +95,7 @@ const ReelSection = memo(function ReelSection({
   onAddToSkillCard,
   onLinkToSpottingCard,
   onCompareWithReference,
+  startAtLoop = false,
 }: ReelSectionProps) {
   const editor = useMemo(
     () => ({ gymEditor, personalEditor, profileId }),
@@ -139,6 +143,7 @@ const ReelSection = memo(function ReelSection({
             persistUrl={clip.url}
             loopA={clip.loopA}
             loopB={clip.loopB}
+            startAtLoop={startAtLoop}
             compact
             quiet
             shareChrome={false}
@@ -248,6 +253,7 @@ export function PhoneReelViewer({
   onAddToSkillCard,
   onLinkToSpottingCard,
   onCompareWithReference,
+  startAtLoop = false,
 }: Props) {
   const favorites = useFavorites()
   const { rememberHandle } = useGymLibrary()
@@ -389,6 +395,7 @@ export function PhoneReelViewer({
               onAddToSkillCard={onAddToSkillCard}
               onLinkToSpottingCard={onLinkToSpottingCard}
               onCompareWithReference={onCompareWithReference}
+              startAtLoop={startAtLoop}
             />
           ))}
         </div>

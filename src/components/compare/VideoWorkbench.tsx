@@ -37,6 +37,9 @@ type Props = {
   loopA?: number | null
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
+  /** When true and a loop start is set, begin playback at the loop start
+   *  instead of 0 (collages: no waiting through the preamble). */
+  startAtLoop?: boolean
   markup?: boolean
   /** Original poster handle, shown on the picture (e.g. Instagram @name). */
   credit?: string | null
@@ -129,6 +132,7 @@ function VideoWorkbenchInner({
   loopA,
   loopB,
   onAbChange,
+  startAtLoop = false,
   markup = true,
   credit = null,
   creditHref = null,
@@ -182,6 +186,8 @@ function VideoWorkbenchInner({
     return () => onVideoElement?.(null)
   }, [onVideoElement])
   const fixingDurationRef = useRef(false)
+  /** Seek-to-loop-start happens once per video (component remounts per src). */
+  const soughtStartRef = useRef(false)
   const clipLoops = useClipLoopsOptional()
   const favorites = useFavoritesOptional()
   const loopSet = persistUrl && clipLoops ? clipLoops.getSet(persistUrl) : null
@@ -531,6 +537,12 @@ function VideoWorkbenchInner({
     }
     if (Number.isFinite(v.duration)) {
       setDuration(v.duration)
+      if (!soughtStartRef.current) {
+        soughtStartRef.current = true
+        if (startAtLoop && pointA != null && v.currentTime < pointA - 0.25) {
+          v.currentTime = pointA
+        }
+      }
       return
     }
     // MediaRecorder webm blobs report Infinity until seeked past the end
@@ -544,8 +556,14 @@ function VideoWorkbenchInner({
     setDuration(v.duration)
     if (fixingDurationRef.current) {
       fixingDurationRef.current = false
+      soughtStartRef.current = true
+      const loopStart = startAtLoop ? pointA : null
       const start =
-        tailSeconds && v.duration > tailSeconds ? v.duration - tailSeconds : 0
+        loopStart != null
+          ? loopStart
+          : tailSeconds && v.duration > tailSeconds
+            ? v.duration - tailSeconds
+            : 0
       v.currentTime = start
     }
   }

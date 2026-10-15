@@ -381,6 +381,7 @@ export function CollageStage({
                 persistUrl={slot.url}
                 loopA={slot.loopA}
                 loopB={slot.loopB}
+                startAtLoop
                 compact
                 quiet
                 shareChrome={false}
@@ -498,6 +499,7 @@ export function CollageStage({
           editor={editor ?? { gymEditor: false, personalEditor: false, profileId: null }}
           gymAdmin={gymAdmin}
           title={collage.name}
+          startAtLoop
         />
       ) : null}
     </div>

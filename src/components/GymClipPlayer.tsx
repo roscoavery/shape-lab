@@ -18,6 +18,8 @@ type Props = {
   loopA?: number | null
   loopB?: number | null
   onAbChange?: (a: number | null, b: number | null) => void
+  /** Begin playback at the loop start instead of 0 (collages). */
+  startAtLoop?: boolean
   compact?: boolean
   quiet?: boolean
   bare?: boolean
@@ -57,6 +59,7 @@ export function GymClipPlayer({
   loopA,
   loopB,
   onAbChange,
+  startAtLoop = false,
   compact = false,
   quiet = false,
   bare = false,
@@ -152,6 +155,7 @@ export function GymClipPlayer({
         smartFit={useSmartFit}
         mirror={mirror}
         onFlip={onFlip}
+        startAtLoop={startAtLoop}
       />
     )
     return fill ? (
@@ -181,6 +185,7 @@ export function GymClipPlayer({
       loopA={loopA}
       loopB={loopB}
       onAbChange={onAbChange}
+      startAtLoop={startAtLoop}
       markup={markup ?? (!compact && !bare)}
       markupSwipeSafe={markupSwipeSafe}
       compact={compact}
