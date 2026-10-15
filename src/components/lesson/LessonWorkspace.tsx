@@ -24,6 +24,7 @@ import { loadAllHomework, loadHomeworkLogs } from '../../lib/storage'
 import { HomeworkLogList } from '../homework/HomeworkLogList'
 import { AthleteProfileCard } from '../AthleteProfileCard'
 import { addCoachNotesToAthletes } from '../../lib/athleteNotes'
+import { AcroCheckinBoard } from './AcroCheckinBoard'
 import { logClassSkillForAthlete } from '../../lib/classSessionLog'
 import { publishTextPost } from '../../lib/feedPosts'
 import { coachShareLabel } from '../../lib/coachShare'
@@ -81,6 +82,7 @@ export function LessonWorkspace({
   const [plansTick, setPlansTick] = useState(0)
   const [showAddAthlete, setShowAddAthlete] = useState(false)
   const [addAthleteQuery, setAddAthleteQuery] = useState('')
+  const [showCheckinBoard, setShowCheckinBoard] = useState(false)
 
   // Planned tasks for this lesson (written in the morning brief or calendar).
   // The plan lives in the class-plan store under lesson:<calendarEventId>,
@@ -271,6 +273,13 @@ export function LessonWorkspace({
             className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white"
           >
             + Add athlete
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCheckinBoard(true)}
+            className="rounded-lg border border-[var(--accent)]/50 px-3 py-2 text-sm font-semibold text-[var(--accent)]"
+          >
+            Check-in board
           </button>
           <button
             type="button"
@@ -642,6 +651,14 @@ export function LessonWorkspace({
           Refresh videos
         </button>
       </TodayDock>
+      {showCheckinBoard && (
+        <AcroCheckinBoard
+          athletes={athletes}
+          sessionAthleteIds={lessonAthleteIds(session)}
+          onClose={() => setShowCheckinBoard(false)}
+          onAthletesChange={onAthletesChange}
+        />
+      )}
     </div>
   )
 }

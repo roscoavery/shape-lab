@@ -56,6 +56,7 @@ import {
 } from '../../lib/coachClasses'
 import { hydrateCoachHours } from '../../lib/coachHours'
 import { ClassRecapList } from '../today/ClassRecapList'
+import { TrainingEventRecapList } from '../today/TrainingEventRecapList'
 import {
   athleteMatchesQuery,
   listKnownGyms,
@@ -167,6 +168,7 @@ export function HomeDashboard({
   const [endAsk, setEndAsk] = useState(false)
   const [startKind, setStartKind] = useState<TrainingEventKind | null>(null)
   const [groupView, setGroupView] = useState<'coach' | 'athlete'>('coach')
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickAddAthleteOpen, setQuickAddAthleteOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
@@ -1454,12 +1456,24 @@ export function HomeDashboard({
       )}
 
       {onShortcut && (
-        <div id="tour-today-shortcuts">
-          <TodayShortcuts
-            onGo={onShortcut}
-            showStation
-            showNames={false}
-          />
+        <div id="tour-today-shortcuts" className="rounded-xl border border-[var(--panel-border)]">
+          <button
+            type="button"
+            onClick={() => setShortcutsOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-4 py-3 text-left"
+          >
+            <span className="text-sm font-bold">Shortcuts</span>
+            <span className="text-[var(--muted)]">{shortcutsOpen ? '▾' : '▸'}</span>
+          </button>
+          {shortcutsOpen && (
+            <div className="border-t border-[var(--panel-border)] p-3">
+              <TodayShortcuts
+                onGo={onShortcut}
+                showStation
+                showNames={false}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -1472,6 +1486,8 @@ export function HomeDashboard({
         classInSession={Boolean(liveClass)}
         onAthletesChange={onAthletesChange}
       />
+
+      <TrainingEventRecapList athletes={athletes} />
 
       <LessonMergePrompt athletes={athletes} />
 

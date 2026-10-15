@@ -5,6 +5,7 @@ import { displayPersonName, namesMatch } from '../../lib/classStation'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
 import { BirthdayQuickPick } from './BirthdayQuickPick'
+import { acroSkillsByLevel } from '../../lib/acroSkills'
 
 type Props = {
   coach: Athlete
@@ -25,16 +26,40 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
   const [last, setLast] = useState('')
   const [birthday, setBirthday] = useState('')
   const [photo, setPhoto] = useState('')
+  const [skillsHave, setSkillsHave] = useState<string[]>([])
+  const [workingTowards, setWorkingTowards] = useState<string[]>([])
 
   const firstName = first.trim()
   const lastName = last.trim()
   const canSave = firstName.length > 0 && lastName.length > 0
   const existing = canSave ? athletes.find((a) => namesMatch(a, firstName, lastName)) : undefined
 
+  const toggleHave = (id: string) => {
+    setSkillsHave((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+  const toggleWorking = (id: string) => {
+    setWorkingTowards((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= 3) return prev
+      return [...prev, id]
+    })
+  }
+
   const save = () => {
     if (!canSave) return
     if (existing) {
-      onAdded?.(existing)
+      // Update the existing profile with any newly selected acro skills.
+      const updated: Athlete = {
+        ...existing,
+        ...(skillsHave.length > 0
+          ? { acroSkillsHave: Array.from(new Set([...(existing.acroSkillsHave ?? []), ...skillsHave])) }
+          : {}),
+        ...(workingTowards.length > 0
+          ? { acroWorkingTowards: Array.from(new Set([...(existing.acroWorkingTowards ?? []), ...workingTowards])).slice(0, 3) }
+          : {}),
+      }
+      onAthletesChange(athletes.map((a) => (a.id === existing.id ? updated : a)))
+      onAdded?.(updated)
       onClose()
       return
     }
@@ -52,6 +77,8 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
       photoDataUrl: photo || undefined,
       dateOfBirth: birthday || undefined,
       createdAt: now,
+      ...(skillsHave.length > 0 ? { acroSkillsHave: skillsHave } : {}),
+      ...(workingTowards.length > 0 ? { acroWorkingTowards: workingTowards } : {}),
     }
     if (athlete.photoDataUrl) rememberLocalPhoto(athlete.id, athlete.photoDataUrl)
     onAthletesChange([...athletes, athlete])
@@ -91,6 +118,47 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
         {existing ? (
           <div className="mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-4">
             <p className="text-sm font-semibold">{existing.name} already has a profile.</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Pick what they're working towards below, then tap to use their profile.
+            </p>
+            <div className="mt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Working towards{' '}
+                <span className="font-normal normal-case">
+                  (pick up to 3, {3 - workingTowards.length} left)
+                </span>
+              </p>
+              <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                {acroSkillsByLevel().map(({ level, skills }) => (
+                  <div key={level}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Level {level}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {skills.map((sk) => {
+                        const on = workingTowards.includes(sk.id) || (existing.acroWorkingTowards ?? []).includes(sk.id)
+                        const disabled = !on && workingTowards.length >= 3
+                        return (
+                          <button
+                            key={sk.id}
+                            type="button"
+                            onClick={() => toggleWorking(sk.id)}
+                            disabled={disabled}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold disabled:opacity-30 ${
+                              on
+                                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                                : 'bg-white/10 text-[var(--text)]'
+                            }`}
+                          >
+                            {sk.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -162,6 +230,79 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                   hint="For the name quiz later"
                   onCapture={setPhoto}
                 />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Skills I have <span className="font-normal normal-case">(tap all that apply)</span>
+              </p>
+              <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                {acroSkillsByLevel().map(({ level, skills }) => (
+                  <div key={level}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Level {level}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {skills.map((sk) => {
+                        const on = skillsHave.includes(sk.id)
+                        return (
+                          <button
+                            key={sk.id}
+                            type="button"
+                            onClick={() => toggleHave(sk.id)}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              on
+                                ? 'bg-emerald-500/90 text-white'
+                                : 'bg-white/10 text-[var(--text)]'
+                            }`}
+                          >
+                            {sk.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Working towards{' '}
+                <span className="font-normal normal-case">
+                  (pick up to 3, {3 - workingTowards.length} left)
+                </span>
+              </p>
+              <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                {acroSkillsByLevel().map(({ level, skills }) => (
+                  <div key={level}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Level {level}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {skills.map((sk) => {
+                        const on = workingTowards.includes(sk.id)
+                        const disabled = !on && workingTowards.length >= 3
+                        return (
+                          <button
+                            key={sk.id}
+                            type="button"
+                            onClick={() => toggleWorking(sk.id)}
+                            disabled={disabled}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold disabled:opacity-30 ${
+                              on
+                                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                                : 'bg-white/10 text-[var(--text)]'
+                            }`}
+                          >
+                            {sk.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

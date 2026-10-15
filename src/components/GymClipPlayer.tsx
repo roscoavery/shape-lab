@@ -42,6 +42,8 @@ type Props = {
   smartFit?: boolean
   /** Mirror the video horizontally (direct files only). */
   mirror?: boolean
+  /** Two-finger pinch-zoom on phones (direct files only). Defaults on. */
+  pinchZoom?: boolean
   /** Show a Flip circle in the markup tool stack; hidden for embeds. */
   onFlip?: () => void
 }
@@ -73,6 +75,7 @@ export function GymClipPlayer({
   fit,
   smartFit,
   mirror = false,
+  pinchZoom = true,
   onFlip,
 }: Props) {
   const objectFit = fit ?? (fill ? 'cover' : 'contain')
@@ -190,6 +193,7 @@ export function GymClipPlayer({
       onToggleChrome={onToggleChrome}
       tapTogglesChrome={tapTogglesChrome}
       startUnmuted={startUnmuted}
+      pinchZoom={pinchZoom}
     />
   )
   return fill ? (

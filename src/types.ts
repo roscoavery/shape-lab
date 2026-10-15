@@ -347,6 +347,18 @@ export type Athlete = {
    * not a promise the coach will train that skill today.
    */
   skillGoals?: AthleteSkillGoal[]
+  /**
+   * Acro clinic: acro skill IDs they are working towards (up to 3),
+   * picked during quick-add. See src/lib/acroSkills.ts.
+   */
+  acroWorkingTowards?: string[]
+  /** Acro clinic: acro skill IDs they said they already have. */
+  acroSkillsHave?: string[]
+  /**
+   * Acro clinic: acro skill IDs the coach marked as targets for this
+   * athlete (coach's pick, shown alongside the athlete's own selections).
+   */
+  acroCoachTargets?: string[]
 }
 
 export type TrainingSurface =
