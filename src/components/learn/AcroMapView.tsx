@@ -175,7 +175,7 @@ export function AcroMapView({ onTileTap }: Props) {
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className={`relative flex w-full items-center justify-center rounded-xl border-2 px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
+                          className={`relative flex w-full items-center justify-center rounded-xl border px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
                             dense ? 'min-h-[44px] py-1 text-[9px]' : 'min-h-[60px] flex-1 py-2 text-[10px] sm:text-[11px]'
                           }`}
                           style={{
@@ -184,7 +184,8 @@ export function AcroMapView({ onTileTap }: Props) {
                               ? `rgba(${rgb},1)`
                               : isShine
                                 ? `rgba(${rgb},0.9)`
-                                : `rgba(${rgb},0.35)`,
+                                : `rgba(${rgb},0.55)`,
+                            borderWidth: isTarget || isShine ? '2px' : '1px',
                             boxShadow: isTarget
                               ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
                               : isShine
