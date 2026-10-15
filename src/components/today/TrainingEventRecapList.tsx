@@ -4,6 +4,7 @@ import {
   listTrainingEvents,
   subscribeTrainingEvents,
   eventKindLabel,
+  deleteTrainingEvent,
   type TrainingEvent,
 } from '../../lib/trainingEvents'
 import { getAcroSkill } from '../../lib/acroSkills'
@@ -21,6 +22,7 @@ type Props = {
 export function TrainingEventRecapList({ athletes }: Props) {
   const [, setTick] = useState(0)
   useEffect(() => subscribeTrainingEvents(() => setTick((n) => n + 1)), [])
+  const [askDelete, setAskDelete] = useState<string | null>(null)
 
   const events = listTrainingEvents()
     .filter((e) => e.athleteIds.length > 0)
@@ -51,10 +53,47 @@ export function TrainingEventRecapList({ athletes }: Props) {
                     {eventKindLabel(event.kind)}
                   </span>
                 </p>
-                <span className="text-xs text-[var(--muted)]">
-                  {eventAthletes.length} athlete{eventAthletes.length === 1 ? '' : 's'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--muted)]">
+                    {eventAthletes.length} athlete{eventAthletes.length === 1 ? '' : 's'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAskDelete(event.id)}
+                    className="rounded-lg px-2 py-1 text-xs text-white/50 hover:bg-white/10 hover:text-white"
+                    aria-label={`Delete ${event.name} recap`}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
+              {askDelete === event.id && (
+                <div className="mt-2 rounded-xl border border-[var(--bad)]/40 bg-[var(--bad)]/10 p-3">
+                  <p className="text-sm">
+                    Delete this group recap? The athlete profiles stay, but the
+                    recap leaves every device and stays gone.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteTrainingEvent(event.id)
+                        setAskDelete(null)
+                      }}
+                      className="rounded-lg bg-[var(--bad)] px-3 py-1.5 text-xs font-semibold text-white"
+                    >
+                      Yes, delete it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAskDelete(null)}
+                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold"
+                    >
+                      Keep it
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="mt-2 space-y-1.5">
                 {eventAthletes.map((a) => {
                   const working = (a.acroWorkingTowards ?? [])
