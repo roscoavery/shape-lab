@@ -244,6 +244,22 @@ const FeedArticle = memo(function FeedArticle({
           draft={clipShareDraft(clip.name, clip.url)}
           onAddToSkillCard={editor.profileId ? () => onAddToSkillCard(clip) : undefined}
           onLinkToSpottingCard={isAdmin ? () => onLinkToSpottingCard(clip) : undefined}
+          extraActions={
+            <ClipOrganizeMenu
+              variant="feed"
+              clip={{
+                name: clip.name,
+                url: clip.url,
+                kind: clip.kind,
+                keywords: clip.keywords,
+                sourceId: clip.id,
+                postedBy: handle ?? undefined,
+              }}
+              editor={editor}
+              gymAdmin={isAdmin}
+              onCopied={onCopied}
+            />
+          }
         />
         <FavoriteStar
           fill
