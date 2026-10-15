@@ -66,11 +66,16 @@ export function isUploadedClip(clip: Pick<GymClip, 'url' | 'kind' | 'collectionI
 }
 
 /**
- * Uploaded videos filed on skill cards (seed evidence + featured proof).
+ * Uploaded videos filed on skill cards (seed evidence + featured proof +
+ * Ryan's own uploads via the card's "+ Add video").
  * These are Ryan's own uploads and third-party references he curated —
  * searchable in the reference scroll by who, what to watch for, and skill.
  */
-function flattenSkillCardVideos(seen: Set<string>, goneUrls: Set<string>): GymClip[] {
+function flattenSkillCardVideos(
+  seen: Set<string>,
+  goneUrls: Set<string>,
+  adminByKey: Record<string, ProofVideo[]> = {},
+): GymClip[] {
   // Evidence key -> skill name + aliases, for keyword tagging.
   const keyToSkill = new Map<string, { name: string; aliases: string[] }>()
   for (const s of [...guideSkillsInOrder(), ...guidelessSkills()]) {
@@ -114,6 +119,13 @@ function flattenSkillCardVideos(seen: Set<string>, goneUrls: Set<string>): GymCl
   }
   for (const [evidenceKey, videos] of Object.entries(TECHNIQUE_EVIDENCE)) {
     for (const video of videos) pushVideo(evidenceKey, video, index++)
+  }
+  // Ryan's own uploads onto skill cards (stored per evidence key on the server).
+  for (const [evidenceKey, videos] of Object.entries(adminByKey)) {
+    if (!Array.isArray(videos)) continue
+    for (const video of videos) {
+      if (video && typeof video.url === 'string') pushVideo(evidenceKey, video, index++)
+    }
   }
   return out
 }
@@ -212,6 +224,7 @@ function flattenSkillRefs(
 function flattenLibrary(
   backup: LibraryBackup | null,
   viewer: { viewerId: string | null; isAdmin: boolean } = { viewerId: null, isAdmin: false },
+  adminCardVideos: Record<string, ProofVideo[]> = {},
 ): GymClip[] {
   const seen = new Set<string>()
   const goneIds = new Set([
@@ -256,7 +269,7 @@ function flattenLibrary(
   }
   }
   out.push(...flattenSkillRefs(seen, goneIds, goneUrls))
-  out.push(...flattenSkillCardVideos(seen, goneUrls))
+  out.push(...flattenSkillCardVideos(seen, goneUrls, adminCardVideos))
   // Ryan's private drill library — only he sees these in the scroll.
   if (viewer.isAdmin) {
     out.push(...flattenDrills(seen, goneUrls))
@@ -291,6 +304,8 @@ export function GymLibraryProvider({
   const [backup, setBackup] = useState<LibraryBackup | null>(() => shippedCompareLibrary())
   const [loading, setLoading] = useState(true)
   const [metaTick, setMetaTick] = useState(0)
+  /** Ryan's own uploads onto skill cards, keyed by evidence key. */
+  const [adminCardVideos, setAdminCardVideos] = useState<Record<string, ProofVideo[]>>({})
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -311,6 +326,13 @@ export function GymLibraryProvider({
         managed: true,
         collections: [...(gym?.collections ?? []), ...(personal?.collections ?? [])],
       })
+      try {
+        const res = await fetch('/api/skill-card-videos', { cache: 'no-store' })
+        const data = res.ok ? await res.json() : {}
+        setAdminCardVideos(data && typeof data === 'object' ? data : {})
+      } catch {
+        /* card uploads stay out of the library until the next pull */
+      }
     } finally {
       setLoading(false)
     }
@@ -335,8 +357,8 @@ export function GymLibraryProvider({
 
   const clips = useMemo(() => {
     void metaTick
-    return flattenLibrary(backup, { viewerId: profileId, isAdmin })
-  }, [backup, metaTick, profileId, isAdmin])
+    return flattenLibrary(backup, { viewerId: profileId, isAdmin }, adminCardVideos)
+  }, [backup, metaTick, profileId, isAdmin, adminCardVideos])
   const collections = backup?.collections ?? []
 
   const clipForUrl = useCallback(
