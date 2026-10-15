@@ -13,6 +13,7 @@ import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { hasAthleteFace } from '../../lib/namesQuiz'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
 import { SkillGoalPicker } from '../coach/SkillGoalPicker'
+import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS, type AcroTrack } from '../../lib/acroSkills'
 import { BirthdayQuickPick } from './BirthdayQuickPick'
 import { AthleteSearchField } from './AthleteSearchField'
 import { StationSnapshot } from './StationSnapshot'
@@ -26,9 +27,16 @@ type Props = {
   onAdded?: () => void
 }
 
-type Step = 'find' | 'first' | 'last' | 'phone' | 'photo' | 'more' | 'color' | 'birthday' | 'goal'
+type Step = 'find' | 'first' | 'last' | 'phone' | 'photo' | 'more' | 'color' | 'birthday' | 'goal' | 'acrotowards'
 
 const MAIN: Step[] = ['find', 'first', 'last', 'phone', 'photo']
+
+const TRACK_RGB: Record<AcroTrack, string> = {
+  standing: '192,132,252',
+  front: '251,146,60',
+  side: '96,165,250',
+  other: '74,222,128',
+}
 
 export function QuickGroupEnroll({
   event,
@@ -49,6 +57,15 @@ export function QuickGroupEnroll({
   const [goals, setGoals] = useState<AthleteSkillGoal[]>([])
   const [birthday, setBirthday] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
+  const [workingTowards, setWorkingTowards] = useState<string[]>([])
+
+  const toggleWorking = (id: string) => {
+    setWorkingTowards((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= 3) return prev
+      return [...prev, id]
+    })
+  }
 
   const kind = eventKindLabel(event.kind).toLowerCase()
   const existingMatch = athletes.find((a) => namesMatch(a, first, last))
@@ -65,6 +82,7 @@ export function QuickGroupEnroll({
     setGoals([])
     setBirthday('')
     setFlash(message ?? null)
+    setWorkingTowards([])
   }
 
   const addExisting = (row: Athlete) => {
@@ -86,6 +104,9 @@ export function QuickGroupEnroll({
     const now = new Date().toISOString()
     const nextPhoto = photo || existing?.photoDataUrl
     const nextGoals = goals.length ? goals : existing?.skillGoals
+    const nextWorking = workingTowards.length
+      ? Array.from(new Set([...(existing?.acroWorkingTowards ?? []), ...workingTowards])).slice(0, 3)
+      : existing?.acroWorkingTowards
     const athlete: Athlete = existing
       ? {
           ...existing,
@@ -94,6 +115,7 @@ export function QuickGroupEnroll({
           photoDataUrl: nextPhoto || existing.photoDataUrl,
           dateOfBirth: birthday || existing.dateOfBirth,
           skillGoals: nextGoals,
+          acroWorkingTowards: nextWorking,
           worksWithCoachIds: [...new Set([...(existing.worksWithCoachIds ?? []), coach.id])],
         }
       : {
@@ -111,6 +133,7 @@ export function QuickGroupEnroll({
           photoDataUrl: nextPhoto || undefined,
           dateOfBirth: birthday || undefined,
           skillGoals: nextGoals,
+          acroWorkingTowards: workingTowards.length ? workingTowards : undefined,
           createdAt: now,
         }
     if (athlete.photoDataUrl) rememberLocalPhoto(athlete.id, athlete.photoDataUrl)
@@ -339,10 +362,13 @@ export function QuickGroupEnroll({
               <button
                 type="button"
                 disabled={!photo}
-                onClick={() => commit({ stayForMore: true })}
+                onClick={() => {
+                  commit({ stayForMore: true })
+                  if (event.kind === 'clinic' || event.kind === 'camp') setStep('acrotowards')
+                }}
                 className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
-                {photo ? 'They’re in · next questions or next kid' : 'Take a snapshot first'}
+                {photo ? 'They’re in · working towards' : 'Take a snapshot first'}
               </button>
               <button
                 type="button"
@@ -367,6 +393,13 @@ export function QuickGroupEnroll({
                 Next athlete
               </button>
               <div className="grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('acrotowards')}
+                  className="h-14 rounded-2xl bg-white/8 text-base font-semibold"
+                >
+                  Working towards{workingTowards.length ? ' · set' : ''}
+                </button>
                 <button
                   type="button"
                   onClick={() => setStep('color')}
@@ -436,6 +469,73 @@ export function QuickGroupEnroll({
                 className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
               >
                 {birthday ? 'Save birthday' : 'Skip birthday'}
+              </button>
+              <button type="button" onClick={() => setStep('more')} className="self-start text-sm text-white/50 underline">
+                Back
+              </button>
+            </>
+          )}
+
+          {step === 'acrotowards' && (
+            <>
+              <p className="text-sm font-semibold text-amber-300">
+                Be quick! Pick up to 3 they can reasonably work towards now.
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                {workingTowards.length}/3 selected
+              </p>
+              <div className="max-h-[46vh] space-y-3 overflow-y-auto">
+                {[7, 6, 5, 4, 3, 2, 1].map((level) => (
+                  <div key={level}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                      Level {level}
+                    </p>
+                    <div className="mt-1 grid grid-cols-4 gap-1.5">
+                      {ACRO_TRACKS.map((track) => {
+                        const skills = ACRO_SKILLS.filter((s) => s.track === track && s.level === level)
+                        const rgb = TRACK_RGB[track]
+                        if (skills.length === 0) return <div key={track} />
+                        return (
+                          <div key={track} className="space-y-1.5">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">
+                              {ACRO_TRACK_LABELS[track]}
+                            </p>
+                            {skills.map((sk) => {
+                              const on = workingTowards.includes(sk.id)
+                              const disabled = !on && workingTowards.length >= 3
+                              return (
+                                <button
+                                  key={sk.id}
+                                  type="button"
+                                  onClick={() => toggleWorking(sk.id)}
+                                  disabled={disabled}
+                                  className="w-full rounded-lg border-2 px-1.5 py-2 text-center text-[10px] font-bold leading-tight text-white disabled:opacity-30"
+                                  style={{
+                                    background: on ? `rgba(${rgb},0.25)` : '#000000',
+                                    borderColor: `rgba(${rgb},${on ? 1 : 0.6})`,
+                                    boxShadow: on ? `0 0 8px rgba(${rgb},0.5)` : 'none',
+                                  }}
+                                >
+                                  {sk.name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  commit({ stayForMore: true })
+                  setStep('more')
+                }}
+                className="h-14 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
+              >
+                {workingTowards.length ? 'Save · more questions' : 'Skip · more questions'}
               </button>
               <button type="button" onClick={() => setStep('more')} className="self-start text-sm text-white/50 underline">
                 Back
