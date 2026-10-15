@@ -64,7 +64,7 @@ function clipToSlot(clip: GymClip, keep?: CollageSlot): CollageSlot {
 }
 
 export function ClassesPanel({ athlete, onOpenTour }: Props) {
-  const { clips, collections, loading, nameForUrl } = useGymLibrary()
+  const { clips, loading, nameForUrl } = useGymLibrary()
   const favorites = useFavorites()
   const [collages, setCollages] = useState<Collage[]>([])
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -110,25 +110,35 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
 
   const grouped = useMemo(() => {
     const q = filter.trim().toLowerCase()
-    return collections
-      .map((col) => ({
-        id: col.id,
-        name: col.name,
-        items: col.items
-          .filter((i) => {
-            if (!i.url) return false
-            if (onlyFavorites && !favorites.isUrlFavorite(i.url)) return false
-            if (!q) return true
-            return `${i.name} ${col.name} ${(i.keywords ?? []).join(' ')}`.toLowerCase().includes(q)
-          })
-          .sort((a, b) => {
-            const af = a.url && favorites.isUrlFavorite(a.url) ? 0 : 1
-            const bf = b.url && favorites.isUrlFavorite(b.url) ? 0 : 1
-            return af - bf
-          }),
-      }))
-      .filter((c) => c.items.length > 0)
-  }, [collections, filter, onlyFavorites, favorites])
+    // Group the flattened library clips (not the raw collections) so the
+    // virtual groups — Skill cards, Drill library, Skill drills — show up here
+    // alongside the real collections.
+    const byCol = new Map<string, { id: string; name: string; items: GymClip[] }>()
+    for (const clip of clips) {
+      if (!clip.url) continue
+      if (onlyFavorites && !favorites.isUrlFavorite(clip.url)) continue
+      if (
+        q &&
+        !`${clip.name} ${clip.collectionName} ${(clip.keywords ?? []).join(' ')} ${clip.postedBy ?? ''}`
+          .toLowerCase()
+          .includes(q)
+      )
+        continue
+      let g = byCol.get(clip.collectionId)
+      if (!g) {
+        g = { id: clip.collectionId, name: clip.collectionName, items: [] }
+        byCol.set(clip.collectionId, g)
+      }
+      g.items.push(clip)
+    }
+    const out = [...byCol.values()]
+    for (const g of out) {
+      g.items.sort(
+        (a, b) => (favorites.isUrlFavorite(a.url) ? 0 : 1) - (favorites.isUrlFavorite(b.url) ? 0 : 1),
+      )
+    }
+    return out.filter((g) => g.items.length > 0)
+  }, [clips, filter, onlyFavorites, favorites])
 
   const closePlay = () => {
     if (playingDirty && !confirm('You have unsaved collage edits. Close without saving?')) {
@@ -541,38 +551,30 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
                 </p>
                 <ul className="space-y-1">
                   {col.items.map((item) => {
-                    if (!item.url) return null
+                    const clip: GymClip = item
                     const used = draft.slots.filter((s) =>
-                      isSameReferenceUrl(s.url, item.url!),
+                      isSameReferenceUrl(s.url, clip.url),
                     ).length
-                    const clip = clips.find((c) => isSameReferenceUrl(c.url, item.url!)) ?? {
-                      id: item.id,
-                      name: item.name,
-                      url: item.url!,
-                      kind: item.kind,
-                      collectionId: col.id,
-                      collectionName: col.name,
-                      keywords: item.keywords,
-                    }
                     const previewing = previewClip
                       ? isSameReferenceUrl(previewClip.url, clip.url)
                       : false
+                    const creator = clip.postedBy?.trim() || null
                     return (
-                      <li key={item.id} className="flex items-center gap-1">
+                      <li key={clip.id} className="flex items-center gap-1">
                         <FavoriteStar
                           compact
-                          on={favorites.isUrlFavorite(item.url!)}
-                          onClick={() => favorites.toggleUrlFavorite(item.url!)}
+                          on={favorites.isUrlFavorite(clip.url)}
+                          onClick={() => favorites.toggleUrlFavorite(clip.url)}
                           label={
-                            favorites.isUrlFavorite(item.url!)
-                              ? `Unfavorite ${item.name}`
-                              : `Favorite ${item.name}`
+                            favorites.isUrlFavorite(clip.url)
+                              ? `Unfavorite ${clip.name}`
+                              : `Favorite ${clip.name}`
                           }
                         />
                         <button
                           type="button"
                           onClick={() => setPreviewClip(clip)}
-                          className={`flex min-w-0 flex-1 items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
+                          className={`flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
                             previewing
                               ? 'bg-white/10 font-semibold text-[var(--text)] ring-1 ring-[var(--accent)]'
                               : used
@@ -580,7 +582,14 @@ export function ClassesPanel({ athlete, onOpenTour }: Props) {
                                 : 'bg-[#0d1218] text-[var(--text)]'
                           }`}
                         >
-                          <span className="truncate">{item.name}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">{clip.name}</span>
+                            {creator ? (
+                              <span className="block truncate text-[11px] text-[var(--muted)]">
+                                {/\s/.test(creator) ? creator : `@${creator}`}
+                              </span>
+                            ) : null}
+                          </span>
                           <span className="shrink-0 text-[11px] opacity-70">
                             {previewing ? 'Preview' : 'Look'}
                           </span>

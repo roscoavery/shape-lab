@@ -51,11 +51,15 @@ export function CollageClipPicker({ url, clipId, clips, onPick, compact, disable
       )}
       {grouped.map(([name, items]) => (
         <optgroup key={name} label={name}>
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
+          {items.map((item) => {
+            const creator = item.postedBy?.trim()
+            return (
+              <option key={item.id} value={item.id}>
+                {item.name}
+                {creator ? ` — ${/\s/.test(creator) ? creator : `@${creator}`}` : ''}
+              </option>
+            )
+          })}
         </optgroup>
       ))}
     </select>
