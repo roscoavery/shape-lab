@@ -32,7 +32,7 @@ function s(id: string, name: string, level: number, track: AcroTrack): AcroSkill
 export const ACRO_SKILLS: AcroSkill[] = [
   // Level 1
   s('back_bend', 'Back bend', 1, 'standing'),
-  s('wall_handstand', 'Wall handstand', 1, 'standing'),
+  s('wall_handstand', 'Wall handstand', 1, 'other'),
   s('cartwheel', 'Cartwheel', 1, 'side'),
   s('tucked_headstand', 'Tucked headstand', 1, 'front'),
   // Level 2
