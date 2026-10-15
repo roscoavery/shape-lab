@@ -20,6 +20,7 @@ export function AcroCheckinBoard({ athletes, sessionAthleteIds, onClose, onAthle
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set(sessionAthleteIds))
   const [pickingTargets, setPickingTargets] = useState(false)
+  const [editingWorking, setEditingWorking] = useState(false)
 
   const sessionAthletes = useMemo(() => {
     const map = new Map(athletes.map((a) => [a.id, a]))
@@ -34,6 +35,8 @@ export function AcroCheckinBoard({ athletes, sessionAthleteIds, onClose, onAthle
   const markSeen = (id: string) => {
     setSelectedId(id)
     setSeenIds((prev) => new Set(prev).add(id))
+    setEditingWorking(false)
+    setPickingTargets(false)
   }
 
   const isNew = (a: Athlete) => !seenIds.has(a.id)
@@ -173,10 +176,61 @@ export function AcroCheckinBoard({ athletes, sessionAthleteIds, onClose, onAthle
               )}
 
               <div className="mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
-                  Working towards
-                </p>
-                {(selected.acroWorkingTowards ?? []).length === 0 ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+                    Working towards
+                  </p>
+                  {onAthletesChange && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingWorking((v) => !v)}
+                      className="rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold"
+                    >
+                      {editingWorking ? 'Done' : 'Edit'}
+                    </button>
+                  )}
+                </div>
+                {editingWorking && onAthletesChange ? (
+                  <div className="mt-2 max-h-64 space-y-2 overflow-y-auto rounded-xl border border-[var(--panel-border)] bg-black/20 p-2">
+                    {acroSkillsByLevel().map(({ level, skills }) => (
+                      <div key={level}>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                          Level {level}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {skills.map((sk) => {
+                            const on = (selected.acroWorkingTowards ?? []).includes(sk.id)
+                            const disabled = !on && (selected.acroWorkingTowards ?? []).length >= 3
+                            return (
+                              <button
+                                key={sk.id}
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => {
+                                  const next = on
+                                    ? (selected.acroWorkingTowards ?? []).filter((x) => x !== sk.id)
+                                    : [...(selected.acroWorkingTowards ?? []), sk.id]
+                                  onAthletesChange(
+                                    athletes.map((a) =>
+                                      a.id === selected.id ? { ...a, acroWorkingTowards: next } : a,
+                                    ),
+                                  )
+                                }}
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold disabled:opacity-30 ${
+                                  on
+                                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                                    : 'bg-white/10 text-[var(--text)]'
+                                }`}
+                              >
+                                {sk.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (selected.acroWorkingTowards ?? []).length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--muted)]">Nothing selected yet.</p>
                 ) : (
                   <div className="mt-2 space-y-3">

@@ -26,6 +26,7 @@ import { ClassMergePrompt } from '../today/ClassMergePrompt'
 import { LiveClassRoll } from '../today/LiveClassRoll'
 import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
+import { AcroCheckinBoard } from './AcroCheckinBoard'
 import { MorningBrief } from '../today/MorningBrief'
 import { CalendarDesk } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
@@ -171,6 +172,7 @@ export function HomeDashboard({
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickAddAthleteOpen, setQuickAddAthleteOpen] = useState(false)
+  const [checkinBoardOpen, setCheckinBoardOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
   const [addQuery, setAddQuery] = useState('')
   const [glowingKinds, setGlowingKinds] = useState<Set<SessionKind>>(new Set())
@@ -1070,6 +1072,15 @@ export function HomeDashboard({
           />
         {activeGroup && groupView === 'coach' && signedIn && onAthletesChange && (
           <div className="mt-3 space-y-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCheckinBoardOpen(true)}
+                className="flex-1 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-3 text-sm font-bold text-[var(--accent)]"
+              >
+                Check-in board ({groupAthletes.length})
+              </button>
+            </div>
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Already has a profile
@@ -1526,6 +1537,14 @@ export function HomeDashboard({
           onAthletesChange={onAthletesChange}
           onClose={() => setQuickAddOpen(false)}
           onAdded={() => setRefresh((n) => n + 1)}
+        />
+      )}
+      {checkinBoardOpen && activeGroup && onAthletesChange && (
+        <AcroCheckinBoard
+          athletes={athletes}
+          sessionAthleteIds={activeGroup.athleteIds}
+          onClose={() => setCheckinBoardOpen(false)}
+          onAthletesChange={onAthletesChange}
         />
       )}
     </div>
