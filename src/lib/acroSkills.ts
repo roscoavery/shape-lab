@@ -47,6 +47,7 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('back_walkover', 'Back walkover', 3, 'standing'),
   s('front_walkover', 'Front walkover', 3, 'front'),
   s('illusion', 'Illusion', 3, 'other'),
+  s('blaster_scoot', 'Blaster scoot', 3, 'other'),
   s('dive_cartwheel', 'Dive cartwheel', 3, 'side'),
   s('prep_aerial', 'Prep aerial', 3, 'side'),
   s('elbow_stand', 'Elbow stand', 3, 'front'),
