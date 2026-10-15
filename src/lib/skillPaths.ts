@@ -16,6 +16,7 @@ import {
   type UnifiedSkillTrack,
 } from './skillRegistry'
 import { SHIPPED_CONDITIONING, SHIPPED_NEEDS, SHIPPED_SKILLS, SHIPPED_VERSIONS } from '../config/skillPathSeed'
+import { getAcroSkill } from './acroSkills'
 import type { Athlete, AthleteSkillGoal, TrainingSurface } from '../types'
 import { givenName } from './classStation'
 
@@ -215,8 +216,14 @@ function mergeShipped(file: SkillPathFile): SkillPathFile {
   const needs = new Map(
     file.needs.filter((n) => n?.id && !removedNeeds.has(n.id)).map((n) => [n.id, n]),
   )
+  // A shipped default yields to a user-authored need covering the same edge,
+  // so Ryan never sees a duplicate if he already wrote the path himself.
+  const userEdges = new Set(
+    [...needs.values()].map((n) => `${n.skillId}→${n.needSkillId ?? n.label ?? ''}`),
+  )
   for (const row of SHIPPED_NEEDS) {
     if (removed.has(row.skillId) || removedNeeds.has(row.id) || needs.has(row.id)) continue
+    if (userEdges.has(`${row.skillId}→${row.needSkillId ?? row.label ?? ''}`)) continue
     needs.set(row.id, row)
   }
   const conditioning = new Map(
@@ -422,6 +429,7 @@ export function needLabel(need: SkillNeed): string {
     return (
       getRegistrySkill(need.needSkillId)?.name ??
       getSkill(need.needSkillId)?.name ??
+      getAcroSkill(need.needSkillId)?.name ??
       'Untitled piece'
     )
   }

@@ -85,8 +85,14 @@ export function guideSkills(): UnifiedSkill[] {
 export function getRegistrySkillByName(name: string | undefined | null): UnifiedSkill | null {
   if (!name) return null
   const want = name.trim().toLowerCase()
-  const skill = ALL_SKILLS.find((s) => s.name.trim().toLowerCase() === want)
-  return skill ? applyOverride(skill) : null
+  const exact = ALL_SKILLS.find((s) => s.name.trim().toLowerCase() === want)
+  if (exact) return applyOverride(exact)
+  // Fall back to aliases so e.g. the acro map's "Back bend kick over" tile
+  // opens the same card as the main map's "Backbend kick over".
+  const aliasHit = ALL_SKILLS.find((s) =>
+    (s.aliases ?? []).some((a) => a.trim().toLowerCase() === want),
+  )
+  return aliasHit ? applyOverride(aliasHit) : null
 }
 
 /**

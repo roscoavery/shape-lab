@@ -10,6 +10,7 @@ import {
 } from '../../lib/acroSkills'
 import { getRegistrySkillByName, getRegistrySkill, type UnifiedSkill } from '../../lib/skillRegistry'
 import { needsForSkillConsolidated } from '../../lib/skillPathHighlight'
+import { needsForSkill } from '../../lib/skillPaths'
 
 type Props = {
   /** Called when a tile is tapped with the resolved skill. */
@@ -42,26 +43,34 @@ export function AcroMapView({ onTileTap }: Props) {
     return ACRO_SKILLS.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 8)
   }, [shineQuery])
 
-  // Shine path: for the shined skill, find prerequisites via main-map
-  // name match, then map them back to acro skills by name.
+  // Shine path: light the shined skill's prerequisites.
+  // Union of (a) acro-authored path pieces (what Ryan writes on acro cards,
+  // keyed by acro skill id) and (b) the shared main-map card's path pieces
+  // mapped back onto acro tiles, matching names and aliases so e.g. the main
+  // map's "Backbend kick over" lands on the acro "Back bend kick over" tile.
   const shinePathIds = useMemo(() => {
     if (!shineId) return new Set<string>()
     const acroSkill = getAcroSkill(shineId)
     if (!acroSkill) return new Set<string>([shineId])
-    const mainSkill = getRegistrySkillByName(acroSkill.name)
-    if (!mainSkill) return new Set<string>([shineId])
     const ids = new Set<string>([shineId])
+    const addNeed = (needSkillId: string | undefined) => {
+      if (!needSkillId) return
+      // Acro-authored need: the id is already an acro tile.
+      if (getAcroSkill(needSkillId)) {
+        ids.add(needSkillId)
+        return
+      }
+      const needSkill = getRegistrySkill(needSkillId)
+      if (!needSkill) return
+      const keys = [needSkill.name, ...(needSkill.aliases ?? [])].map((n) => n.trim().toLowerCase())
+      const tile = ACRO_SKILLS.find((a) => keys.includes(a.name.trim().toLowerCase()))
+      if (tile) ids.add(tile.id)
+    }
     try {
-      const needs = needsForSkillConsolidated(mainSkill.id)
-      for (const need of needs) {
-        if (!need.needSkillId) continue
-        const needSkill = getRegistrySkill(need.needSkillId)
-        if (!needSkill) continue
-        // Find acro skill with matching name
-        const acroMatch = ACRO_SKILLS.find(
-          (a) => a.name.toLowerCase() === needSkill.name.toLowerCase(),
-        )
-        if (acroMatch) ids.add(acroMatch.id)
+      for (const need of needsForSkill(acroSkill.id)) addNeed(need.needSkillId)
+      const mainSkill = getRegistrySkillByName(acroSkill.name)
+      if (mainSkill) {
+        for (const need of needsForSkillConsolidated(mainSkill.id)) addNeed(need.needSkillId)
       }
     } catch {
       /* no path data */

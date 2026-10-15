@@ -49,7 +49,7 @@ import {
 import { toggleKeyHelperWiggle } from '../../lib/keyHelperOverrides'
 import { FAMILY_BY_SKILL, SkillMapView, hlGlowStyle, type SkillFamily } from './SkillMapView'
 import { AcroMapView } from './AcroMapView'
-import { ACRO_SKILLS, acroSkillToUnified } from '../../lib/acroSkills'
+import { ACRO_SKILLS, acroSkillToUnified, getAcroSkill } from '../../lib/acroSkills'
 import type { Athlete } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
@@ -1025,7 +1025,7 @@ function PathNode({
   onSelectSkill?: (s: UnifiedSkill) => void
 }) {
   const reg = getRegistrySkill(skillId)
-  const name = reg?.name ?? skillId
+  const name = reg?.name ?? getAcroSkill(skillId)?.name ?? skillId
   const family: SkillFamily = FAMILY_BY_SKILL[skillId] ?? 'foundations'
   const layer = hlGlowStyle(hl, role, dist, family, hl.keyHelpers.has(canonicalSkillId(skillId)))
   const canOpen = !!reg?.guideId && !!onSelectSkill

@@ -58,6 +58,7 @@ export const ACRO_SKILLS: AcroSkill[] = [
   s('dive_front_walkover', 'Dive front walkover', 4, 'front'),
   s('spider_cartwheel', 'Spider cartwheel', 4, 'side'),
   s('butterfly_kick', 'Butterfly kick', 4, 'side'),
+  s('tricking_aerial', 'Tricking aerial', 4, 'side'),
   s('one_arm_front_walkover', 'One arm front walkover', 4, 'front'),
   s('front_toss', 'Front toss', 4, 'front'),
   // Level 5

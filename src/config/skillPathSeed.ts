@@ -464,6 +464,42 @@ export const SHIPPED_NEEDS: SkillNeed[] = [
     order: 5,
     shipped: true,
   },
+  // Acro map (Ryan 2026-10-15): back walkover needs back bend and backbend kick over.
+  {
+    id: 'need_bwo_back_bend',
+    skillId: 'skl_back_walkover',
+    needSkillId: 'skl_back_bend',
+    kind: 'required',
+    note: 'A back bend. Never without it.',
+    order: 10,
+    shipped: true,
+  },
+  {
+    id: 'need_bwo_kick_over',
+    skillId: 'skl_back_walkover',
+    needSkillId: 'skl_backbend_kick_over',
+    kind: 'required',
+    note: 'Kick over from the bridge before the walkover.',
+    order: 20,
+    shipped: true,
+  },
+  // Acro map (Ryan 2026-10-15): tricking aerial needs blaster scoot and butterfly kick.
+  {
+    id: 'need_tricking_aerial_scoot',
+    skillId: 'acro_tricking_aerial',
+    needSkillId: 'acro_blaster_scoot',
+    kind: 'required',
+    order: 10,
+    shipped: true,
+  },
+  {
+    id: 'need_tricking_aerial_bfly',
+    skillId: 'acro_tricking_aerial',
+    needSkillId: 'acro_butterfly_kick',
+    kind: 'required',
+    order: 20,
+    shipped: true,
+  },
 ]
 
 export const SHIPPED_CONDITIONING: ConditioningNeed[] = [
