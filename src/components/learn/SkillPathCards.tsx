@@ -1796,6 +1796,7 @@ export function SkillPathCards({
     resolveSkill(focusSkillId),
   )
   const [mapKind, setMapKind] = useState<'main' | 'acro'>('main')
+  const [acroModalSkill, setAcroModalSkill] = useState<import('../../lib/acroSkills').AcroSkill | null>(null)
   const modalScrollRef = useRef<HTMLDivElement>(null)
 
   // Deep-linked from search or a shared card link: open the skill's card in the modal.
@@ -1918,7 +1919,15 @@ export function SkillPathCards({
           {mapKind === 'main' ? (
             <SkillMapView onTileTap={setModalSkill} viewer={viewer} classAthletes={classAthletes} activeAthlete={activeAthlete} />
           ) : (
-            <AcroMapView />
+            <AcroMapView
+              onTileTap={(skill) => {
+                if ('guideId' in skill) {
+                  setModalSkill(skill as UnifiedSkill)
+                } else {
+                  setAcroModalSkill(skill as import('../../lib/acroSkills').AcroSkill)
+                }
+              }}
+            />
           )}
         </div>
       </section>
@@ -2003,6 +2012,43 @@ export function SkillPathCards({
         </div>,
         document.body,
       )}
+
+      {acroModalSkill &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6"
+            onClick={() => setAcroModalSkill(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={acroModalSkill.name}
+          >
+            <div
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-[var(--panel)] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-extrabold">{acroModalSkill.name}</h3>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    Level {acroModalSkill.level} · {acroModalSkill.track}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAcroModalSkill(null)}
+                  className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-bold"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="mt-4 text-sm opacity-80">
+                This acro skill doesn't have a guide card yet. Path and wiggle
+                settings for acro skills are coming.
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

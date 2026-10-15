@@ -79,6 +79,17 @@ export function guideSkills(): UnifiedSkill[] {
 }
 
 /**
+ * Look up a registry skill by its display name (case-insensitive).
+ * Used by the acro map to share cards with the main map when names match.
+ */
+export function getRegistrySkillByName(name: string | undefined | null): UnifiedSkill | null {
+  if (!name) return null
+  const want = name.trim().toLowerCase()
+  const skill = ALL_SKILLS.find((s) => s.name.trim().toLowerCase() === want)
+  return skill ? applyOverride(skill) : null
+}
+
+/**
  * Guide display order, top-down: peak skills first, foundations last.
  * (Preserved from the original guide order; front-walkover moved
  * next to back-walkover per Ryan 2026-09-26.)
