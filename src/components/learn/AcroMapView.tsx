@@ -170,14 +170,27 @@ export function AcroMapView({ onTileTap }: Props) {
                       const isTarget = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
                       const hasCard = !!mainSkill?.guideId
+                      const nameLen = skill.name.length
+                      const tileText =
+                        dense
+                          ? nameLen > 18
+                            ? 'text-[7px]'
+                            : nameLen > 12
+                              ? 'text-[8px]'
+                              : 'text-[9px]'
+                          : nameLen > 22
+                            ? 'text-[8px]'
+                            : nameLen > 15
+                              ? 'text-[9px]'
+                              : 'text-[10px] sm:text-[11px]'
                       return (
                         <button
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className={`relative flex w-full items-center justify-center rounded-xl border px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
-                            dense ? 'min-h-[44px] py-1 text-[9px]' : 'min-h-[60px] flex-1 py-2 text-[10px] sm:text-[11px]'
-                          }`}
+                          className={`relative flex w-full items-center justify-center overflow-hidden rounded-xl border px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
+                            dense ? 'min-h-[44px] py-1' : 'min-h-[60px] flex-1 py-2'
+                          } ${tileText}`}
                           style={{
                             background: '#000000',
                             borderColor: isTarget
@@ -201,7 +214,7 @@ export function AcroMapView({ onTileTap }: Props) {
                               aria-hidden
                             />
                           )}
-                          <span className="break-words">{skill.name}</span>
+                          <span className="break-all hyphens-auto">{skill.name}</span>
                         </button>
                       )
                     })}
