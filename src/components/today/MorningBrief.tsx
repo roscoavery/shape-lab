@@ -26,6 +26,7 @@ type Props = {
   coach: Athlete
   athletes: Athlete[]
   onOpenChecklist: () => void
+  onViewProfile?: (id: string) => void
 }
 
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
@@ -40,7 +41,7 @@ function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
  * per-athlete focus tasks. Tasks feed the athlete checklist and each
  * athlete's own view.
  */
-export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
+export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }: Props) {
   const [events, setEvents] = useState<TodayCalendarEvent[]>([])
   const [plansTick, setPlansTick] = useState(0)
   const [openOfferingId, setOpenOfferingId] = useState<string | null>(null)
@@ -218,6 +219,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist }: Props) {
                     taskInput={taskInputs[planKey] ?? ''}
                     onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [planKey]: v }))}
                     plansTick={plansTick}
+                    onViewProfile={onViewProfile}
                   />
                 )
               })}

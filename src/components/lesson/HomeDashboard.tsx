@@ -653,6 +653,7 @@ export function HomeDashboard({
           coach={signedIn}
           athletes={athletes}
           onOpenChecklist={onOpenChecklist}
+          onViewProfile={onViewProfile}
         />
       )}
       <CollapsibleSection

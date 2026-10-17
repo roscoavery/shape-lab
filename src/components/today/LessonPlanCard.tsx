@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
+import { AthleteAvatar } from '../AthleteAvatar'
 import {
   getOrCreateClassPlan,
   addPlanTask,
@@ -41,6 +42,8 @@ export function LessonPlanCard({
   plansTick,
   /** Hide the header row; the parent already shows the lesson title. */
   hideHeader = false,
+  /** Open the athlete's profile (tap on their photo). */
+  onViewProfile,
 }: {
   event: TodayCalendarEvent
   athlete: Athlete | null
@@ -52,6 +55,7 @@ export function LessonPlanCard({
   onTaskInput: (v: string) => void
   plansTick: number
   hideHeader?: boolean
+  onViewProfile?: (id: string) => void
 }) {
   const planId = `lesson:${event.id}`
   const plan: ClassPlan = useMemo(
@@ -154,21 +158,37 @@ export function LessonPlanCard({
 
   return (
     <div className="min-w-0 rounded-lg bg-[#121820] px-3 py-2">
-      <button
-        type="button"
-        className="flex w-full min-w-0 items-center justify-between gap-2 text-left"
-        onClick={onToggle}
-      >
-        <span className="min-w-0 truncate text-sm text-[var(--text)]">
-          {formatTime(event.startAt)} · {label}
-          {plan.tasks.length > 0 && (
-            <span className="ml-2 text-xs text-[var(--muted)]">
-              {doneCount}/{plan.tasks.length} done
-            </span>
-          )}
-        </span>
-        <span className="shrink-0 text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
-      </button>
+      <div className="flex w-full min-w-0 items-center gap-2">
+        {athlete && onViewProfile && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewProfile(athlete.id)
+            }}
+            className="shrink-0 rounded-full"
+            aria-label={`View ${athlete.firstName || athlete.name}'s profile`}
+          >
+            <AthleteAvatar athlete={athlete} size="sm" />
+          </button>
+        )}
+        {athlete && !onViewProfile && <AthleteAvatar athlete={athlete} size="sm" />}
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+          onClick={onToggle}
+        >
+          <span className="min-w-0 truncate text-sm text-[var(--text)]">
+            {formatTime(event.startAt)} · {label}
+            {plan.tasks.length > 0 && (
+              <span className="ml-2 text-xs text-[var(--muted)]">
+                {doneCount}/{plan.tasks.length} done
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+        </button>
+      </div>
       {open && <div className="mt-2 min-w-0 border-t border-white/10 pt-2">{body}</div>}
     </div>
   )

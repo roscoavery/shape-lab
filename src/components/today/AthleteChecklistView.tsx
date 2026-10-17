@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
+import { AthleteAvatar } from '../AthleteAvatar'
 import { loadOfferingsForCoach, WEEKDAYS } from '../../lib/coachClasses'
 import {
   plansForDate,
@@ -202,10 +203,13 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                 onClick={() => setSelectedId(a.id)}
                 className="flex items-center justify-between rounded-2xl border border-white/15 bg-[#111418] p-5 text-left active:bg-white/10"
               >
-                <span className="text-2xl font-bold text-white">
-                  {a.firstName || a.name}
+                <span className="flex min-w-0 items-center gap-3">
+                  <AthleteAvatar athlete={a} size="md" />
+                  <span className="truncate text-2xl font-bold text-white">
+                    {a.firstName || a.name}
+                  </span>
                 </span>
-                <span className="text-sm text-white/50">
+                <span className="shrink-0 text-sm text-white/50">
                   {myDone}/{myRows.length} done
                 </span>
               </button>
