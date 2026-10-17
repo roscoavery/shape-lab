@@ -219,7 +219,6 @@ export function subnavForSection(
       { id: 'scroll', label: 'Reference scroll' },
       { id: 'feed', label: 'Feed' },
       { id: 'wins', label: 'Wins' },
-      { id: 'network', label: 'Network' },
       { id: 'learn', label: 'Learn' },
       { id: 'history', label: 'Profile' },
       { id: 'about', label: 'About' },

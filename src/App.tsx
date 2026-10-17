@@ -231,7 +231,7 @@ import { hydrateCoachStills, mergeCoachExtras, subscribeCoachStills } from './li
 import { ensureRyanInAthletes, isRyanAthlete } from './lib/ryanProfile'
 import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
-import { isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
+import { isAthleteProfile, isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
 import { checkLessonAutoStart, checkLessonAutoEnd, checkLessonEndWarning, extendLessonEnd } from './lib/lessonAuto'
 import { getAutoStartSessions } from './lib/sessionPrefs'
 import { childAthletes } from './lib/parentLink'
@@ -2361,7 +2361,7 @@ export default function App() {
         />
       )}
 
-      {tab === 'network' && (
+      {tab === 'network' && !isAthleteProfile(activeProfile) && (
         <NetworkPanel
           athletes={athletes}
           athlete={athletes.find((a) => a.id === activeAthleteId) ?? null}
