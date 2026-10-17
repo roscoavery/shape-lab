@@ -545,13 +545,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
     },
+  ],
+  'ro-bhs-series': [
     {
       who: 'Hangtime TNT Gymnastics',
       url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
       watchFor: 'Back handspring zombie fall to hollow.',
     },
-  ],
-  'ro-bhs-series': [
     {
       who: 'Coach Ryan Williams',
       url: '/videos/ryan-roundoff-eyes-forward-blocking-angle.mp4',
