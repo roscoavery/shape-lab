@@ -83,3 +83,42 @@ export function IgHeartOutlineIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+export function IgClockIcon({ className, filled }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={filled ? 0 : 1.75} aria-hidden>
+      {filled ? (
+        <path d="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19Zm1 5h-2v6l5 3 1-1.7-4-2.3V7.5Z" />
+      ) : (
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+          <path strokeLinecap="round" d="M12 7.5V12l3.5 2" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+export function IgLearnIcon({ className, filled }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={filled ? 0 : 1.75} aria-hidden>
+      {filled ? (
+        <path d="M5 4.5h11a3 3 0 0 1 3 3v11a1 1 0 0 1-1.7.7L14 15.9a1 1 0 0 0-1.4 0l-1.3 1.3V6.5a2 2 0 0 0-2-2H5a1 1 0 0 0-1 1v13a1 1 0 0 1-2 0v-13a2 2 0 0 1 2-2Z" />
+      ) : (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v13H6.5A2.5 2.5 0 0 0 4 18.5V5.5Z M4 18.5A2.5 2.5 0 0 1 6.5 16H19v3H6.5A2.5 2.5 0 0 1 4 18.5Z"
+        />
+      )}
+    </svg>
+  )
+}
+
+export function IgHomeworkIcon({ className, filled }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={filled ? 2.25 : 1.75} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m5 12.5 4.5 4.5L19 7.5" />
+    </svg>
+  )
+}

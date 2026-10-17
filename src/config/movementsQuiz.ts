@@ -126,7 +126,7 @@ export const MOVEMENTS_QUIZ_BANK: PhysicsQuizItem[] = [
   {
     id: 'block-combo',
     lessonId: 'movement-names',
-    prompt: 'A tumbling block is mostly:',
+    prompt: 'A handstand block is mostly:',
     choices: [
       { id: 'a', label: 'Shoulder flexion and wrist extension (wrist dorsiflexion) into the floor' },
       { id: 'b', label: 'Shoulder extension and wrist flexion' },

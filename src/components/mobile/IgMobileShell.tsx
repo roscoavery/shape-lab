@@ -13,7 +13,8 @@ import { MobileSearchPage } from './MobileSearchPage'
 import { MobileAccountSwitcher } from './MobileAccountSwitcher'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { MobileDiscoverSheet } from './MobileDiscoverSheet'
-import { IgHomeIcon, IgMessagesIcon, IgReelsIcon, IgSearchIcon } from './IgNavIcons'
+import { IgHomeIcon, IgMessagesIcon, IgReelsIcon, IgSearchIcon, IgClockIcon, IgLearnIcon, IgHomeworkIcon } from './IgNavIcons'
+import { isAthleteProfile } from '../../lib/profileRole'
 import { stashDiscoverTarget, type DiscoverTarget } from '../../lib/mobileDiscover'
 import { stashMobileSearchJump } from '../../lib/mobileSearchNav'
 
@@ -95,6 +96,8 @@ export function IgMobileShell({
   const navBtn = (on: boolean) => (on ? 'text-[var(--text)]' : 'text-[var(--muted)]')
   const navIconBtn = 'flex flex-1 items-center justify-center py-2 min-h-[44px]'
 
+  const isAthlete = isAthleteProfile(athlete)
+
   const pickDiscover = (pickTab: AppTab, target: DiscoverTarget) => {
     stashDiscoverTarget(target)
     // Skill path guide opens Learn straight on the skill map.
@@ -110,64 +113,126 @@ export function IgMobileShell({
     onGo(id)
   }
 
-  const navItems = [
-    {
-      id: 'home',
-      label: 'Home',
-      active: active === 'home',
-      onClick: () => go(isOwner ? 'owner' : 'today'),
-      icon: <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />,
-    },
-    {
-      id: 'discover',
-      label: 'Discover',
-      active: discoverOn,
-      onClick: () => {
-        setMobileSearch(false)
-        onCloseProfile?.()
-        setDiscoverOpen(true)
-      },
-      icon: <IgReelsIcon className="h-7 w-7" filled={discoverOn} />,
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      active: active === 'messages',
-      onClick: () => go('network'),
-      icon: <IgMessagesIcon className="h-7 w-7" filled={active === 'messages'} />,
-    },
-    {
-      id: 'search',
-      label: 'Search',
-      active: active === 'search',
-      onClick: () => {
-        setDiscoverOpen(false)
-        onCloseProfile?.()
-        setMobileSearch(true)
-      },
-      icon: <IgSearchIcon className="h-7 w-7" />,
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      active: active === 'profile',
-      onClick: () => {
-        setMobileSearch(false)
-        onOpenMyProfile?.()
-      },
-      icon: athlete ? (
-        <AthleteAvatar
-          athlete={athlete}
-          size="xs"
-          className={`h-7 w-7 ring-1 ${active === 'profile' ? 'ring-[var(--text)]' : 'ring-white/25'}`}
-        />
-      ) : (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">
-          ◎
-        </span>
-      ),
-    },
-  ]
+  const navItems = isAthlete
+    ? [
+        {
+          id: 'home',
+          label: 'Home',
+          active: active === 'home',
+          onClick: () => go('today'),
+          icon: <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />,
+        },
+        {
+          id: 'discover',
+          label: 'Discover',
+          active: discoverOn,
+          onClick: () => {
+            setMobileSearch(false)
+            onCloseProfile?.()
+            setDiscoverOpen(true)
+          },
+          icon: <IgReelsIcon className="h-7 w-7" filled={discoverOn} />,
+        },
+        {
+          id: 'clock',
+          label: 'Clock',
+          active: tab === 'classclock',
+          onClick: () => go('classclock'),
+          icon: <IgClockIcon className="h-7 w-7" filled={tab === 'classclock'} />,
+        },
+        {
+          id: 'learn',
+          label: 'Learn',
+          active: tab === 'learn',
+          onClick: () => go('learn'),
+          icon: <IgLearnIcon className="h-7 w-7" filled={tab === 'learn'} />,
+        },
+        {
+          id: 'homework',
+          label: 'Homework',
+          active: tab === 'homework',
+          onClick: () => go('homework'),
+          icon: <IgHomeworkIcon className="h-7 w-7" filled={tab === 'homework'} />,
+        },
+        {
+          id: 'profile',
+          label: 'Profile',
+          active: active === 'profile',
+          onClick: () => {
+            setMobileSearch(false)
+            onOpenMyProfile?.()
+          },
+          icon: athlete ? (
+            <AthleteAvatar
+              athlete={athlete}
+              size="xs"
+              className={`h-7 w-7 ring-1 ${active === 'profile' ? 'ring-[var(--text)]' : 'ring-white/25'}`}
+            />
+          ) : (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">
+              ◎
+            </span>
+          ),
+        },
+      ]
+    : [
+        {
+          id: 'home',
+          label: 'Home',
+          active: active === 'home',
+          onClick: () => go(isOwner ? 'owner' : 'today'),
+          icon: <IgHomeIcon className="h-7 w-7" filled={active === 'home'} />,
+        },
+        {
+          id: 'discover',
+          label: 'Discover',
+          active: discoverOn,
+          onClick: () => {
+            setMobileSearch(false)
+            onCloseProfile?.()
+            setDiscoverOpen(true)
+          },
+          icon: <IgReelsIcon className="h-7 w-7" filled={discoverOn} />,
+        },
+        {
+          id: 'messages',
+          label: 'Messages',
+          active: active === 'messages',
+          onClick: () => go('network'),
+          icon: <IgMessagesIcon className="h-7 w-7" filled={active === 'messages'} />,
+        },
+        {
+          id: 'search',
+          label: 'Search',
+          active: active === 'search',
+          onClick: () => {
+            setDiscoverOpen(false)
+            onCloseProfile?.()
+            setMobileSearch(true)
+          },
+          icon: <IgSearchIcon className="h-7 w-7" />,
+        },
+        {
+          id: 'profile',
+          label: 'Profile',
+          active: active === 'profile',
+          onClick: () => {
+            setMobileSearch(false)
+            onOpenMyProfile?.()
+          },
+          icon: athlete ? (
+            <AthleteAvatar
+              athlete={athlete}
+              size="xs"
+              className={`h-7 w-7 ring-1 ${active === 'profile' ? 'ring-[var(--text)]' : 'ring-white/25'}`}
+            />
+          ) : (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs">
+              ◎
+            </span>
+          ),
+        },
+      ]
 
   return (
     <div className="max-md:pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pl-[76px] xl:pl-60">

@@ -1,7 +1,7 @@
 import type { AppTab } from '../../lib/storage'
 import { saveTab } from '../../lib/storage'
 import { MobilePortal } from './MobilePortal'
-import { isCoachProfile } from '../../lib/profileRole'
+import { isAthleteProfile, isCoachProfile } from '../../lib/profileRole'
 import type { Athlete } from '../../types'
 import type { DiscoverTarget } from '../../lib/mobileDiscover'
 
@@ -37,11 +37,15 @@ const ROWS: Row[] = [
 export function MobileDiscoverSheet({ open, onClose, onPick, athlete }: Props) {
   if (!open) return null
   const coach = isCoachProfile(athlete)
+  const isAthlete = isAthleteProfile(athlete)
   const rows = ROWS.filter((r) => {
     if (r.coachOnly && !coach) return false
     if (r.athleteOnly && coach) return false
+    // Athletes never see spotting or my system, even if role detection is off.
+    if (isAthlete && (r.target === 'spotting' || r.target === 'mysystem')) return false
     return true
   })
+  const learnHint = isAthlete ? 'Shapes, skills, and drills' : 'Shapes, skills, drills, and spotting'
   return (
     <MobilePortal>
     <div
@@ -70,7 +74,9 @@ export function MobileDiscoverSheet({ open, onClose, onPick, athlete }: Props) {
                 }}
               >
                 <span className="text-sm font-semibold">{row.title}</span>
-                <span className="text-xs text-[var(--muted)]">{row.hint}</span>
+                <span className="text-xs text-[var(--muted)]">
+                  {row.target === 'learn' ? learnHint : row.hint}
+                </span>
               </button>
             </li>
           ))}
