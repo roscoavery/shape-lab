@@ -131,7 +131,9 @@ import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { handleShareCard } from './shareCard.ts'
 import {
+  getOrCreateGroupIntakeToken,
   getOrCreateIntakeToken,
+  getOrCreateOpenIntakeToken,
   getOrCreateShareToken,
   handleShareIntake,
   handleShareIntakeSubmit,
@@ -289,6 +291,8 @@ const API_PATHS = new Set([
   '/api/athlete-videos/folder-token',
   '/api/athlete-videos/file-class',
   '/api/share-links/intake-token',
+  '/api/share-links/intake-open-token',
+  '/api/share-links/intake-group-token',
   '/api/share-links/library-token',
   '/api/coach-media',
   '/api/coach-media-file',
@@ -1538,6 +1542,39 @@ export async function handleShapeLabApi(
     }
     const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
     const token = await getOrCreateIntakeToken(athleteId, coachId)
+    sendJson(res, 200, { token, path: `/intake/${token}` })
+    return true
+  }
+  if (path === '/api/share-links/intake-open-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
+    const token = await getOrCreateOpenIntakeToken(coachId)
+    sendJson(res, 200, { token, path: `/intake/${token}` })
+    return true
+  }
+  if (path === '/api/share-links/intake-group-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { groupId?: string } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    const groupId = (body.groupId ?? '').trim()
+    if (!groupId) {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
+    const token = await getOrCreateGroupIntakeToken(groupId, coachId)
     sendJson(res, 200, { token, path: `/intake/${token}` })
     return true
   }

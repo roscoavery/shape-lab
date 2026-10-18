@@ -1,17 +1,27 @@
 /**
- * Public athlete intake (build 1076).
+ * Public athlete intake.
  *
- * Rendered standalone at /intake/<token> with NO sign-in. The token is tied
- * to one athlete's profile (made by the coach via quick-add) — the link only
- * ever touches that profile. No roster search, no name enumeration.
+ * Rendered standalone at /intake/<token> with NO sign-in. Three modes:
  *
- * The athlete answers any unanswered intake questions. Questions that
- * reference a body position show the shape still, same as the in-app intake.
+ * - athlete: token tied to one athlete's profile (coach made it via
+ *   quick-add). The athlete answers unanswered questions.
+ * - open: general new-athlete link. They enter their name, answer all
+ *   questions, optionally pick working-towards skills.
+ * - group: new-athlete link tied to a training event. Same as open, but the
+ *   new profile auto-joins that group.
+ *
+ * The per-athlete mode never searches the roster — the link only ever
+ * touches that one profile.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { CORE_INTAKE, type IntakeQuestion } from '../../lib/intakeQuestions'
+import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
+import { guideSkillsInOrder } from '../../lib/skillRegistry'
+import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS } from '../../lib/acroSkills'
+
+type Mode = 'athlete' | 'open' | 'group'
 
 function stillUrl(q: IntakeQuestion): string | null {
   if (q.stillFile) return `/references/${q.stillFile}`
@@ -38,119 +48,276 @@ function QuestionView({
         <img
           src={still}
           alt=""
-          className="mb-4 max-h-56 w-full rounded-xl object-contain bg-black/40"
+          className="mb-3 max-h-56 w-full rounded-xl object-contain bg-black/30"
         />
       )}
       <p className="text-base font-semibold text-white">{q.prompt}</p>
-      {q.kind === 'choice' && q.options && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {q.options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
-                value === opt.value
-                  ? 'border-sky-400 bg-sky-400/20 text-white'
-                  : 'border-white/15 bg-black/30 text-white/80'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+      {q.kind === 'color' ? (
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {q.options!.map((o) => {
+            const swatch = FAVORITE_COLORS.find((c) => c.id === o.value)?.swatch ?? '#888'
+            return (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => onChange(o.value)}
+                className={`flex flex-col items-center gap-1 rounded-xl border p-2 ${
+                  value === o.value
+                    ? 'border-sky-300 bg-sky-400/20'
+                    : 'border-white/10 bg-white/5'
+                }`}
+              >
+                <span
+                  className="h-8 w-8 rounded-full border border-white/20"
+                  style={{ background: swatch }}
+                />
+                <span className="text-[11px] font-semibold text-white/80">
+                  {o.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
-      )}
-      {q.kind === 'color' && q.options && (
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {q.options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
-                value === opt.value
-                  ? 'border-sky-400 bg-sky-400/20 text-white'
-                  : 'border-white/15 bg-black/30 text-white/80'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {(q.kind === 'skip-phone') && (
+      ) : q.kind === 'skip-phone' ? (
         <input
+          type="tel"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="mt-3 h-11 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
-          placeholder="Phone number (optional)"
-          inputMode="tel"
+          placeholder="(optional)"
+          className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
         />
-      )}
-      {q.kind === 'photo' && (
-        <p className="mt-3 text-sm text-white/55">
+      ) : q.kind === 'photo' ? (
+        <p className="mt-3 text-sm text-white/50">
           You can add a photo when you see your coach.
         </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {q.options!.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange(o.value)}
+              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+                value === o.value
+                  ? 'border-sky-300 bg-sky-400/20 text-white'
+                  : 'border-white/15 bg-white/5 text-white/80'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
 }
 
-export default function PublicIntakePage({ token }: { token: string }) {
-  const [coachName, setCoachName] = useState('Your coach')
-  const [athleteName, setAthleteName] = useState('')
-  const [answeredIds, setAnsweredIds] = useState<string[]>([])
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [qIndex, setQIndex] = useState(0)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+/** Working-towards picker: map toggle (main / acro), up to 3, skippable. */
+function WorkingTowardsPicker({
+  value,
+  onChange,
+}: {
+  value: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [map, setMap] = useState<'main' | 'acro'>('main')
+  const mainSkills = useMemo(() => guideSkillsInOrder(), [])
+
+  const toggle = (id: string) => {
+    if (value.includes(id)) onChange(value.filter((v) => v !== id))
+    else if (value.length < 3) onChange([...value, id])
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <p className="text-base font-semibold text-white">
+        What skills are you working towards?
+      </p>
+      <p className="mt-1 text-sm text-white/50">
+        Pick up to 3. Skip this if you're not sure.
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setMap('main')}
+          className={`h-11 rounded-xl text-sm font-bold ${
+            map === 'main'
+              ? 'bg-sky-400 text-black'
+              : 'border border-white/15 text-white/70'
+          }`}
+        >
+          Main skill map
+        </button>
+        <button
+          type="button"
+          onClick={() => setMap('acro')}
+          className={`h-11 rounded-xl text-sm font-bold ${
+            map === 'acro'
+              ? 'bg-sky-400 text-black'
+              : 'border border-white/15 text-white/70'
+          }`}
+        >
+          Acro map
+        </button>
+      </div>
+
+      <p className="mt-3 text-xs text-white/50">{value.length}/3 selected</p>
+      <div className="mt-2 max-h-64 space-y-3 overflow-y-auto">
+        {map === 'main' ? (
+          <div className="grid grid-cols-2 gap-1.5">
+            {mainSkills.map((sk) => {
+              const on = value.includes(sk.name)
+              const disabled = !on && value.length >= 3
+              return (
+                <button
+                  key={sk.id}
+                  type="button"
+                  onClick={() => toggle(sk.name)}
+                  disabled={disabled}
+                  className={`rounded-lg border-2 px-2 py-2 text-center text-[12px] font-bold leading-tight disabled:opacity-30 ${
+                    on
+                      ? 'border-sky-300 bg-sky-400/20 text-white'
+                      : 'border-white/15 bg-black/40 text-white/80'
+                  }`}
+                >
+                  {sk.name}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          [7, 6, 5, 4, 3, 2, 1].map((level) => (
+            <div key={level}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
+                Level {level}
+              </p>
+              <div className="mt-1 grid grid-cols-3 gap-1.5">
+                {ACRO_TRACKS.map((track) => {
+                  const skills = ACRO_SKILLS.filter(
+                    (s) => s.track === track && s.level === level,
+                  )
+                  if (skills.length === 0) return <div key={track} />
+                  return (
+                    <div key={track} className="space-y-1.5">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">
+                        {ACRO_TRACK_LABELS[track]}
+                      </p>
+                      {skills.map((sk) => {
+                        const on = value.includes(sk.name)
+                        const disabled = !on && value.length >= 3
+                        return (
+                          <button
+                            key={sk.id}
+                            type="button"
+                            onClick={() => toggle(sk.name)}
+                            disabled={disabled}
+                            className={`w-full rounded-lg border-2 px-1.5 py-2 text-center text-[10px] font-bold leading-tight disabled:opacity-30 ${
+                              on
+                                ? 'border-sky-300 bg-sky-400/20 text-white'
+                                : 'border-white/15 bg-black/40 text-white/80'
+                            }`}
+                          >
+                            {sk.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function PublicIntakePage({ token }: { token: string }) {
+  const [loading, setLoading] = useState(true)
   const [invalid, setInvalid] = useState(false)
+  const [mode, setMode] = useState<Mode>('athlete')
+  const [coachName, setCoachName] = useState('')
+  const [athleteName, setAthleteName] = useState('')
+  const [groupName, setGroupName] = useState<string | null>(null)
+  const [answeredIds, setAnsweredIds] = useState<string[]>([])
+  const [name, setName] = useState('')
+  const [qIndex, setQIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [workingTowards, setWorkingTowards] = useState<string[]>([])
+  const [step, setStep] = useState<'name' | 'questions' | 'towards'>('questions')
+  const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     fetch(`/api/share/intake?token=${encodeURIComponent(token)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!d?.ok) {
-          setInvalid(true)
-          return
-        }
-        setCoachName(d.coachName ?? 'Your coach')
-        setAthleteName(d.athleteName ?? '')
-        setAnsweredIds(d.answeredIds ?? [])
+      .then(async (r) => {
+        if (!r.ok) throw new Error('bad link')
+        const data = await r.json()
+        if (cancelled) return
+        setMode((data.mode as Mode) ?? 'athlete')
+        setCoachName(data.coachName ?? '')
+        setAthleteName(data.athleteName ?? '')
+        setGroupName(data.groupName ?? null)
+        setAnsweredIds(data.answeredIds ?? [])
+        if (data.mode === 'open' || data.mode === 'group') setStep('name')
       })
-      .catch(() => setInvalid(true))
+      .catch(() => {
+        if (!cancelled) setInvalid(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [token])
 
-  // All questions in order, skipping ones already answered.
-  const questions = useMemo(() => {
-    const answered = new Set(answeredIds)
-    return CORE_INTAKE.filter((q) => !answered.has(q.id))
-  }, [answeredIds])
+  const questions = useMemo(
+    () => CORE_INTAKE.filter((q) => !answeredIds.includes(q.id)),
+    [answeredIds],
+  )
 
   const submit = async () => {
     setSubmitting(true)
-    setError(null)
+    setError('')
     try {
-      const payloadAnswers = questions.map((q) => ({
-        questionId: q.id,
-        prompt: q.prompt,
-        answer: answers[q.id] ?? '',
-        askedAt: new Date().toISOString(),
-      }))
-      const r = await fetch(`/api/share/intake-submit?token=${encodeURIComponent(token)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: payloadAnswers }),
-      })
-      const d = await r.json()
-      if (!r.ok || !d?.ok) throw new Error(d?.error ?? 'Could not save.')
+      const payload: any = {
+        answers: questions
+          .filter((q) => q.kind !== 'photo')
+          .map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' })),
+        workingTowards,
+      }
+      if (mode !== 'athlete') payload.name = name.trim()
+      const r = await fetch(
+        `/api/share/intake-submit?token=${encodeURIComponent(token)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      )
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Could not save. Try again.')
+      }
       setDone(true)
     } catch (e: any) {
       setError(e?.message ?? 'Could not save. Try again.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[#0a1014] p-6">
+        <p className="text-white/60">Loading…</p>
+      </div>
+    )
   }
 
   if (invalid) {
@@ -161,8 +328,16 @@ export default function PublicIntakePage({ token }: { token: string }) {
     )
   }
 
+  const heading =
+    mode === 'group' && groupName
+      ? `${groupName} sign-up`
+      : mode === 'open'
+        ? 'New athlete sign-up'
+        : null
+
   const q = questions[qIndex]
   const last = qIndex >= questions.length - 1
+  const isNew = mode !== 'athlete'
 
   return (
     <div className="min-h-dvh bg-[#0a1014] px-4 py-8">
@@ -178,6 +353,65 @@ export default function PublicIntakePage({ token }: { token: string }) {
               Your answers are saved. See you at the gym!
             </p>
           </div>
+        ) : isNew && step === 'name' ? (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
+            {heading && (
+              <h1 className="text-xl font-bold text-white">{heading}</h1>
+            )}
+            <p className="mt-2 text-sm text-white/60">
+              {mode === 'group'
+                ? `You're signing up for ${groupName ?? 'the group'}. Start by telling us your name.`
+                : 'Start by telling us your name.'}
+            </p>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="First and last name"
+              autoComplete="name"
+              className="mt-4 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
+            />
+            {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+            <button
+              type="button"
+              onClick={() => {
+                if (!name.trim()) {
+                  setError('Please enter your name.')
+                  return
+                }
+                setError('')
+                setStep('questions')
+              }}
+              className="mt-4 h-12 w-full rounded-xl bg-sky-400 text-base font-bold text-black"
+            >
+              Continue
+            </button>
+          </div>
+        ) : step === 'towards' ? (
+          <div className="mt-6">
+            <p className="mb-3 text-center text-sm text-white/50">
+              Last step · optional
+            </p>
+            <WorkingTowardsPicker value={workingTowards} onChange={setWorkingTowards} />
+            {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setStep('questions')}
+                className="h-12 flex-1 rounded-xl border border-white/15 text-white font-semibold"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={submitting}
+                className="h-12 flex-[2] rounded-xl bg-sky-400 text-base font-bold text-black disabled:opacity-40"
+              >
+                {submitting ? 'Saving…' : 'Finish'}
+              </button>
+            </div>
+          </div>
         ) : questions.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
             <h1 className="text-xl font-bold text-white">
@@ -190,9 +424,16 @@ export default function PublicIntakePage({ token }: { token: string }) {
         ) : (
           q && (
             <div className="mt-6">
-              <h1 className="mb-1 text-center text-lg font-bold text-white">
-                Hi{athleteName ? ` ${athleteName.split(' ')[0]}` : ''}!
-              </h1>
+              {heading && (
+                <h1 className="mb-1 text-center text-lg font-bold text-white">
+                  {heading}
+                </h1>
+              )}
+              {!isNew && (
+                <h1 className="mb-1 text-center text-lg font-bold text-white">
+                  Hi{athleteName ? ` ${athleteName.split(' ')[0]}` : ''}!
+                </h1>
+              )}
               <p className="mb-3 text-center text-sm text-white/50">
                 Question {qIndex + 1} of {questions.length}
               </p>
@@ -214,11 +455,18 @@ export default function PublicIntakePage({ token }: { token: string }) {
                 )}
                 <button
                   type="button"
-                  onClick={() => (last ? void submit() : setQIndex(qIndex + 1))}
+                  onClick={() => {
+                    if (last) {
+                      if (isNew) setStep('towards')
+                      else void submit()
+                    } else {
+                      setQIndex(qIndex + 1)
+                    }
+                  }}
                   disabled={submitting}
                   className="h-12 flex-[2] rounded-xl bg-sky-400 text-base font-bold text-black disabled:opacity-40"
                 >
-                  {submitting ? 'Saving…' : last ? 'Save answers' : 'Next'}
+                  {submitting ? 'Saving…' : last ? (isNew ? 'Next' : 'Save answers') : 'Next'}
                 </button>
               </div>
             </div>
@@ -228,3 +476,5 @@ export default function PublicIntakePage({ token }: { token: string }) {
     </div>
   )
 }
+
+export default PublicIntakePage
