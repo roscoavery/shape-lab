@@ -22,11 +22,6 @@ const STUDY_EXCLUDE = new Set([
   'bridge', // rainbow bridge + long bridge already cover it, and this one has no still
 ])
 
-function stillUrls(shapeId: string): string[] {
-  return shippedFileList(shapeId).map((f) => `/references/${f}`)
-}
-
-/** Still ID for crop lookup (matches the in-app convention). */
 function stillIdFor(shapeId: string, fileIndex: number): string {
   return `default_${shapeId}_${fileIndex}`
 }
@@ -121,6 +116,7 @@ export default function PublicLibraryPage({
     ...SHIPPED_STILL_CROPS,
   }))
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
+  const [mainStills, setMainStills] = useState<Record<string, string>>({})
   const [index, setIndex] = useState(0)
   const [stillIdx, setStillIdx] = useState(0)
   const touchX = useRef<number | null>(null)
@@ -140,24 +136,37 @@ export default function PublicLibraryPage({
         if (Array.isArray(data?.removedStillIds)) {
           setRemovedStillIds(new Set(data.removedStillIds))
         }
+        if (data?.mainStills && typeof data.mainStills === 'object') {
+          setMainStills(data.mainStills)
+        }
         setValid(true)
       })
       .catch(() => setValid(false))
   }, [token])
 
-  // Apply Ryan's deletions: filter out removed stills, keep the rest.
+  // Apply Ryan's deletions and main-still ordering.
   const shapes = useMemo(() => {
     return SHAPES.filter((s) => {
       if (STUDY_EXCLUDE.has(s.id)) return false
       return true
     }).map((s) => {
-      const urls = stillUrls(s.id).filter((_, i) => {
-        const stillId = stillIdFor(s.id, i)
-        return !removedStillIds.has(stillId)
-      })
-      return { ...s, urls }
+      const files = shippedFileList(s.id)
+      // Build (stillId, url) pairs, filter out deleted.
+      const pairs = files
+        .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}` }))
+        .filter((p) => !removedStillIds.has(p.stillId))
+      // Move Ryan's main-still pick to the front.
+      const mainId = mainStills[s.id]
+      if (mainId) {
+        const idx = pairs.findIndex((p) => p.stillId === mainId)
+        if (idx > 0) {
+          const [main] = pairs.splice(idx, 1)
+          pairs.unshift(main!)
+        }
+      }
+      return { ...s, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) }
     }).filter((s) => s.urls.length > 0)
-  }, [removedStillIds])
+  }, [removedStillIds, mainStills])
 
   // shapes with deletions applied is defined above
 
@@ -268,7 +277,7 @@ export default function PublicLibraryPage({
               <div className="relative flex max-h-[70%] w-full items-center justify-center">
                 <CroppedImage
                   src={urls[sIdx]}
-                  stillId={stillIdFor(s.id, sIdx)}
+                  stillId={s.stillIds[sIdx] ?? stillIdFor(s.id, sIdx)}
                   crops={crops}
                   alt={s.name}
                 />

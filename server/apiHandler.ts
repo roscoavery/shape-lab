@@ -255,6 +255,7 @@ const API_PATHS = new Set([
   '/api/coach-stills',
   '/api/coach-still-file',
   '/api/still-crops',
+  '/api/main-stills',
   '/api/athlete-videos',
   '/api/athlete-video-file',
   '/api/r2-upload-url',
@@ -1304,6 +1305,24 @@ export async function handleShapeLabApi(
     if (req.method === 'PUT') {
       const body = await readRequestBody(req)
       const saved = await writeStillCropFile(JSON.parse(body))
+      sendJson(res, 200, saved)
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET or PUT' })
+    return true
+  }
+  if (path === '/api/main-stills') {
+    const { readMainStillFile, writeMainStillFile } = await import('./mainStillStore.ts')
+    if (req.method === 'GET') {
+      sendJson(res, 200, await readMainStillFile())
+      return true
+    }
+    if (req.method === 'PUT') {
+      const body = await readRequestBody(req)
+      const picks = (JSON.parse(body) as any)?.picks
+      const saved = await writeMainStillFile(
+        picks && typeof picks === 'object' ? picks : {},
+      )
       sendJson(res, 200, saved)
       return true
     }

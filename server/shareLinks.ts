@@ -410,7 +410,15 @@ export async function handleShareLibrary(
   } catch {
     // removed stills are best-effort
   }
-  sendJson(res, 200, { ok: true, crops, removedStillIds })
+  let mainStills: Record<string, string> = {}
+  try {
+    const { readMainStillFile } = await import('./mainStillStore.ts')
+    const file = await readMainStillFile()
+    mainStills = (file as any)?.picks ?? {}
+  } catch {
+    // main stills are best-effort
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills })
 }
 
 /**

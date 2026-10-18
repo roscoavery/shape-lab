@@ -15,6 +15,7 @@ import {
 import { stillCropLookupIds } from '../lib/shippedRefs'
 import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../lib/shippedStillCrops'
 import { pullStillCrops, pushStillCrops } from '../lib/stillCropStore'
+import { pullMainStills } from '../lib/coachStillPrefs'
 
 type StillCropCtx = {
   canEdit: boolean
@@ -40,6 +41,8 @@ export function StillCropProvider({
     void pullStillCrops().then((next) => {
       setCrops(mergeStillCrops(SHIPPED_STILL_CROPS, next))
     })
+    // Sync main-still picks to the server so the public study link sees them.
+    void pullMainStills()
   }, [])
 
   const cropFor = useCallback(
