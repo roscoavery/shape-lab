@@ -389,6 +389,80 @@ export async function handleShareLibrary(
     return
   }
   // Shape definitions + still file lists ship in the client bundle; the
-  // public page imports them directly. This endpoint validates the token.
+  // public page imports them directly. This endpoint validates the token
+  // and returns the still crops so Ryan's framing applies here too.
+  let crops: Record<string, unknown> = {}
+  let removedStillIds: string[] = []
+  try {
+    const { readStillCropFile } = await import('./stillCropStore.ts')
+    const file = await readStillCropFile()
+    crops = (file as any)?.crops ?? {}
+  } catch {
+    // crops are best-effort
+  }
+  try {
+    const { readIgStillMeta } = await import('./igStillDisk.ts')
+    const meta = await readIgStillMeta()
+    const ids = (meta as any)?.removedStillIds
+    if (Array.isArray(ids)) {
+      removedStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    }
+  } catch {
+    // removed stills are best-effort
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds })
+}
+
+/**
+ * Public shape test submission. Athletes identify themselves by name;
+ * the result is saved to the server so the coach can see it.
+ */
+export async function handleShareQuizSubmit(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
+  const rec = await validateShareToken(url.searchParams.get('token') ?? '')
+  if (!rec || rec.type !== 'library') {
+    sendJson(res, 404, { error: 'Invalid or expired link.' })
+    return
+  }
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return
+  }
+  let body: any
+  try {
+    body = await readBody(req)
+  } catch {
+    sendJson(res, 400, { error: 'Bad request.' })
+    return
+  }
+  const firstName = String(body.firstName ?? '').trim()
+  const lastName = String(body.lastName ?? '').trim()
+  const score = Number(body.score)
+  const total = Number(body.total)
+  if (!firstName || !lastName || !Number.isFinite(score) || !Number.isFinite(total)) {
+    sendJson(res, 400, { error: 'Name and score are required.' })
+    return
+  }
+  const record = {
+    id: `quiz_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    firstName,
+    lastName,
+    score,
+    total,
+    answers: Array.isArray(body.answers) ? body.answers : [],
+    takenAt: new Date().toISOString(),
+  }
+  try {
+    const { readQuizResultsFile, writeQuizResultsFile } = await import('./quizResultsStore.ts')
+    const file = await readQuizResultsFile()
+    const results = Array.isArray((file as any)?.results) ? (file as any).results : []
+    results.push(record)
+    await writeQuizResultsFile({ kind: 'shape-lab-quiz-results', version: 1, results })
+  } catch {
+    // best-effort
+  }
   sendJson(res, 200, { ok: true })
 }

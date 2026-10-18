@@ -138,6 +138,7 @@ import {
   handleShareIntake,
   handleShareIntakeSubmit,
   handleShareLibrary,
+  handleShareQuizSubmit,
 } from './shareLinks.ts'
 import {
   handleShareFolder,
@@ -408,6 +409,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/library') {
     await handleShareLibrary(req, res, url)
+    return true
+  }
+  if (path === '/api/share/quiz-submit') {
+    await handleShareQuizSubmit(req, res, url)
     return true
   }
 
