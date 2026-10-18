@@ -105,7 +105,8 @@ function QuestionView({
       ) : q.kind === 'photo' ? (
         <div className="mt-3">
           <p className="text-sm font-semibold text-amber-200">
-            Make sure your face is easy to see in the picture.
+            Make sure your face is easy to see in the picture. We need a photo
+            to move on. We can change it later.
           </p>
           {cropSrc ? (
             <div className="mt-3">
@@ -181,9 +182,16 @@ function WorkingTowardsPicker({
   onChange: (v: string[]) => void
 }) {
   const [map, setMap] = useState<'main' | 'acro'>('main')
+  const lastTap = useRef<string | null>(null)
 
+  // First tap shows the map's shine/path. Second tap on the same tile selects it.
   const toggle = (skill: UnifiedSkill) => {
     const id = skill.name
+    if (lastTap.current !== id) {
+      lastTap.current = id
+      return
+    }
+    lastTap.current = null
     if (value.includes(id)) onChange(value.filter((v) => v !== id))
     else if (value.length < 3) onChange([...value, id])
   }
@@ -194,7 +202,8 @@ function WorkingTowardsPicker({
         What skills are you working towards?
       </p>
       <p className="mt-1 text-sm text-white/50">
-        Tap tiles on the map to pick up to 3. Skip this if you're not sure.
+        Tap a tile once to see its path, tap it again to pick it. Up to 3.
+        Skip this if you're not sure.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -365,6 +374,7 @@ export function PublicIntakePage({ token }: { token: string }) {
   const q = questions[qIndex]
   const last = qIndex >= questions.length - 1
   const isNew = mode !== 'athlete'
+  const photoRequired = q?.kind === 'photo' && !photoDataUrl
 
   return (
     <div className="min-h-dvh bg-[#0a1014] px-4 py-8">
@@ -502,7 +512,7 @@ export function PublicIntakePage({ token }: { token: string }) {
                       setQIndex(qIndex + 1)
                     }
                   }}
-                  disabled={submitting}
+                  disabled={submitting || photoRequired}
                   className="h-12 flex-[2] rounded-xl bg-sky-400 text-base font-bold text-black disabled:opacity-40"
                 >
                   {submitting ? 'Saving…' : last ? (isNew ? 'Next' : 'Save answers') : 'Next'}
