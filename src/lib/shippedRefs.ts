@@ -16,7 +16,7 @@ import type { ReferencePhoto } from '../types'
 /** Filename under src/assets/references/ (and public/references/ as fallback). */
 export const SHIPPED_FILES: Record<string, string | string[]> = {
   stand_clean: 'stand_clean.jpg',
-  feet_together_open_shoulders: 'feet_together_open_shoulders.jpg',
+  feet_together_open_shoulders: ['feet_together_open_shoulders.jpg', 'shoulder_angle_open_closed.jpg'],
   passe: 'passe.jpg',
   lunge_start: 'lunge_start.jpg',
   lever: 'lever.jpg',
