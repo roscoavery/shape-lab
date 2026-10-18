@@ -265,6 +265,19 @@ export async function handleShareIntakeSubmit(
     saveAnswersToAthlete(athlete, answers)
     if (workingTowards.length > 0) {
       athlete.acroWorkingTowards = workingTowards.slice(0, 3)
+      // Also save as skillGoals so they show in "Working towards" on the profile.
+      const now = new Date().toISOString()
+      const existing = new Set((athlete.skillGoals ?? []).map((g: any) => g.label?.toLowerCase()))
+      const freshGoals = workingTowards
+        .slice(0, 3)
+        .filter((label) => !existing.has(label.toLowerCase()))
+        .map((label) => ({
+          id: `sg_${randomBytes(6).toString('hex')}`,
+          label,
+          setAt: now,
+          source: 'intake',
+        }))
+      athlete.skillGoals = [...(athlete.skillGoals ?? []), ...freshGoals]
     }
     if (photoDataUrl) athlete.photoDataUrl = photoDataUrl
     await writeRosterFile({ ...roster, athletes })
@@ -296,6 +309,13 @@ export async function handleShareIntakeSubmit(
   saveAnswersToAthlete(athlete, answers)
   if (workingTowards.length > 0) {
     athlete.acroWorkingTowards = workingTowards.slice(0, 3)
+    const now = new Date().toISOString()
+    athlete.skillGoals = workingTowards.slice(0, 3).map((label) => ({
+      id: `sg_${randomBytes(6).toString('hex')}`,
+      label,
+      setAt: now,
+      source: 'intake',
+    }))
   }
   if (photoDataUrl) athlete.photoDataUrl = photoDataUrl
   athletes.push(athlete)
