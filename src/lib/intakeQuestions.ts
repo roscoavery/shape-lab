@@ -58,10 +58,11 @@ export const VUP_OPTS: IntakeChoice[] = [
 ]
 
 export const SHOULDER_OPTS: IntakeChoice[] = [
-  { value: 'easy', label: 'Easy, arms cover my ears' },
-  { value: 'okay', label: 'Okay, almost there' },
-  { value: 'hard', label: 'Hard, arms stay in front' },
-  { value: 'cant', label: "Can't get them up" },
+  { value: '1', label: '1 · easy' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+  { value: '5', label: '5 · hardest' },
   { value: 'not_sure', label: 'Not sure' },
 ]
 
@@ -81,7 +82,7 @@ export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
 export const CORE_INTAKE: IntakeQuestion[] = [
   {
     id: 'shoulderOpen',
-    prompt: 'How hard is fully open shoulders for you?',
+    prompt: 'How hard is fully open shoulders for you? 1 is easy, 5 is hardest.',
     kind: 'choice',
     once: true,
     stillFile: 'shoulder_angle_open_closed.jpg',
@@ -300,7 +301,7 @@ export function applyIntakeField(athlete: Athlete, id: string, value: string): A
   if (id === 'vUps') return { ...athlete, vUps: value as VUpGuess }
   if (id === 'pushUps') return { ...athlete, pushUps: value as VUpGuess }
   if (id === 'shoulderOpen') {
-    const num = { easy: 1, okay: 2, hard: 4, cant: 5 }[value] as 1 | 2 | 3 | 4 | 5 | undefined
+    const num = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5 }[value] as 1 | 2 | 3 | 4 | 5 | undefined
     return num ? { ...athlete, openShoulderHardness: num } : athlete
   }
   if (id === 'cartwheelSide') return { ...athlete, cartwheelLeg: value as Athlete['cartwheelLeg'] }

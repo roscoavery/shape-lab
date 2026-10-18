@@ -338,7 +338,7 @@ function saveAnswersToAthlete(athlete: any, answers: any[]): void {
     skateStance: 'skateStance',
     harderShape: 'harderShape',
   }
-  const SHOULDER_NUM: Record<string, number> = { easy: 1, okay: 2, hard: 4, cant: 5 }
+  const SHOULDER_NUM: Record<string, number> = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5 }
   for (const a of fresh) {
     const field = FIELD_MAP[a.questionId]
     if (!field || !a.answer || a.answer === 'not_sure') continue
