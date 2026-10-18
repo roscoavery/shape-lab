@@ -265,13 +265,14 @@ export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
 
 /** Wall handstand always sits on the next card after no-wall. */
 function pairWallAfterFloor(list: IntakeQuestion[]): IntakeQuestion[] {
+  // Ryan's order: wall handstand comes BEFORE handstand without a wall.
   const wall = list.find((q) => q.id === 'handstandWall')
   const floorAt = list.findIndex((q) => q.id === 'handstandFloor')
   if (!wall) return list
   const rest = list.filter((q) => q.id !== 'handstandWall')
-  if (floorAt === -1) return rest.concat(wall)
+  if (floorAt === -1) return [wall, ...rest]
   const floorNow = rest.findIndex((q) => q.id === 'handstandFloor')
-  return [...rest.slice(0, floorNow + 1), wall, ...rest.slice(floorNow + 1)]
+  return [...rest.slice(0, floorNow), wall, ...rest.slice(floorNow)]
 }
 
 export function upsertIntakeAnswer(
