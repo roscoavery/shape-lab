@@ -62,6 +62,12 @@ export const SHOULDER_OPTS: IntakeChoice[] = [
   { value: 'okay', label: 'Okay, almost there' },
   { value: 'hard', label: 'Hard, arms stay in front' },
   { value: 'cant', label: "Can't get them up" },
+  { value: 'not_sure', label: 'Not sure' },
+]
+
+const withNotSure = (opts: IntakeChoice[]): IntakeChoice[] => [
+  ...opts,
+  { value: 'not_sure', label: 'Not sure' },
 ]
 
 export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
@@ -74,6 +80,113 @@ export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
 /** Permanent pre-test questions. Weekly extras go in WEEKLY_INTAKE. */
 export const CORE_INTAKE: IntakeQuestion[] = [
   {
+    id: 'shoulderOpen',
+    prompt: 'How hard is fully open shoulders for you?',
+    kind: 'choice',
+    once: true,
+    stillFile: 'shoulder_angle_open_closed.jpg',
+    options: SHOULDER_OPTS,
+  },
+  {
+    id: 'handstandWall',
+    prompt: 'How long can you hold a wall handstand?',
+    kind: 'choice',
+    once: true,
+    stillShapeId: 'wall_handstand',
+    options: withNotSure(WALL_OPTS),
+  },
+  {
+    id: 'handstandFloor',
+    prompt: 'How long do you think you can hold a handstand without a wall?',
+    kind: 'choice',
+    once: true,
+    stillShapeId: 'handstand',
+    options: withNotSure(HOLD_OPTS),
+  },
+  {
+    id: 'hollowHold',
+    prompt: 'How long can you hold a hollow?',
+    kind: 'choice',
+    once: true,
+    stillShapeId: 'hollow_arms_down',
+    options: withNotSure(WALL_OPTS),
+  },
+  {
+    id: 'supermanHold',
+    prompt: 'How long can you hold a Superman?',
+    kind: 'choice',
+    once: true,
+    stillShapeId: 'superman',
+    options: withNotSure(WALL_OPTS),
+  },
+  {
+    id: 'vUps',
+    prompt: 'How many V-ups can you do?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure(VUP_OPTS),
+  },
+  {
+    id: 'cartwheelSide',
+    prompt: 'Which way do you cartwheel?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure([
+      { value: 'left', label: 'Left leg forward' },
+      { value: 'right', label: 'Right leg forward' },
+    ]),
+  },
+  {
+    id: 'twistDirection',
+    prompt: 'Which way do you twist?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure([
+      { value: 'left', label: 'Left' },
+      { value: 'right', label: 'Right' },
+      { value: 'both', label: 'I can twist both ways' },
+      { value: 'not_yet', label: "I'm not twisting yet" },
+    ]),
+  },
+  {
+    id: 'dominantHand',
+    prompt: 'Dominant hand?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure([
+      { value: 'right', label: 'Right' },
+      { value: 'left', label: 'Left' },
+      { value: 'both', label: 'Both' },
+    ]),
+  },
+  {
+    id: 'skateStance',
+    prompt: 'Which way would you ride a skateboard?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure([
+      { value: 'regular', label: 'Regular (left foot forward)' },
+      { value: 'goofy', label: 'Goofy (right foot forward)' },
+    ]),
+  },
+  {
+    id: 'harderShape',
+    prompt: 'Which one is harder for you?',
+    kind: 'choice',
+    once: true,
+    options: withNotSure([
+      { value: 'hollow', label: 'Hollow' },
+      { value: 'superman', label: 'Superman' },
+    ]),
+  },
+  {
+    id: 'favoriteColor',
+    prompt: 'Favorite color? We theme your profile around it.',
+    kind: 'color',
+    once: true,
+    options: FAVORITE_COLORS.map((c) => ({ value: c.id, label: c.label })),
+  },
+  {
     id: 'photo',
     prompt: 'Add a profile photo so coaches know who you are on the floor.',
     kind: 'photo',
@@ -84,60 +197,6 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     prompt: 'Parent phone, skip if you do not know it yet.',
     kind: 'skip-phone',
     once: true,
-  },
-  {
-    id: 'favoriteColor',
-    prompt: 'Favorite color? We theme your profile around it.',
-    kind: 'color',
-    once: true,
-    options: FAVORITE_COLORS.map((c) => ({ value: c.id, label: c.label })),
-  },
-  {
-    id: 'handstandFloor',
-    prompt: 'How long do you think you can hold a handstand without a wall?',
-    kind: 'choice',
-    once: true,
-    stillShapeId: 'handstand',
-    options: HOLD_OPTS,
-  },
-  {
-    id: 'handstandWall',
-    prompt: 'How long can you hold a wall handstand?',
-    kind: 'choice',
-    once: true,
-    stillShapeId: 'wall_handstand',
-    options: WALL_OPTS,
-  },
-  {
-    id: 'hollowHold',
-    prompt: 'How long can you hold a hollow?',
-    kind: 'choice',
-    once: true,
-    stillShapeId: 'hollow_arms_down',
-    options: WALL_OPTS,
-  },
-  {
-    id: 'supermanHold',
-    prompt: 'How long can you hold a Superman?',
-    kind: 'choice',
-    once: true,
-    stillShapeId: 'superman',
-    options: WALL_OPTS,
-  },
-  {
-    id: 'vUps',
-    prompt: 'How many V-ups can you do?',
-    kind: 'choice',
-    once: true,
-    options: VUP_OPTS,
-  },
-  {
-    id: 'shoulderOpen',
-    prompt: 'How hard is fully open shoulders for you?',
-    kind: 'choice',
-    once: true,
-    stillFile: 'shoulder_angle_open_closed.jpg',
-    options: SHOULDER_OPTS,
   },
 ]
 
@@ -226,6 +285,15 @@ export function applyIntakeField(athlete: Athlete, id: string, value: string): A
     return { ...athlete, supermanHold: asMinuteHold(value) ?? (value as Athlete['supermanHold']) }
   }
   if (id === 'vUps') return { ...athlete, vUps: value as VUpGuess }
+  if (id === 'shoulderOpen') {
+    const num = { easy: 1, okay: 2, hard: 4, cant: 5 }[value] as 1 | 2 | 3 | 4 | 5 | undefined
+    return num ? { ...athlete, openShoulderHardness: num } : athlete
+  }
+  if (id === 'cartwheelSide') return { ...athlete, cartwheelLeg: value as Athlete['cartwheelLeg'] }
+  if (id === 'twistDirection') return { ...athlete, twistDirection: value as Athlete['twistDirection'] }
+  if (id === 'dominantHand') return { ...athlete, dominantHand: value as Athlete['dominantHand'] }
+  if (id === 'skateStance') return { ...athlete, skateStance: value as Athlete['skateStance'] }
+  if (id === 'harderShape') return { ...athlete, harderShape: value as Athlete['harderShape'] }
   return athlete
 }
 

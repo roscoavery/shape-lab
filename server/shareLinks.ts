@@ -186,6 +186,26 @@ export async function handleShareIntakeSubmit(
   const existing = new Set((athlete.intakeAnswers ?? []).map((a: any) => a.questionId))
   const fresh = answers.filter((a: any) => a?.questionId && !existing.has(a.questionId))
   athlete.intakeAnswers = [...(athlete.intakeAnswers ?? []), ...fresh]
+  // Apply profile fields directly so they show up on the athlete's card.
+  const FIELD_MAP: Record<string, string> = {
+    parentPhone: 'parentPhone',
+    favoriteColor: 'favoriteColor',
+    handstandFloor: 'handstandFloor',
+    handstandWall: 'handstandWall',
+    hollowHold: 'hollowHold',
+    supermanHold: 'supermanHold',
+    vUps: 'vUps',
+    shoulderOpen: 'openShoulderHardness',
+    cartwheelSide: 'cartwheelLeg',
+    twistDirection: 'twistDirection',
+    dominantHand: 'dominantHand',
+    skateStance: 'skateStance',
+    harderShape: 'harderShape',
+  }
+  for (const a of fresh) {
+    const field = FIELD_MAP[a.questionId]
+    if (field && a.answer) athlete[field] = a.answer
+  }
   await writeRosterFile({ ...roster, athletes })
   sendJson(res, 200, { ok: true })
 }

@@ -60,13 +60,37 @@ function QuestionView({
           ))}
         </div>
       )}
-      {q.kind === 'choice' && !q.options && (
+      {q.kind === 'color' && q.options && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {q.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+                value === opt.value
+                  ? 'border-sky-400 bg-sky-400/20 text-white'
+                  : 'border-white/15 bg-black/30 text-white/80'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {(q.kind === 'skip-phone') && (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="mt-3 h-11 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
-          placeholder="Type your answer"
+          placeholder="Phone number (optional)"
+          inputMode="tel"
         />
+      )}
+      {q.kind === 'photo' && (
+        <p className="mt-3 text-sm text-white/55">
+          You can add a photo when you see your coach.
+        </p>
       )}
     </div>
   )
@@ -98,10 +122,10 @@ export default function PublicIntakePage({ token }: { token: string }) {
       .catch(() => setInvalid(true))
   }, [token])
 
-  // Only the choice questions, skipping ones already answered.
+  // All questions in order, skipping ones already answered.
   const questions = useMemo(() => {
     const answered = new Set(answeredIds)
-    return CORE_INTAKE.filter((q) => q.kind === 'choice' && !answered.has(q.id))
+    return CORE_INTAKE.filter((q) => !answered.has(q.id))
   }, [answeredIds])
 
   const submit = async () => {
