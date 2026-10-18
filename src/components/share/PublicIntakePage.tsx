@@ -18,9 +18,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CORE_INTAKE, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
-import { guideSkillsInOrder } from '../../lib/skillRegistry'
-import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS } from '../../lib/acroSkills'
 import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
+import { SkillMapView } from '../learn/SkillMapView'
+import { AcroMapView } from '../learn/AcroMapView'
+import type { UnifiedSkill } from '../../lib/skillRegistry'
 
 type Mode = 'athlete' | 'open' | 'group'
 
@@ -171,7 +172,7 @@ function QuestionView({
   )
 }
 
-/** Working-towards picker: map toggle (main / acro), up to 3, skippable. */
+/** Working-towards picker: the real skill maps, tap tiles to select up to 3. */
 function WorkingTowardsPicker({
   value,
   onChange,
@@ -180,9 +181,9 @@ function WorkingTowardsPicker({
   onChange: (v: string[]) => void
 }) {
   const [map, setMap] = useState<'main' | 'acro'>('main')
-  const mainSkills = useMemo(() => guideSkillsInOrder(), [])
 
-  const toggle = (id: string) => {
+  const toggle = (skill: UnifiedSkill) => {
+    const id = skill.name
     if (value.includes(id)) onChange(value.filter((v) => v !== id))
     else if (value.length < 3) onChange([...value, id])
   }
@@ -193,7 +194,7 @@ function WorkingTowardsPicker({
         What skills are you working towards?
       </p>
       <p className="mt-1 text-sm text-white/50">
-        Pick up to 3. Skip this if you're not sure.
+        Tap tiles on the map to pick up to 3. Skip this if you're not sure.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -221,74 +222,28 @@ function WorkingTowardsPicker({
         </button>
       </div>
 
-      <p className="mt-3 text-xs text-white/50">{value.length}/3 selected</p>
-      <div className="mt-2 max-h-64 space-y-3 overflow-y-auto">
+      <p className="mt-3 text-xs text-white/50">
+        {value.length}/3 selected
+        {value.length > 0 && `: ${value.join(', ')}`}
+      </p>
+      <div className="mt-2 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
         {map === 'main' ? (
-          <div className="grid grid-cols-2 gap-1.5">
-            {mainSkills.map((sk) => {
-              const on = value.includes(sk.name)
-              const disabled = !on && value.length >= 3
-              return (
-                <button
-                  key={sk.id}
-                  type="button"
-                  onClick={() => toggle(sk.name)}
-                  disabled={disabled}
-                  className={`rounded-lg border-2 px-2 py-2 text-center text-[12px] font-bold leading-tight disabled:opacity-30 ${
-                    on
-                      ? 'border-sky-300 bg-sky-400/20 text-white'
-                      : 'border-white/15 bg-black/40 text-white/80'
-                  }`}
-                >
-                  {sk.name}
-                </button>
-              )
-            })}
-          </div>
+          <SkillMapView
+            onTileTap={toggle}
+          />
         ) : (
-          [7, 6, 5, 4, 3, 2, 1].map((level) => (
-            <div key={level}>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
-                Level {level}
-              </p>
-              <div className="mt-1 grid grid-cols-3 gap-1.5">
-                {ACRO_TRACKS.map((track) => {
-                  const skills = ACRO_SKILLS.filter(
-                    (s) => s.track === track && s.level === level,
-                  )
-                  if (skills.length === 0) return <div key={track} />
-                  return (
-                    <div key={track} className="space-y-1.5">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">
-                        {ACRO_TRACK_LABELS[track]}
-                      </p>
-                      {skills.map((sk) => {
-                        const on = value.includes(sk.name)
-                        const disabled = !on && value.length >= 3
-                        return (
-                          <button
-                            key={sk.id}
-                            type="button"
-                            onClick={() => toggle(sk.name)}
-                            disabled={disabled}
-                            className={`w-full rounded-lg border-2 px-1.5 py-2 text-center text-[10px] font-bold leading-tight disabled:opacity-30 ${
-                              on
-                                ? 'border-sky-300 bg-sky-400/20 text-white'
-                                : 'border-white/15 bg-black/40 text-white/80'
-                            }`}
-                          >
-                            {sk.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          ))
+          <AcroMapView onTileTap={toggle} />
         )}
       </div>
+      {value.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className="mt-2 text-sm font-semibold text-sky-300"
+        >
+          Clear selection
+        </button>
+      )}
     </div>
   )
 }
