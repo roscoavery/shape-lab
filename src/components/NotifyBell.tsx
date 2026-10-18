@@ -75,7 +75,7 @@ export function NotifyBell({ athlete, settings, onOpen, variant = 'default' }: P
     void pushNotice({
       toId: athlete.id,
       kind: 'nudge',
-      title: 'Homework is waiting',
+      title: 'Progress is waiting',
       body: homeworkNudgeCopy(athlete),
       href: 'homework',
     }).then((row) => setList((prev) => [row, ...prev]))
