@@ -1167,13 +1167,23 @@ function EventPreview({
         </button>
         {!compact &&
           (ev.matchedAthleteId ? (
-            <button
-              type="button"
-              className="shrink-0 rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
-              onClick={() => onStart(ev, ev.matchedAthleteId!)}
-            >
-              {activeForEvent ? 'Resume' : 'Start'}
-            </button>
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                type="button"
+                className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs font-semibold"
+                onClick={onPick}
+                title="Change which athlete this event is linked to"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
+                onClick={() => onStart(ev, ev.matchedAthleteId!)}
+              >
+                {activeForEvent ? 'Resume' : 'Start'}
+              </button>
+            </div>
           ) : (
             <button
               type="button"

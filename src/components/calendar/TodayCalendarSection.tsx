@@ -150,21 +150,31 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
         return <span className="text-xs text-[var(--muted)]">Lesson completed</span>
       }
       return (
-        <button
-          type="button"
-          className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
-          onClick={() =>
-            onStartLesson([ev.matchedAthleteId!], null, {
-              eventId: ev.id,
-              title: ev.title,
-              startAt: ev.startAt,
-              endAt: ev.endAt,
-              notes: ev.notes ?? null,
-            })
-          }
-        >
-          Start lesson
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs"
+            onClick={() => setPickEventId(ev.id)}
+            title="Change which athlete this event is linked to"
+          >
+            Change
+          </button>
+          <button
+            type="button"
+            className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
+            onClick={() =>
+              onStartLesson([ev.matchedAthleteId!], null, {
+                eventId: ev.id,
+                title: ev.title,
+                startAt: ev.startAt,
+                endAt: ev.endAt,
+                notes: ev.notes ?? null,
+              })
+            }
+          >
+            Start lesson
+          </button>
+        </div>
       )
     }
 
