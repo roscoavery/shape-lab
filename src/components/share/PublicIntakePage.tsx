@@ -21,7 +21,8 @@ import { shippedFileList } from '../../lib/shippedRefs'
 import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
 import { SkillMapView } from '../learn/SkillMapView'
 import { AcroMapView } from '../learn/AcroMapView'
-import type { UnifiedSkill } from '../../lib/skillRegistry'
+import { guideSkillsInOrder, type UnifiedSkill } from '../../lib/skillRegistry'
+import { ACRO_SKILLS } from '../../lib/acroSkills'
 
 type Mode = 'athlete' | 'open' | 'group'
 
@@ -210,6 +211,12 @@ function WorkingTowardsPicker({
   onChange: (v: string[]) => void
 }) {
   const [map, setMap] = useState<'main' | 'acro'>('main')
+  const [view, setView] = useState<'map' | 'list'>('map')
+  const mainSkills = useMemo(() => guideSkillsInOrder(), [])
+  const acroSkills = useMemo(
+    () => [...ACRO_SKILLS].sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  )
 
   // Single tap selects in the intake picker only. The map components are
   // untouched — they still shine/open cards everywhere else.
@@ -218,6 +225,13 @@ function WorkingTowardsPicker({
     if (value.includes(id)) onChange(value.filter((v) => v !== id))
     else if (value.length < 3) onChange([...value, id])
   }
+
+  const toggleName = (name: string) => {
+    if (value.includes(name)) onChange(value.filter((v) => v !== name))
+    else if (value.length < 3) onChange([...value, name])
+  }
+
+  const listSkills = map === 'main' ? mainSkills.map((s) => s.name) : acroSkills.map((s) => s.name)
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -257,11 +271,58 @@ function WorkingTowardsPicker({
         {value.length}/3 selected
         {value.length > 0 && `: ${value.join(', ')}`}
       </p>
+
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setView('map')}
+          className={`h-9 flex-1 rounded-lg text-sm font-bold ${
+            view === 'map'
+              ? 'bg-white/15 text-white'
+              : 'border border-white/15 text-white/60'
+          }`}
+        >
+          Map view
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('list')}
+          className={`h-9 flex-1 rounded-lg text-sm font-bold ${
+            view === 'list'
+              ? 'bg-white/15 text-white'
+              : 'border border-white/15 text-white/60'
+          }`}
+        >
+          Show list
+        </button>
+      </div>
+
       <div className="mt-2 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
-        {map === 'main' ? (
-          <SkillMapView
-            onTileTap={toggle}
-          />
+        {view === 'list' ? (
+          <div className="space-y-1.5 p-2">
+            {listSkills.map((name) => {
+              const on = value.includes(name)
+              const disabled = !on && value.length >= 3
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => toggleName(name)}
+                  disabled={disabled}
+                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm font-semibold disabled:opacity-30 ${
+                    on
+                      ? 'border-sky-300 bg-sky-400/20 text-white'
+                      : 'border-white/10 bg-black/40 text-white/80'
+                  }`}
+                >
+                  <span>{name}</span>
+                  {on && <span className="text-sky-300">✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        ) : map === 'main' ? (
+          <SkillMapView onTileTap={toggle} />
         ) : (
           <AcroMapView onTileTap={toggle} />
         )}
