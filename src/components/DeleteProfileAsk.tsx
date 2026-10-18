@@ -8,7 +8,7 @@ type Props = {
 
 export function DeleteProfileAsk({ athlete, onKeep, onDelete }: Props) {
   return (
-    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[420] flex items-end justify-center bg-black/70 p-4 pb-24 sm:items-center sm:pb-4">
       <div className="w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-5 shadow-2xl">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--bad)]">
           Delete profile
