@@ -25,6 +25,7 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
     fact: 'Push ups build stronger shoulder support for handstands, round offs and back handsprings.',
     builds: ['Front support', 'Plank body line'],
     powers: ['Handstand', 'Round-off', 'Back handspring'],
+    image: 'push_ups_diagram.png',
   },
   {
     id: 'ff_vup_hollow',

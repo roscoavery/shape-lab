@@ -330,6 +330,7 @@ export type Athlete = {
   hollowHold?: HoldGuess | WallHoldGuess
   supermanHold?: HoldGuess | WallHoldGuess
   vUps?: VUpGuess
+  pushUps?: VUpGuess
   /** Weekly / intake answers kept for research and profile building. */
   intakeAnswers?: IntakeAnswer[]
   gestures?: ProfileGesture[]

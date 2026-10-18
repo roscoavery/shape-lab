@@ -128,6 +128,14 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     options: withNotSure(VUP_OPTS),
   },
   {
+    id: 'pushUps',
+    prompt: 'How many push-ups can you do?',
+    kind: 'choice',
+    once: true,
+    stillFile: 'push_ups_diagram.png',
+    options: withNotSure(VUP_OPTS),
+  },
+  {
     id: 'cartwheelSide',
     prompt: 'Which way do you cartwheel?',
     kind: 'choice',
@@ -289,6 +297,7 @@ export function applyIntakeField(athlete: Athlete, id: string, value: string): A
     return { ...athlete, supermanHold: asMinuteHold(value) ?? (value as Athlete['supermanHold']) }
   }
   if (id === 'vUps') return { ...athlete, vUps: value as VUpGuess }
+  if (id === 'pushUps') return { ...athlete, pushUps: value as VUpGuess }
   if (id === 'shoulderOpen') {
     const num = { easy: 1, okay: 2, hard: 4, cant: 5 }[value] as 1 | 2 | 3 | 4 | 5 | undefined
     return num ? { ...athlete, openShoulderHardness: num } : athlete

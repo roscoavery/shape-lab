@@ -200,6 +200,7 @@ export async function handleShareIntakeSubmit(
     hollowHold: 'hollowHold',
     supermanHold: 'supermanHold',
     vUps: 'vUps',
+    pushUps: 'pushUps',
     shoulderOpen: 'openShoulderHardness',
     cartwheelSide: 'cartwheelLeg',
     twistDirection: 'twistDirection',
