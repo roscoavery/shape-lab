@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Athlete } from '../../types'
 import { dismissReminder, getCoachReminders } from '../../lib/coachReminders'
 import {
@@ -312,76 +312,6 @@ async function postWinForAthlete(
 }
 
 /**
- * Guided walk through each athlete's recap: no explanations, just navigation.
- * Each step scrolls to the athlete's recap card, expands it, and highlights it.
- */
-function WinsGuide({ athletes, onDone }: { athletes: Athlete[]; onDone: () => void }) {
-  const [index, setIndex] = useState(0)
-  const prevEl = useRef<HTMLElement | null>(null)
-  const athlete = athletes[Math.min(index, athletes.length - 1)] ?? null
-
-  useEffect(() => {
-    if (prevEl.current) {
-      prevEl.current.style.outline = ''
-      prevEl.current.style.outlineOffset = ''
-      prevEl.current.style.boxShadow = ''
-      prevEl.current = null
-    }
-    if (!athlete) return
-    window.dispatchEvent(
-      new CustomEvent('shapelab:reveal-recap', { detail: { athleteId: athlete.id } }),
-    )
-    const el = document.querySelector(
-      `[data-recap-athlete~="${CSS.escape(athlete.id)}"]`,
-    ) as HTMLElement | null
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.style.outline = '2px solid var(--accent)'
-      el.style.outlineOffset = '2px'
-      el.style.boxShadow = '0 0 28px var(--accent)'
-      prevEl.current = el
-    }
-    return () => {
-      if (prevEl.current) {
-        prevEl.current.style.outline = ''
-        prevEl.current.style.outlineOffset = ''
-        prevEl.current.style.boxShadow = ''
-        prevEl.current = null
-      }
-    }
-  }, [athlete])
-
-  if (!athlete) return null
-  const last = index >= athletes.length - 1
-  return (
-    <div className="fixed inset-x-0 bottom-20 z-[70] flex justify-center px-4 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex w-full max-w-md items-center gap-2 rounded-2xl border border-[var(--panel-border)] bg-[#0d1218]/95 px-3 py-2.5 shadow-xl backdrop-blur">
-        <p className="min-w-0 flex-1 truncate text-sm">
-          <span className="font-bold text-[var(--text)]">{athlete.name}</span>
-          <span className="ml-2 text-xs text-[var(--muted)]">
-            {index + 1} of {athletes.length}
-          </span>
-        </p>
-        <button
-          type="button"
-          onClick={() => (last ? onDone() : setIndex(index + 1))}
-          className="shrink-0 rounded-full px-3 py-1.5 text-xs text-[var(--muted)]"
-        >
-          Skip
-        </button>
-        <button
-          type="button"
-          onClick={() => (last ? onDone() : setIndex(index + 1))}
-          className="shrink-0 rounded-full bg-[var(--accent)] px-4 py-1.5 text-xs font-bold text-[var(--on-accent)]"
-        >
-          {last ? 'Done' : 'Next'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/**
  * Smart banners at the top of the coach Today tab.
  * - Evening: nudge to log wins in the recaps below, if classes/lessons ran today.
  * - Anytime: nudge to plan lessons on the calendar today/tomorrow with no plan.
@@ -404,7 +334,6 @@ export function CoachReminderBanners({
 }) {
   const [tick, setTick] = useState(0)
   const [calEvents, setCalEvents] = useState<TodayCalendarEvent[]>([])
-  const [guiding, setGuiding] = useState(false)
   const [winDrafts, setWinDrafts] = useState<Record<string, string>>({})
   const [winBusy, setWinBusy] = useState<Record<string, boolean>>({})
   const [winDone, setWinDone] = useState<Record<string, boolean>>({})
@@ -538,15 +467,7 @@ export function CoachReminderBanners({
                   ))}
                 </div>
               )}
-              {worked.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setGuiding(true)}
-                  className="mt-2 w-full rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-black text-black"
-                >
-                  Walk me through each recap →
-                </button>
-              ) : (
+              {worked.length === 0 && (
                 <button
                   type="button"
                   onClick={onJumpToRecaps}
@@ -554,15 +475,6 @@ export function CoachReminderBanners({
                 >
                   Go to recaps
                 </button>
-              )}
-              {guiding && (
-                <WinsGuide
-                  athletes={worked}
-                  onDone={() => {
-                    setGuiding(false)
-                    dismiss('log-wins')
-                  }}
-                />
               )}
             </div>
           )
