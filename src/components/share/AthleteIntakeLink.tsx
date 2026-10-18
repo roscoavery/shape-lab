@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { markedFetch } from '../../lib/authSession'
 
 export function AthleteIntakeLink({
   athleteId,
@@ -21,7 +22,7 @@ export function AthleteIntakeLink({
     setBusy(true)
     setError(null)
     try {
-      const r = await fetch('/api/share-links/intake-token', {
+      const r = await markedFetch('/api/share-links/intake-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ athleteId }),

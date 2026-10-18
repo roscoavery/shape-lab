@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { markedFetch } from '../../lib/authSession'
 
 export function ShareLinksPanel() {
   const [libUrl, setLibUrl] = useState<string | null>(null)
@@ -14,7 +15,7 @@ export function ShareLinksPanel() {
   const makeLink = async () => {
     setBusy(true)
     try {
-      const r = await fetch('/api/share-links/library-token', { method: 'POST' })
+      const r = await markedFetch('/api/share-links/library-token', { method: 'POST' })
       const d = await r.json()
       if (!r.ok || !d?.path) throw new Error('Could not make the link.')
       setLibUrl(`${window.location.origin}${d.path}`)

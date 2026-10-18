@@ -554,7 +554,7 @@ export function CoachReminderBanners({
                       const parsed = parseAcuityNotes(ev.notes)
                       if (parsed?.tumblerName) label = parsed.tumblerName
                       else {
-                        const marker = ev.notes.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+                        const marker = ev.notes.match(/(?:athlete|tumbler)[ \t]*name[ \t]*:[ \t]*([A-Za-z][A-Za-z'-]{1,24})(?:[ \t]+([A-Za-z][A-Za-z'-]{1,24}))?/i)
                         if (marker) label = marker[2] ? `${marker[1]} ${marker[2]}` : marker[1]!
                       }
                     }

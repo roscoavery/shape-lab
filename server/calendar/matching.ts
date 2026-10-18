@@ -100,6 +100,8 @@ export const SKIP_NAME_TOKENS = new Set([
   'full',
   'tumbler',
   'tumblers',
+  'age',
+  'ages',
 ])
 
 export type MatchInput = {
@@ -195,7 +197,9 @@ export function extractUnmatchedPersonName(
   const descText = unescapeCalendarText(description ?? '').trim()
   if (descText) {
     // Look for an explicit "Athlete name:" or "Tumbler name:" marker first.
-    const marker = descText.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+    // The value must be on the same line — an empty "Tumbler name:" followed
+    // by "Tumbler Age:" must not capture "Tumbler" as the name.
+    const marker = descText.match(/(?:athlete|tumbler)[ \t]*name[ \t]*:[ \t]*([A-Za-z][A-Za-z'-]{1,24})(?:[ \t]+([A-Za-z][A-Za-z'-]{1,24}))?/i)
     if (marker) {
       const first = marker[1]!.replace(/^./, (c) => c.toUpperCase())
       const last = marker[2] ? marker[2].replace(/^./, (c) => c.toUpperCase()) : ''
@@ -301,7 +305,9 @@ export function matchEventToAthlete(input: MatchInput): MatchResult {
   // have the name in a labeled field but not as a bare full-name hit.
   const descText = unescapeCalendarText(input.description ?? '')
   if (descText) {
-    const marker = descText.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+    // Same-line only: an empty "Tumbler name:" must not capture "Tumbler"
+    // from the next line's "Tumbler Age:".
+    const marker = descText.match(/(?:athlete|tumbler)[ \t]*name[ \t]*:[ \t]*([A-Za-z][A-Za-z'-]{1,24})(?:[ \t]+([A-Za-z][A-Za-z'-]{1,24}))?/i)
     if (marker) {
       const first = marker[1]!
       const last = marker[2] ?? ''

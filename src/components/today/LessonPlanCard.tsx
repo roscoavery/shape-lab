@@ -89,7 +89,7 @@ export function LessonPlanCard({
     if (event.notes) {
       const parsed = parseAcuityNotes(event.notes)
       if (parsed?.tumblerName) return parsed.tumblerName
-      const marker = event.notes.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+      const marker = event.notes.match(/(?:athlete|tumbler)[ \t]*name[ \t]*:[ \t]*([A-Za-z][A-Za-z'-]{1,24})(?:[ \t]+([A-Za-z][A-Za-z'-]{1,24}))?/i)
       if (marker) return marker[2] ? `${marker[1]} ${marker[2]}` : marker[1]!
     }
     return event.title || 'Lesson'
