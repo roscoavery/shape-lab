@@ -248,6 +248,9 @@ export async function handleShareIntakeSubmit(
   const workingTowards: string[] = Array.isArray(body.workingTowards)
     ? body.workingTowards.filter((s: any) => typeof s === 'string')
     : []
+  const photoDataUrl = typeof body.photoDataUrl === 'string' && body.photoDataUrl.startsWith('data:image/')
+    ? body.photoDataUrl.slice(0, 500000) // cap at ~500KB
+    : null
   const { readRosterFile, writeRosterFile } = await import('./rosterStore.ts')
   const roster = await readRosterFile()
   const athletes = roster.athletes as any[]
@@ -263,6 +266,7 @@ export async function handleShareIntakeSubmit(
     if (workingTowards.length > 0) {
       athlete.acroWorkingTowards = workingTowards.slice(0, 3)
     }
+    if (photoDataUrl) athlete.photoDataUrl = photoDataUrl
     await writeRosterFile({ ...roster, athletes })
     sendJson(res, 200, { ok: true })
     return
@@ -293,6 +297,7 @@ export async function handleShareIntakeSubmit(
   if (workingTowards.length > 0) {
     athlete.acroWorkingTowards = workingTowards.slice(0, 3)
   }
+  if (photoDataUrl) athlete.photoDataUrl = photoDataUrl
   athletes.push(athlete)
 
   // Group mode: add them to the training event.

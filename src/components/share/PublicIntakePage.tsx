@@ -14,12 +14,13 @@
  * touches that one profile.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CORE_INTAKE, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
 import { guideSkillsInOrder } from '../../lib/skillRegistry'
 import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS } from '../../lib/acroSkills'
+import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
 
 type Mode = 'athlete' | 'open' | 'group'
 
@@ -36,12 +37,26 @@ function QuestionView({
   q,
   value,
   onChange,
+  photoDataUrl,
+  onPhoto,
 }: {
   q: IntakeQuestion
   value: string
   onChange: (v: string) => void
+  photoDataUrl: string | null
+  onPhoto: (dataUrl: string | null) => void
 }) {
   const still = stillUrl(q)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const url = URL.createObjectURL(f)
+    setCropSrc(url)
+    e.target.value = ''
+  }
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
       {still && (
@@ -87,9 +102,53 @@ function QuestionView({
           className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
         />
       ) : q.kind === 'photo' ? (
-        <p className="mt-3 text-sm text-white/50">
-          You can add a photo when you see your coach.
-        </p>
+        <div className="mt-3">
+          <p className="text-sm font-semibold text-amber-200">
+            Make sure your face is easy to see in the picture.
+          </p>
+          {cropSrc ? (
+            <div className="mt-3">
+              <ProfilePhotoCropper
+                src={cropSrc}
+                onSave={(dataUrl) => {
+                  onPhoto(dataUrl)
+                  setCropSrc(null)
+                }}
+                onCancel={() => setCropSrc(null)}
+              />
+            </div>
+          ) : photoDataUrl ? (
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <img
+                src={photoDataUrl}
+                alt="Profile preview"
+                className="h-32 w-32 rounded-full object-cover border-2 border-white/20"
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="text-sm font-semibold text-sky-300"
+              >
+                Retake
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="mt-3 flex h-24 w-full items-center justify-center rounded-xl border-2 border-dashed border-white/25 text-sm font-semibold text-white/70"
+            >
+              Take a photo or pick from library
+            </button>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={pickFile}
+            className="hidden"
+          />
+        </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2">
           {q.options!.map((o) => (
@@ -246,6 +305,7 @@ export function PublicIntakePage({ token }: { token: string }) {
   const [lastName, setLastName] = useState('')
   const [qIndex, setQIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
   const [workingTowards, setWorkingTowards] = useState<string[]>([])
   const [step, setStep] = useState<'name' | 'questions' | 'towards'>('questions')
   const [submitting, setSubmitting] = useState(false)
@@ -292,6 +352,7 @@ export function PublicIntakePage({ token }: { token: string }) {
           .map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' })),
         workingTowards,
       }
+      if (photoDataUrl) payload.photoDataUrl = photoDataUrl
       if (mode !== 'athlete') {
         payload.firstName = firstName.trim()
         payload.lastName = lastName.trim()
@@ -455,6 +516,8 @@ export function PublicIntakePage({ token }: { token: string }) {
                 q={q}
                 value={answers[q.id] ?? ''}
                 onChange={(v) => setAnswers((s) => ({ ...s, [q.id]: v }))}
+                photoDataUrl={photoDataUrl}
+                onPhoto={setPhotoDataUrl}
               />
               {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
               <div className="mt-4 flex gap-2">
