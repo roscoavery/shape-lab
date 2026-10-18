@@ -292,10 +292,17 @@ export function PublicIntakePage({ token }: { token: string }) {
     }
   }, [token])
 
-  const questions = useMemo(
-    () => CORE_INTAKE.filter((q) => !answeredIds.includes(q.id)),
-    [answeredIds],
-  )
+  const questions = useMemo(() => {
+    const answered = new Set(answeredIds)
+    // Include in-progress answers so conditional follow-ups (e.g. twistBetter
+    // after answering "both") appear immediately.
+    const current: Record<string, string> = { ...answers }
+    return CORE_INTAKE.filter((q) => {
+      if (answered.has(q.id)) return false
+      if (q.showIf && !q.showIf(current)) return false
+      return true
+    })
+  }, [answeredIds, answers])
 
   const submit = async () => {
     setSubmitting(true)

@@ -359,6 +359,7 @@ function saveAnswersToAthlete(athlete: any, answers: any[]): void {
     shoulderOpen: 'openShoulderHardness',
     cartwheelSide: 'cartwheelLeg',
     twistDirection: 'twistDirection',
+    twistBetter: 'twistBetterSide',
     dominantHand: 'dominantHand',
     skateStance: 'skateStance',
     harderShape: 'harderShape',

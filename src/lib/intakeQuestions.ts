@@ -20,6 +20,8 @@ export type IntakeQuestion = {
   once?: boolean
   /** ISO week key — asked again next week even if they answered last week. */
   weekly?: boolean
+  /** Conditional: only ask when this returns true for the athlete's current answers. */
+  showIf?: (answers: Record<string, string>) => boolean
 }
 
 export const HOLD_OPTS: IntakeChoice[] = [
@@ -159,6 +161,17 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     ]),
   },
   {
+    id: 'twistBetter',
+    prompt: 'Which is your better side?',
+    kind: 'choice',
+    once: true,
+    showIf: (a) => a.twistDirection === 'both',
+    options: withNotSure([
+      { value: 'left', label: 'Left is better' },
+      { value: 'right', label: 'Right is better' },
+    ]),
+  },
+  {
     id: 'dominantHand',
     prompt: 'Dominant hand?',
     kind: 'choice',
@@ -251,9 +264,14 @@ function hasAnswer(athlete: Athlete, id: string): boolean {
 
 export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
   const week = isoWeekKey()
+  const answers: Record<string, string> = {}
+  for (const a of athlete.intakeAnswers ?? []) {
+    if (a.answer && a.answer !== 'not_sure') answers[a.questionId] = a.answer
+  }
   const out: IntakeQuestion[] = []
   for (const q of CORE_INTAKE) {
     if (q.once && hasAnswer(athlete, q.id)) continue
+    if (q.showIf && !q.showIf(answers)) continue
     out.push(q)
   }
   for (const q of WEEKLY_INTAKE) {
@@ -306,6 +324,7 @@ export function applyIntakeField(athlete: Athlete, id: string, value: string): A
   }
   if (id === 'cartwheelSide') return { ...athlete, cartwheelLeg: value as Athlete['cartwheelLeg'] }
   if (id === 'twistDirection') return { ...athlete, twistDirection: value as Athlete['twistDirection'] }
+  if (id === 'twistBetter') return { ...athlete, twistBetterSide: value as Athlete['twistBetterSide'] }
   if (id === 'dominantHand') return { ...athlete, dominantHand: value as Athlete['dominantHand'] }
   if (id === 'skateStance') return { ...athlete, skateStance: value as Athlete['skateStance'] }
   if (id === 'harderShape') return { ...athlete, harderShape: value as Athlete['harderShape'] }
