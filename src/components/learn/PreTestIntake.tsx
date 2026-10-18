@@ -159,9 +159,25 @@ export function PreTestIntake({
         )}
       </div>
       <h3 className="mt-1 text-xl font-semibold">{q.prompt}</h3>
-      {(q.stillFile || q.stillShapeId) && (
+      {(q.stillFile || q.stillShapeId || q.stillShapeIds) && (
         <div className="mt-4 overflow-hidden rounded-xl bg-[#0d1218]">
-          {q.stillFile ? (
+          {q.stillShapeIds ? (
+            <div className="grid grid-cols-2 gap-2 p-2">
+              {q.stillShapeIds.slice(0, 2).map((id, i) => (
+                <div key={id} className="flex flex-col items-center gap-1">
+                  <ReferenceStill
+                    shapeId={id}
+                    photos={photos}
+                    alt=""
+                    className="max-h-44 w-full object-contain"
+                  />
+                  <span className="text-xs font-semibold text-white/60">
+                    {q.options?.[i]?.label ?? ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : q.stillFile ? (
             <img
               src={`/references/${q.stillFile}`}
               alt=""

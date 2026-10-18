@@ -34,6 +34,16 @@ function stillUrl(q: IntakeQuestion): string | null {
   return null
 }
 
+function stillUrls(q: IntakeQuestion): string[] {
+  if (q.stillShapeIds) {
+    return q.stillShapeIds
+      .flatMap((id) => shippedFileList(id).map((f) => `/references/${f}`))
+      .slice(0, 2)
+  }
+  const one = stillUrl(q)
+  return one ? [one] : []
+}
+
 function QuestionView({
   q,
   value,
@@ -48,6 +58,7 @@ function QuestionView({
   onPhoto: (dataUrl: string | null) => void
 }) {
   const still = stillUrl(q)
+  const stills = stillUrls(q)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
 
@@ -60,12 +71,29 @@ function QuestionView({
   }
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      {still && (
-        <img
-          src={still}
-          alt=""
-          className="mb-3 max-h-56 w-full rounded-xl object-contain bg-black/30"
-        />
+      {stills.length > 1 ? (
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {stills.map((u, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <img
+                src={u}
+                alt=""
+                className="max-h-44 w-full rounded-xl object-contain bg-black/30"
+              />
+              <span className="text-xs font-semibold text-white/60">
+                {q.options?.[i]?.label ?? ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        still && (
+          <img
+            src={still}
+            alt=""
+            className="mb-3 max-h-56 w-full rounded-xl object-contain bg-black/30"
+          />
+        )
       )}
       <p className="text-base font-semibold text-white">{q.prompt}</p>
       {q.kind === 'color' ? (
@@ -198,12 +226,11 @@ function WorkingTowardsPicker({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      <p className="text-base font-semibold text-white">
-        What skills are you working towards?
+      <p className="text-center text-xl font-black uppercase tracking-wide text-amber-300">
+        Tap a skill twice to select it
       </p>
-      <p className="mt-1 text-sm text-white/50">
-        Tap a tile once to see its path, tap it again to pick it. Up to 3.
-        Skip this if you're not sure.
+      <p className="mt-1 text-center text-sm text-white/50">
+        First tap shows its path. Up to 3. Skip this if you're not sure.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">

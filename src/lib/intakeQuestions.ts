@@ -16,6 +16,8 @@ export type IntakeQuestion = {
   stillShapeId?: string
   /** Direct still image file (under /references/) — overrides stillShapeId. */
   stillFile?: string
+  /** Multiple stills shown side by side (e.g. hollow vs superman). */
+  stillShapeIds?: string[]
   /** If true, skip when the athlete already has an answer stored. */
   once?: boolean
   /** ISO week key — asked again next week even if they answered last week. */
@@ -197,6 +199,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     prompt: 'Which one is harder for you?',
     kind: 'choice',
     once: true,
+    stillShapeIds: ['hollow_arms_down', 'superman'],
     options: withNotSure([
       { value: 'hollow', label: 'Hollow' },
       { value: 'superman', label: 'Superman' },
