@@ -579,14 +579,47 @@ export function PublicIntakePage({ token }: { token: string }) {
             </div>
           </div>
         ) : questions.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-            <h1 className="text-xl font-bold text-white">
-              Hi{athleteName ? ` ${athleteName.split(' ')[0]}` : ''}!
-            </h1>
-            <p className="mt-2 text-sm text-white/60">
-              You've already answered everything. See you at the gym!
-            </p>
-          </div>
+          postStep === 'study' ? (
+            <PublicLibraryPage
+              token={token}
+              onExit={() => setPostStep('none')}
+              hideTestButton
+            />
+          ) : postStep === 'test' ? (
+            <PublicShapeTest
+              token={token}
+              onExit={() => setPostStep('none')}
+              presetName={{
+                firstName: athleteName?.split(' ')[0] ?? '',
+                lastName: athleteName?.split(' ').slice(1).join(' ') ?? '',
+              }}
+            />
+          ) : (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+              <h1 className="text-xl font-bold text-white">
+                Hi{athleteName ? ` ${athleteName.split(' ')[0]}` : ''}!
+              </h1>
+              <p className="mt-2 text-sm text-white/60">
+                You've already answered everything. Want to study the shapes or take the shape test?
+              </p>
+              <div className="mt-5 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setPostStep('study')}
+                  className="h-12 w-full rounded-xl bg-sky-500 text-base font-bold text-white"
+                >
+                  Study the shapes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPostStep('test')}
+                  className="h-12 w-full rounded-xl border border-white/15 text-base font-bold text-white"
+                >
+                  Take the shape test
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           q && (
             <div className="mt-6">
