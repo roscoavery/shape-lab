@@ -184,9 +184,14 @@ export async function handleShareIntakeSubmit(
     return
   }
   const existing = new Set((athlete.intakeAnswers ?? []).map((a: any) => a.questionId))
-  const fresh = answers.filter((a: any) => a?.questionId && !existing.has(a.questionId))
+  // "Not sure" doesn't count as answered — the question stays open to be
+  // asked again later.
+  const fresh = answers.filter(
+    (a: any) => a?.questionId && !existing.has(a.questionId) && a.answer !== 'not_sure',
+  )
   athlete.intakeAnswers = [...(athlete.intakeAnswers ?? []), ...fresh]
   // Apply profile fields directly so they show up on the athlete's card.
+  // Skip "not_sure" — it leaves the field untouched.
   const FIELD_MAP: Record<string, string> = {
     parentPhone: 'parentPhone',
     favoriteColor: 'favoriteColor',
@@ -202,9 +207,16 @@ export async function handleShareIntakeSubmit(
     skateStance: 'skateStance',
     harderShape: 'harderShape',
   }
+  const SHOULDER_NUM: Record<string, number> = { easy: 1, okay: 2, hard: 4, cant: 5 }
   for (const a of fresh) {
     const field = FIELD_MAP[a.questionId]
-    if (field && a.answer) athlete[field] = a.answer
+    if (!field || !a.answer || a.answer === 'not_sure') continue
+    if (a.questionId === 'shoulderOpen') {
+      const num = SHOULDER_NUM[a.answer]
+      if (num) athlete[field] = num
+    } else {
+      athlete[field] = a.answer
+    }
   }
   await writeRosterFile({ ...roster, athletes })
   sendJson(res, 200, { ok: true })

@@ -14,6 +14,8 @@ export type FoundationFact = {
   builds: string[]
   /** Skills it powers. */
   powers: string[]
+  /** Optional image file under /references/. */
+  image?: string
 }
 
 export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
@@ -30,6 +32,7 @@ export const FOUNDATION_FACTS_DRAFT: FoundationFact[] = [
     fact: 'Strong V ups lead to stronger standing tucks and stronger layouts. Build them early on!',
     builds: ['Hollow shape'],
     powers: ['Standing tuck', 'Layout'],
+    image: 'v_ups_diagram.png',
   },
   {
     id: 'ff_hollow_basics',

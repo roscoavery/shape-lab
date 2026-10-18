@@ -64,6 +64,13 @@ export function AthleteFoundation({ athlete }: { athlete: Athlete }) {
           <p className="text-[11px] font-bold uppercase tracking-widest text-amber-300/80">
             {fact.exercise}
           </p>
+          {fact.image && (
+            <img
+              src={`/references/${fact.image}`}
+              alt={fact.exercise}
+              className="mt-2 max-h-48 w-full rounded-lg object-contain bg-black/30"
+            />
+          )}
           <p className="mt-2 text-[15px] font-medium leading-relaxed text-[var(--text)]">
             “{fact.fact}”
           </p>

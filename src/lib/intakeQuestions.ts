@@ -124,6 +124,7 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     prompt: 'How many V-ups can you do?',
     kind: 'choice',
     once: true,
+    stillFile: 'v_ups_diagram.png',
     options: withNotSure(VUP_OPTS),
   },
   {
@@ -270,6 +271,9 @@ export function upsertIntakeAnswer(
   row: IntakeAnswer,
 ): Athlete {
   const rest = (athlete.intakeAnswers ?? []).filter((a) => a.questionId !== row.questionId)
+  // "Not sure" doesn't count as answered — the question stays open to be
+  // asked again later.
+  if (row.answer === 'not_sure') return { ...athlete, intakeAnswers: rest }
   return { ...athlete, intakeAnswers: [row, ...rest].slice(0, 80) }
 }
 
