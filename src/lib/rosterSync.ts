@@ -232,6 +232,24 @@ export function localHasGymRoster(): boolean {
   return loadAthletes().some((a) => !isRyanAthlete(a))
 }
 
+/**
+ * Nobody's last name is "tumbler" — it leaked in from the "Tumbler Name:"
+ * label in calendar notes. Strip it; the athlete keeps their first name
+ * until Ryan (or the athlete) sets the real last name.
+ */
+function stripTumblerLastName<T extends { lastName?: string; firstName?: string; name?: string }>(
+  athletes: T[],
+): T[] {
+  let changed = false
+  const next = athletes.map((a) => {
+    if (a.lastName?.trim().toLowerCase() !== 'tumbler') return a
+    changed = true
+    const first = a.firstName?.trim() || a.name?.split(/\s+/)[0] || ''
+    return { ...a, lastName: '', name: first }
+  })
+  return changed ? next : athletes
+}
+
 export function applyRosterSnapshot(data: RosterBackup): {
   athletes: Athlete[]
   activeAthleteId: string | null
@@ -241,6 +259,8 @@ export function applyRosterSnapshot(data: RosterBackup): {
   // treat that as "we have a roster" and keep hiding everyone else.
   const merged = mergeRosterLists(listsFromLocal(), remote)
   merged.athletes = restoreMissingAthletes(merged)
+  // Nobody's last name is "tumbler" — strip the bogus extraction artifact.
+  merged.athletes = stripTumblerLastName(merged.athletes)
   const athletes = persistLists(merged)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('shape-lab-roster-applied'))
