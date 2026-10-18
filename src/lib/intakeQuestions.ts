@@ -14,6 +14,8 @@ export type IntakeQuestion = {
   kind: 'choice' | 'skip-phone' | 'photo' | 'color'
   options?: IntakeChoice[]
   stillShapeId?: string
+  /** Direct still image file (under /references/) — overrides stillShapeId. */
+  stillFile?: string
   /** If true, skip when the athlete already has an answer stored. */
   once?: boolean
   /** ISO week key — asked again next week even if they answered last week. */
@@ -53,6 +55,13 @@ export const VUP_OPTS: IntakeChoice[] = [
   { value: 'over_10', label: 'Over 10' },
   { value: 'over_20', label: 'Over 20' },
   { value: 'over_30', label: 'Over 30' },
+]
+
+export const SHOULDER_OPTS: IntakeChoice[] = [
+  { value: 'easy', label: 'Easy, arms cover my ears' },
+  { value: 'okay', label: 'Okay, almost there' },
+  { value: 'hard', label: 'Hard, arms stay in front' },
+  { value: 'cant', label: "Can't get them up" },
 ]
 
 export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
@@ -121,6 +130,14 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     kind: 'choice',
     once: true,
     options: VUP_OPTS,
+  },
+  {
+    id: 'shoulderOpen',
+    prompt: 'How hard is fully open shoulders for you?',
+    kind: 'choice',
+    once: true,
+    stillFile: 'shoulder_angle_open_closed.jpg',
+    options: SHOULDER_OPTS,
   },
 ]
 

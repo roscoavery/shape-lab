@@ -28,6 +28,8 @@ import { TodayShortcuts, type TodayShortcutId } from '../today/TodayShortcuts'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
 import { AcroCheckinBoard } from './AcroCheckinBoard'
 import { MorningBrief } from '../today/MorningBrief'
+import { ShareLinksPanel } from '../share/ShareLinksPanel'
+import { AthleteIntakeLink } from '../share/AthleteIntakeLink'
 import { CalendarDesk } from '../calendar/CalendarDesk'
 import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { getSessionGlow, type SessionKind } from '../../lib/sessionGlow'
@@ -172,6 +174,7 @@ export function HomeDashboard({
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickAddAthleteOpen, setQuickAddAthleteOpen] = useState(false)
+  const [justAddedAthlete, setJustAddedAthlete] = useState<Athlete | null>(null)
   const [checkinBoardOpen, setCheckinBoardOpen] = useState(false)
   const [hiddenTick, setHiddenTick] = useState(0)
   const [addQuery, setAddQuery] = useState('')
@@ -706,6 +709,16 @@ export function HomeDashboard({
             it over.
           </p>
         </details>
+        {coach && signedIn && (
+          <details className="mt-3 rounded-xl bg-[#121820] px-3 py-2">
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">
+              Share links for athletes
+            </summary>
+            <div className="mt-2">
+              <ShareLinksPanel />
+            </div>
+          </details>
+        )}
         {onStartClass && liveClass && liveOffering && liveClass.coachId !== signedIn?.id && !isShapelabAdmin(signedIn) && (
           <LiveClassRoll meeting={liveClass} offering={liveOffering} />
         )}
@@ -1523,12 +1536,37 @@ export function HomeDashboard({
           onClose={() => setQuickAddAthleteOpen(false)}
           onAdded={(athlete) => {
             setRefresh((n) => n + 1)
+            setJustAddedAthlete(athlete)
             // If a training event (clinic/group/school) is active, mark them present.
             if (activeGroup && !activeGroup.athleteIds.includes(athlete.id)) {
               toggleEventAthlete(activeGroup.id, athlete.id)
             }
           }}
         />
+      )}
+      {justAddedAthlete && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-2xl bg-[#121820] p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-base font-bold text-white">
+                {justAddedAthlete.name} added
+              </p>
+              <button
+                type="button"
+                onClick={() => setJustAddedAthlete(null)}
+                className="rounded-full px-3 py-1 text-sm text-white/60"
+              >
+                Done
+              </button>
+            </div>
+            <div className="mt-3">
+              <AthleteIntakeLink
+                athleteId={justAddedAthlete.id}
+                athleteName={justAddedAthlete.name}
+              />
+            </div>
+          </div>
+        </div>
       )}
       {quickAddOpen && activeGroup && signedIn && onAthletesChange && (
         <QuickGroupEnroll

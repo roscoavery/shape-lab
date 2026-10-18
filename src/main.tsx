@@ -5,6 +5,8 @@ import './index.css'
 import App from './App.tsx'
 import PublicSharePage from './components/share/PublicSharePage.tsx'
 import PublicFolderPage from './components/share/PublicFolderPage.tsx'
+import PublicIntakePage from './components/share/PublicIntakePage.tsx'
+import PublicLibraryPage from './components/share/PublicLibraryPage.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
 
 installLegacySafariShims()
@@ -33,6 +35,10 @@ createRoot(document.getElementById('root')!).render(
       <PublicFolderPage token={shareFolderTokenFromPath()!} />
     ) : shareCardIdFromPath() ? (
       <PublicSharePage cardId={shareCardIdFromPath()!} />
+    ) : intakeTokenFromPath() ? (
+      <PublicIntakePage token={intakeTokenFromPath()!} />
+    ) : studyLibTokenFromPath() ? (
+      <PublicLibraryPage token={studyLibTokenFromPath()!} />
     ) : (
       <App />
     )}
@@ -53,6 +59,26 @@ function shareFolderTokenFromPath(): string | null {
 function shareCardIdFromPath(): string | null {
   try {
     const m = /^\/share\/([^/?#]+)/.exec(window.location.pathname)
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
+
+/** /intake/<token> renders the public no-account athlete intake. */
+function intakeTokenFromPath(): string | null {
+  try {
+    const m = /^\/intake\/([^/?#]+)/.exec(window.location.pathname)
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
+
+/** /studylib/<token> renders the public no-account shape study library. */
+function studyLibTokenFromPath(): string | null {
+  try {
+    const m = /^\/studylib\/([^/?#]+)/.exec(window.location.pathname)
     return m ? decodeURIComponent(m[1]) : null
   } catch {
     return null

@@ -131,6 +131,13 @@ import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { handleShareCard } from './shareCard.ts'
 import {
+  getOrCreateIntakeToken,
+  getOrCreateShareToken,
+  handleShareIntake,
+  handleShareIntakeSubmit,
+  handleShareLibrary,
+} from './shareLinks.ts'
+import {
   handleShareFolder,
   handleShareFolderFile,
   handleShareFolderZip,
@@ -276,6 +283,9 @@ const API_PATHS = new Set([
   '/api/share/folder',
   '/api/share/folder-file',
   '/api/share/folder-zip',
+  '/api/share/intake',
+  '/api/share/intake-submit',
+  '/api/share/library',
   '/api/athlete-videos/folder-token',
   '/api/athlete-videos/file-class',
   '/api/coach-media',
@@ -378,6 +388,21 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/folder-zip') {
     return handleShareFolderZip(req, res, url)
+  }
+
+  // Public shareable intake + study library — no sign-in required. The
+  // unguessable token is the only secret; every request validates it.
+  if (path === '/api/share/intake') {
+    await handleShareIntake(req, res, url)
+    return true
+  }
+  if (path === '/api/share/intake-submit') {
+    await handleShareIntakeSubmit(req, res, url)
+    return true
+  }
+  if (path === '/api/share/library') {
+    await handleShareLibrary(req, res, url)
+    return true
   }
 
   const gate = await gateApiRequest(req, res, path)
@@ -1489,6 +1514,39 @@ export async function handleShapeLabApi(
     }
     await writeAudit('media.share', viewer, { athleteId, detail: 'folder-token' })
     sendJson(res, 200, { token, path: `/share/folder/${token}` })
+    return true
+  }
+  if (path === '/api/share-links/intake-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    let body: { athleteId?: string } = {}
+    try {
+      const raw = await readRequestBody(req)
+      body = raw ? (JSON.parse(raw) as typeof body) : {}
+    } catch {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    const athleteId = (body.athleteId ?? '').trim()
+    if (!athleteId) {
+      sendJson(res, 400, { error: 'Could not make that link.' })
+      return true
+    }
+    const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
+    const token = await getOrCreateIntakeToken(athleteId, coachId)
+    sendJson(res, 200, { token, path: `/intake/${token}` })
+    return true
+  }
+  if (path === '/api/share-links/library-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
+    const token = await getOrCreateShareToken('library', coachId)
+    sendJson(res, 200, { token, path: `/studylib/${token}` })
     return true
   }
   if (path === '/api/athlete-videos/file-class') {

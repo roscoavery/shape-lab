@@ -53,6 +53,7 @@ import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
 import { SkillGoalPicker } from './coach/SkillGoalPicker'
+import { AthleteIntakeLink } from './share/AthleteIntakeLink'
 import { GoalPathView } from './coach/GoalPathView'
 import { SKILL_GOAL_COACH_NOTE } from '../lib/skillPaths'
 import { NoteAudiencePicker } from './lesson/NoteAudiencePicker'
@@ -366,6 +367,16 @@ export function AthleteProfileCard({
               />
             </div>
           )}
+        </details>
+      )}
+      {coach && isAthleteProfile(athlete) && (
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Intake link
+          </summary>
+          <div className="mt-2">
+            <AthleteIntakeLink athleteId={athlete.id} athleteName={athlete.name} />
+          </div>
         </details>
       )}
       {facts.length > 0 && (

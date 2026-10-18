@@ -159,14 +159,22 @@ export function PreTestIntake({
         )}
       </div>
       <h3 className="mt-1 text-xl font-semibold">{q.prompt}</h3>
-      {q.stillShapeId && (
+      {(q.stillFile || q.stillShapeId) && (
         <div className="mt-4 overflow-hidden rounded-xl bg-[#0d1218]">
-          <ReferenceStill
-            shapeId={q.stillShapeId}
-            photos={photos}
-            alt=""
-            className="max-h-64 w-full object-contain"
-          />
+          {q.stillFile ? (
+            <img
+              src={`/references/${q.stillFile}`}
+              alt=""
+              className="max-h-64 w-full object-contain"
+            />
+          ) : (
+            <ReferenceStill
+              shapeId={q.stillShapeId!}
+              photos={photos}
+              alt=""
+              className="max-h-64 w-full object-contain"
+            />
+          )}
         </div>
       )}
       {q.kind === 'skip-phone' && (
