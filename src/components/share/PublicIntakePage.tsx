@@ -210,16 +210,11 @@ function WorkingTowardsPicker({
   onChange: (v: string[]) => void
 }) {
   const [map, setMap] = useState<'main' | 'acro'>('main')
-  const lastTap = useRef<string | null>(null)
 
-  // First tap shows the map's shine/path. Second tap on the same tile selects it.
+  // Single tap selects in the intake picker only. The map components are
+  // untouched — they still shine/open cards everywhere else.
   const toggle = (skill: UnifiedSkill) => {
     const id = skill.name
-    if (lastTap.current !== id) {
-      lastTap.current = id
-      return
-    }
-    lastTap.current = null
     if (value.includes(id)) onChange(value.filter((v) => v !== id))
     else if (value.length < 3) onChange([...value, id])
   }
@@ -227,10 +222,10 @@ function WorkingTowardsPicker({
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
       <p className="text-center text-xl font-black uppercase tracking-wide text-amber-300">
-        Tap a skill twice to select it
+        Tap a skill to select it
       </p>
       <p className="mt-1 text-center text-sm text-white/50">
-        First tap shows its path. Up to 3. Skip this if you're not sure.
+        Up to 3. Skip this if you're not sure.
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
