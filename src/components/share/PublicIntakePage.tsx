@@ -242,7 +242,8 @@ export function PublicIntakePage({ token }: { token: string }) {
   const [athleteName, setAthleteName] = useState('')
   const [groupName, setGroupName] = useState<string | null>(null)
   const [answeredIds, setAnsweredIds] = useState<string[]>([])
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [qIndex, setQIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [workingTowards, setWorkingTowards] = useState<string[]>([])
@@ -291,7 +292,10 @@ export function PublicIntakePage({ token }: { token: string }) {
           .map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' })),
         workingTowards,
       }
-      if (mode !== 'athlete') payload.name = name.trim()
+      if (mode !== 'athlete') {
+        payload.firstName = firstName.trim()
+        payload.lastName = lastName.trim()
+      }
       const r = await fetch(
         `/api/share/intake-submit?token=${encodeURIComponent(token)}`,
         {
@@ -363,20 +367,30 @@ export function PublicIntakePage({ token }: { token: string }) {
                 ? `You're signing up for ${groupName ?? 'the group'}. Start by telling us your name.`
                 : 'Start by telling us your name.'}
             </p>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="First and last name"
-              autoComplete="name"
-              className="mt-4 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
-            />
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                autoComplete="given-name"
+                className="h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white placeholder:text-white/40"
+              />
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                autoComplete="family-name"
+                className="h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white placeholder:text-white/40"
+              />
+            </div>
             {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
             <button
               type="button"
               onClick={() => {
-                if (!name.trim()) {
-                  setError('Please enter your name.')
+                if (!firstName.trim()) {
+                  setError('Please enter your first name.')
                   return
                 }
                 setError('')

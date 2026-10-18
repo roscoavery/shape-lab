@@ -269,18 +269,22 @@ export async function handleShareIntakeSubmit(
   }
 
   // Open / group mode: create a new profile.
-  const name = String(body.name ?? '').trim()
-  if (!name) {
-    sendJson(res, 400, { error: 'Please enter your name.' })
+  const firstName = String(body.firstName ?? '').trim()
+  const lastName = String(body.lastName ?? '').trim()
+  // Back-compat: older clients send a single name field.
+  const legacyName = String(body.name ?? '').trim()
+  const resolvedFirst = firstName || legacyName.split(/\s+/)[0] || ''
+  const resolvedLast = lastName || legacyName.split(/\s+/).slice(1).join(' ') || ''
+  if (!resolvedFirst) {
+    sendJson(res, 400, { error: 'Please enter your first name.' })
     return
   }
   const id = `ath_${randomBytes(8).toString('hex')}`
-  const parts = name.split(/\s+/)
   const athlete: any = {
     id,
-    name,
-    firstName: parts[0] ?? name,
-    lastName: parts.slice(1).join(' ') ?? '',
+    name: `${resolvedFirst} ${resolvedLast}`.trim(),
+    firstName: resolvedFirst,
+    lastName: resolvedLast,
     role: 'athlete',
     createdAt: new Date().toISOString(),
     intakeAnswers: [],
