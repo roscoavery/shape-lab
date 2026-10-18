@@ -288,6 +288,8 @@ const API_PATHS = new Set([
   '/api/share/library',
   '/api/athlete-videos/folder-token',
   '/api/athlete-videos/file-class',
+  '/api/share-links/intake-token',
+  '/api/share-links/library-token',
   '/api/coach-media',
   '/api/coach-media-file',
   '/api/stories',

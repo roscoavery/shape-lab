@@ -15,20 +15,22 @@ export function AthleteIntakeLink({
   const [url, setUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const makeLink = async () => {
     setBusy(true)
+    setError(null)
     try {
       const r = await fetch('/api/share-links/intake-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ athleteId }),
       })
-      const d = await r.json()
-      if (!r.ok || !d?.path) throw new Error('Could not make the link.')
+      const d = await r.json().catch(() => null)
+      if (!r.ok || !d?.path) throw new Error(d?.error ?? `Server said ${r.status}`)
       setUrl(`${window.location.origin}${d.path}`)
-    } catch {
-      // silent — coach can retry
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not make the link.')
     } finally {
       setBusy(false)
     }
@@ -69,14 +71,17 @@ export function AthleteIntakeLink({
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => void makeLink()}
-          disabled={busy}
-          className="mt-2 h-9 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white disabled:opacity-40"
-        >
-          {busy ? 'Making…' : 'Get intake link'}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => void makeLink()}
+            disabled={busy}
+            className="mt-2 h-9 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white disabled:opacity-40"
+          >
+            {busy ? 'Making…' : 'Get intake link'}
+          </button>
+          {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
+        </>
       )}
     </div>
   )
