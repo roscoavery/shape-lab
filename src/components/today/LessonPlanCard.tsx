@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
+import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { AthleteAvatar } from '../AthleteAvatar'
 import {
   getOrCreateClassPlan,
@@ -81,7 +82,18 @@ export function LessonPlanCard({
     setRepsInput('')
   }
 
-  const label = athlete?.firstName || athlete?.name || event.title || 'Lesson'
+  const label = useMemo(() => {
+    if (athlete?.firstName || athlete?.name) return athlete.firstName || athlete.name
+    // Unmatched lesson: prefer the tumbler name from the event notes over the
+    // raw title (Acuity titles carry the parent's name).
+    if (event.notes) {
+      const parsed = parseAcuityNotes(event.notes)
+      if (parsed?.tumblerName) return parsed.tumblerName
+      const marker = event.notes.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+      if (marker) return marker[2] ? `${marker[1]} ${marker[2]}` : marker[1]!
+    }
+    return event.title || 'Lesson'
+  }, [athlete, event.notes, event.title])
   const doneCount = plan.tasks.filter((t) => t.done).length
 
   const body = (

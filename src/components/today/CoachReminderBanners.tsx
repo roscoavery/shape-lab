@@ -10,6 +10,7 @@ import {
   subscribeCoachHours,
 } from '../../lib/coachHours'
 import { fetchCalendarRange, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { classLabel, classMemberIds, getOffering, loadMeetings } from '../../lib/coachClasses'
 import { lessonAthleteIds, loadLessonSessions } from '../../lib/lessonStore'
 import { publishTextPostResult } from '../../lib/feedPosts'
@@ -548,7 +549,16 @@ export function CoachReminderBanners({
                     const matched = ev.matchedAthleteId
                       ? athletes.find((a) => a.id === ev.matchedAthleteId)
                       : null
-                    const label = matched?.name ?? ev.title
+                    let label = matched?.name
+                    if (!label && ev.notes) {
+                      const parsed = parseAcuityNotes(ev.notes)
+                      if (parsed?.tumblerName) label = parsed.tumblerName
+                      else {
+                        const marker = ev.notes.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+                        if (marker) label = marker[2] ? `${marker[1]} ${marker[2]}` : marker[1]!
+                      }
+                    }
+                    if (!label) label = ev.title
                     return (
                       <li key={ev.id}>
                         {onPlanLesson ? (

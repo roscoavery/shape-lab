@@ -295,6 +295,38 @@ export function matchEventToAthlete(input: MatchInput): MatchResult {
     return { athleteId: titleMap.athleteId, matchStatus: 'matched', matchConfidence: 0.95 }
   }
 
+  // Prefer the explicit "Athlete name:" / "Tumbler name:" marker in notes.
+  // Ryan's Acuity convention: title carries the parent's name, notes carry the
+  // athlete's name. The generic full-name search below can miss when the notes
+  // have the name in a labeled field but not as a bare full-name hit.
+  const descText = unescapeCalendarText(input.description ?? '')
+  if (descText) {
+    const marker = descText.match(/(?:athlete|tumbler)\s*name\s*:\s*([A-Za-z][A-Za-z'-]{1,24})(?:\s+([A-Za-z][A-Za-z'-]{1,24}))?/i)
+    if (marker) {
+      const first = marker[1]!
+      const last = marker[2] ?? ''
+      const fullNorm = normalizePersonName(last ? `${first} ${last}` : first)
+      // Full name match against roster.
+      const fullHit = input.coachAthletes.filter(
+        (a) => normalizePersonName(athleteFullName(a)) === fullNorm,
+      )
+      if (fullHit.length === 1) {
+        return { athleteId: fullHit[0]!.id, matchStatus: 'matched', matchConfidence: 0.96 }
+      }
+      // First-name-only in notes: match if exactly one roster athlete has it.
+      if (!last) {
+        const firstNorm = normalizePersonName(first)
+        const firstHits = input.coachAthletes.filter((a) => {
+          const af = a.firstName?.trim() || a.name.trim().split(/\s+/)[0] || ''
+          return normalizePersonName(af) === firstNorm
+        })
+        if (firstHits.length === 1) {
+          return { athleteId: firstHits[0]!.id, matchStatus: 'matched', matchConfidence: 0.9 }
+        }
+      }
+    }
+  }
+
   const notesHay = normalizeAlias(unescapeCalendarText(input.description ?? ''))
   const namedInNotes = notesHay ? fullNameHits(notesHay, input.coachAthletes) : []
   if (namedInNotes.length === 1) {
