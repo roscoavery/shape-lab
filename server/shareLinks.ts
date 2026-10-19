@@ -420,7 +420,8 @@ export async function handleShareLibrary(
   }
   // Coach-uploaded stills: include shapes that have them so the public
   // library matches what Ryan sees in the app.
-  let coachStills: { shapeId: string; stillId: string }[] = []
+  // Returns the file path so the client can load it directly.
+  let coachStills: { shapeId: string; stillId: string; file?: string; dataUrl?: string }[] = []
   try {
     const { readCoachStillsFile } = await import('./coachStillStore.ts')
     const file = await readCoachStillsFile()
@@ -428,7 +429,12 @@ export async function handleShareLibrary(
     if (Array.isArray(extras)) {
       for (const e of extras) {
         if (e?.shapeId && e?.id) {
-          coachStills.push({ shapeId: String(e.shapeId), stillId: String(e.id) })
+          coachStills.push({
+            shapeId: String(e.shapeId),
+            stillId: String(e.id),
+            file: e.file ? String(e.file) : undefined,
+            dataUrl: e.dataUrl ? String(e.dataUrl) : undefined,
+          })
         }
       }
     }

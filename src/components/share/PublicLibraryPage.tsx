@@ -14,12 +14,31 @@ import { cropSourcePixels, type StillCropRect } from '../../lib/stillCrop'
 import PublicShapeTest from './PublicShapeTest'
 
 /** Shapes kept out of the athlete study view. */
+// Arm positions, scaffolding, and unmatched are separate from the shape library.
 const STUDY_EXCLUDE = new Set([
   'arms_down',
   'arms_forward',
   'arms_vertical',
   'zombie_arms',
   'bridge', // rainbow bridge + long bridge already cover it, and this one has no still
+  // Arm position shapes (from ARM_POSITION_SHAPE_IDS in educationCopy.ts)
+  'arms_low_v_back',
+  'arms_front_middle',
+  'arms_open_shoulders',
+  'arms_t',
+  'arms_high_v_chest',
+  'lunge_arms_low_v',
+  'lunge_arms_front',
+  'lunge_arms_open',
+  'lunge_arms_t',
+  'lunge_arms_high_v',
+  // Scaffold shapes (from SCAFFOLD_SHAPE_IDS in educationCopy.ts)
+  'lunge',
+  'tucked_handstand',
+  'piked_handstand',
+  'l_handstand',
+  // Unmatched coach stills (not assigned to a shape)
+  'unmatched',
 ])
 
 function stillIdFor(shapeId: string, fileIndex: number): string {
@@ -117,7 +136,7 @@ export default function PublicLibraryPage({
   }))
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
   const [mainStills, setMainStills] = useState<Record<string, string>>({})
-  const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string }[]>([])
+  const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string; file?: string; dataUrl?: string }[]>([])
   const [removedCoachStillIds, setRemovedCoachStillIds] = useState<Set<string>>(new Set())
   const [gymShapes, setGymShapes] = useState<{ id: string; name: string }[]>([])
   const [index, setIndex] = useState(0)
@@ -158,66 +177,49 @@ export default function PublicLibraryPage({
   }, [token])
 
   // Apply Ryan's deletions and main-still ordering.
-  // Includes coach-uploaded stills and gym shapes so the list matches the in-app library.
+  // Matches the in-app Shape Library exactly: same shapes, same order, same pictures.
+  // In-app order: SHAPES (in defined order) then gym shapes (in gymLibrary order).
   const shapes = useMemo(() => {
-    // Group extra stills by shape.
-    const extraByShape = new Map<string, { shapeId: string; stillId: string }[]>()
+    // Group coach stills by shape.
+    const extraByShape = new Map<string, { shapeId: string; stillId: string; file?: string; dataUrl?: string }[]>()
     for (const c of coachStills) {
       const list = extraByShape.get(c.shapeId) ?? []
       list.push(c)
       extraByShape.set(c.shapeId, list)
     }
 
-    // All shape IDs with any stills (shipped or coach-uploaded).
-    // Includes gym shapes (custom shapes like lightning bolt, curl up).
-    const shapeIds = new Set<string>()
-    const shapeMap = new Map<string, { id: string; name: string }>()
+    const isRemoved = (stillId: string, fileName: string) =>
+      removedStillIds.has(stillId) ||
+      removedCoachStillIds.has(stillId) ||
+      removedCoachStillIds.has(fileName)
+
+    // Build the shape list in in-app order.
+    const result: { id: string; name: string; urls: string[]; stillIds: string[] }[] = []
+
+    // 1. Main shapes with stills, in SHAPES order.
     for (const s of SHAPES) {
       if (STUDY_EXCLUDE.has(s.id)) continue
-      shapeMap.set(s.id, s)
-      if (shippedFileList(s.id).length > 0) shapeIds.add(s.id)
-    }
-    // Add gym shape names.
-    for (const g of gymShapes) {
-      if (!STUDY_EXCLUDE.has(g.id) && !shapeMap.has(g.id)) {
-        shapeMap.set(g.id, g)
-      }
-    }
-    for (const id of extraByShape.keys()) {
-      if (!STUDY_EXCLUDE.has(id)) {
-        shapeIds.add(id)
-        if (!shapeMap.has(id)) {
-          // Fallback name from ID if not in gym shapes.
-          const pretty = id.replace(/^gym_/, '').replace(/_/g, ' ')
-          shapeMap.set(id, { id, name: pretty.charAt(0).toUpperCase() + pretty.slice(1) })
-        }
-      }
-    }
-
-    return [...shapeIds].map((id) => {
-      const s = shapeMap.get(id)!
-      const files = shippedFileList(id)
-      // Build (stillId, url) pairs, filter out deleted.
-      // Check both the IG removed list and the coach-still tombstones.
-      const isRemoved = (stillId: string, fileName: string) =>
-        removedStillIds.has(stillId) ||
-        removedCoachStillIds.has(stillId) ||
-        removedCoachStillIds.has(fileName)
+      const files = shippedFileList(s.id)
       const pairs = files
-        .map((f, i) => ({ stillId: stillIdFor(id, i), url: `/references/${f}`, file: f }))
+        .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}`, file: f }))
         .filter((p) => !isRemoved(p.stillId, p.file))
       // Add coach-uploaded stills.
-      for (const c of extraByShape.get(id) ?? []) {
+      for (const c of extraByShape.get(s.id) ?? []) {
         if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
-          pairs.push({
-            stillId: c.stillId,
-            url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
-            file: '',
-          })
+          if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
+            pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
+          } else {
+            pairs.push({
+              stillId: c.stillId,
+              url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
+              file: '',
+            })
+          }
         }
       }
-      // Move Ryan's main-still pick to the front.
-      const mainId = mainStills[id]
+      if (pairs.length === 0) continue
+      // Main-still first.
+      const mainId = mainStills[s.id]
       if (mainId) {
         const idx = pairs.findIndex((p) => p.stillId === mainId)
         if (idx > 0) {
@@ -225,8 +227,40 @@ export default function PublicLibraryPage({
           pairs.unshift(main!)
         }
       }
-      return { ...s, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) }
-    }).filter((s) => s.urls.length > 0)
+      result.push({ id: s.id, name: s.name, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) })
+    }
+
+    // 2. Gym shapes with stills, in gymLibrary order.
+    for (const g of gymShapes) {
+      if (STUDY_EXCLUDE.has(g.id)) continue
+      const pairs: { stillId: string; url: string; file: string }[] = []
+      // Gym shapes have no shipped files, only coach-uploaded.
+      for (const c of extraByShape.get(g.id) ?? []) {
+        if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
+          if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
+            pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
+          } else {
+            pairs.push({
+              stillId: c.stillId,
+              url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
+              file: '',
+            })
+          }
+        }
+      }
+      if (pairs.length === 0) continue
+      const mainId = mainStills[g.id]
+      if (mainId) {
+        const idx = pairs.findIndex((p) => p.stillId === mainId)
+        if (idx > 0) {
+          const [main] = pairs.splice(idx, 1)
+          pairs.unshift(main!)
+        }
+      }
+      result.push({ id: g.id, name: g.name, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) })
+    }
+
+    return result
   }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, gymShapes, token])
 
   // shapes with deletions applied is defined above
@@ -352,45 +386,35 @@ export default function PublicLibraryPage({
                 />
                 {hasMany && active && (
                   <>
+                    {/* Tap zones: left third = previous still, right third = next still.
+                        Swipe anywhere = change shape. */}
                     <button
                       type="button"
                       aria-label="Previous picture"
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        setStillIdx((sIdx - 1 + urls.length) % urls.length)
-                      }}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx - 1 + urls.length) % urls.length)
                       }}
-                      className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-2xl text-white"
+                      className="absolute left-0 top-0 flex h-full w-1/3 items-center justify-start pl-2"
                     >
-                      ‹
+                      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/70 text-3xl text-white">
+                        ‹
+                      </span>
                     </button>
                     <button
                       type="button"
                       aria-label="Next picture"
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        setStillIdx((sIdx + 1) % urls.length)
-                      }}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx + 1) % urls.length)
                       }}
-                      className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-2xl text-white"
+                      className="absolute right-0 top-0 flex h-full w-1/3 items-center justify-end pr-2"
                     >
-                      ›
+                      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-black/70 text-3xl text-white">
+                        ›
+                      </span>
                     </button>
-                    <div
-                      className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5"
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                    >
+                    <div className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5">
                       <span className="text-xs font-semibold text-white">
                         {sIdx + 1} / {urls.length}
                       </span>
@@ -399,11 +423,6 @@ export default function PublicLibraryPage({
                           key={d}
                           type="button"
                           aria-label={`Picture ${d + 1}`}
-                          onTouchEnd={(e) => {
-                            e.stopPropagation()
-                            e.preventDefault()
-                            setStillIdx(d)
-                          }}
                           onClick={(e) => {
                             e.stopPropagation()
                             setStillIdx(d)
