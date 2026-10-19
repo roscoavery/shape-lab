@@ -695,11 +695,12 @@ export async function handleShareFindAthlete(
   try {
     const { readRosterFile } = await import('./rosterStore.ts')
     const roster = await readRosterFile()
+    const athletes = (roster as any)?.athletes ?? []
     // Split query into tokens; match if every token appears in first/last/full name.
     // This handles "ryan williams" matching firstName="Ryan", lastName="Williams",
     // as well as partial matches.
     const tokens = q.split(/\s+/).filter((t) => t.length > 0)
-    const matches = (roster ?? [])
+    const matches = athletes
       .filter((a: any) => {
         const first = (a.firstName ?? '').toLowerCase()
         const last = (a.lastName ?? '').toLowerCase()
