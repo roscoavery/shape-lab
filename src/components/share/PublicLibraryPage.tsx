@@ -137,6 +137,7 @@ export default function PublicLibraryPage({
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
   const [mainStills, setMainStills] = useState<Record<string, string>>({})
   const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string; file: string }[]>([])
+  const [igStills, setIgStills] = useState<{ shapeId: string; stillId: string; file: string }[]>([])
   const [removedCoachStillIds, setRemovedCoachStillIds] = useState<Set<string>>(new Set())
   const [gymShapes, setGymShapes] = useState<{ id: string; name: string }[]>([])
   const [index, setIndex] = useState(0)
@@ -165,6 +166,9 @@ export default function PublicLibraryPage({
         if (Array.isArray(data?.coachStills)) {
           setCoachStills(data.coachStills)
         }
+        if (Array.isArray(data?.igStills)) {
+          setIgStills(data.igStills)
+        }
         if (Array.isArray(data?.removedCoachStillIds)) {
           setRemovedCoachStillIds(new Set(data.removedCoachStillIds))
         }
@@ -179,10 +183,11 @@ export default function PublicLibraryPage({
   // Apply Ryan's deletions and main-still ordering.
   // Matches the in-app Shape Library exactly: same shapes, same order, same pictures.
   // Uses learnLibraryShapes() for the exact in-app order, then gym shapes in gymLibrary order.
+  // Includes IG stills (Ryan: "allow any ig stills that show inside of any shapes").
   const shapes = useMemo(() => {
-    // Group coach stills by shape.
+    // Group coach and IG stills by shape.
     const extraByShape = new Map<string, { shapeId: string; stillId: string; file: string }[]>()
-    for (const c of coachStills) {
+    for (const c of [...coachStills, ...igStills]) {
       const list = extraByShape.get(c.shapeId) ?? []
       list.push(c)
       extraByShape.set(c.shapeId, list)
@@ -255,7 +260,7 @@ export default function PublicLibraryPage({
     }
 
     return result
-  }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, gymShapes, token])
+  }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, gymShapes, token])
 
   // shapes with deletions applied is defined above
 
