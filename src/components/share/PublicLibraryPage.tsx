@@ -120,6 +120,7 @@ export default function PublicLibraryPage({
   const [index, setIndex] = useState(0)
   const [stillIdx, setStillIdx] = useState(0)
   const touchX = useRef<number | null>(null)
+  const swiped = useRef(false)
   const scrollerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -224,13 +225,19 @@ export default function PublicLibraryPage({
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchX.current = e.touches[0]?.clientX ?? null
+    swiped.current = false
   }
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchX.current == null) return
     const dx = (e.changedTouches[0]?.clientX ?? touchX.current) - touchX.current
     touchX.current = null
-    if (dx < -40) go(index + 1)
-    else if (dx > 40) go(index - 1)
+    if (dx < -40) {
+      swiped.current = true
+      go(index + 1)
+    } else if (dx > 40) {
+      swiped.current = true
+      go(index - 1)
+    }
   }
 
   return (
@@ -267,21 +274,37 @@ export default function PublicLibraryPage({
         {shapes.map((s, i) => {
           const urls = s.urls
           const active = i === index
-          const sIdx = active ? stillIdx : 0
+          // Clamp: if the still list shrank (deletions loaded), don't go blank.
+          const sIdx = active ? Math.min(stillIdx, Math.max(0, urls.length - 1)) : 0
+          const hasMany = urls.length > 1
           return (
             <div
               key={s.id}
               data-shape-slide={i}
               className="flex h-full w-full shrink-0 snap-start flex-col items-center justify-center px-6"
             >
-              <div className="relative flex max-h-[70%] w-full items-center justify-center">
+              <div
+                className="relative flex max-h-[70%] w-full items-center justify-center"
+                onClick={(e) => {
+                  // Tap the picture to step through its stills.
+                  // Skip if this tap was actually a swipe (shape change).
+                  if (swiped.current) {
+                    swiped.current = false
+                    return
+                  }
+                  if (active && hasMany) {
+                    e.stopPropagation()
+                    setStillIdx((sIdx + 1) % urls.length)
+                  }
+                }}
+              >
                 <CroppedImage
                   src={urls[sIdx]}
                   stillId={s.stillIds[sIdx] ?? stillIdFor(s.id, sIdx)}
                   crops={crops}
                   alt={s.name}
                 />
-                {urls.length > 1 && active && (
+                {hasMany && active && (
                   <>
                     <button
                       type="button"
@@ -290,7 +313,7 @@ export default function PublicLibraryPage({
                         e.stopPropagation()
                         setStillIdx((sIdx - 1 + urls.length) % urls.length)
                       }}
-                      className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white"
+                      className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-2xl text-white"
                     >
                       ‹
                     </button>
@@ -301,12 +324,12 @@ export default function PublicLibraryPage({
                         e.stopPropagation()
                         setStillIdx((sIdx + 1) % urls.length)
                       }}
-                      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white"
+                      className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-2xl text-white"
                     >
                       ›
                     </button>
-                    <div className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1">
-                      <span className="text-[11px] font-semibold text-white">
+                    <div className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5">
+                      <span className="text-xs font-semibold text-white">
                         {sIdx + 1} / {urls.length}
                       </span>
                       {urls.map((_, d) => (
@@ -318,7 +341,7 @@ export default function PublicLibraryPage({
                             e.stopPropagation()
                             setStillIdx(d)
                           }}
-                          className={`h-2 w-2 rounded-full ${
+                          className={`h-2.5 w-2.5 rounded-full ${
                             d === sIdx ? 'bg-white' : 'bg-white/30'
                           }`}
                         />
