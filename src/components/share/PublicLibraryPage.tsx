@@ -128,23 +128,7 @@ export default function PublicLibraryPage({
   const [showTest, setShowTest] = useState(false)
 
   if (showTest) {
-    // Temporarily disabled: PublicShapeTest was crashing to blank screen.
-    // TODO: Fix and re-enable.
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
-        <h1 className="text-xl font-bold">Shape test</h1>
-        <p className="mt-2 text-center text-sm text-white/60">
-          The test is being fixed. Please use the shape library for now.
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowTest(false)}
-          className="mt-6 rounded-xl bg-sky-500 px-6 py-3 font-bold text-white"
-        >
-          Back to library
-        </button>
-      </div>
-    )
+    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} />
   }
   const [valid, setValid] = useState<boolean | null>(null)
   const [crops, setCrops] = useState<Record<string, StillCropRect>>(() => ({
