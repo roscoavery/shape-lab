@@ -56,21 +56,27 @@ function buildQuestionsFromUrls(
   shapes: { id: string; name: string; urls: string[]; stillIds: string[] }[],
   count = 10,
 ): TestQuestion[] {
-  const picked = shuffle(shapes).slice(0, Math.min(count, shapes.length))
-  return picked.map((s) => {
-    const idx = Math.floor(Math.random() * s.urls.length)
-    const others = shuffle(shapes.filter((x) => x.id !== s.id))
-      .slice(0, 3)
-      .map((x) => x.name)
-    const choices = shuffle([s.name, ...others])
-    return {
-      shapeId: s.id,
-      shapeName: s.name,
-      imageUrl: s.urls[idx]!,
-      stillId: s.stillIds[idx] ?? `default_${s.id}_${idx}`,
-      choices,
-    }
-  })
+  try {
+    const valid = shapes.filter((s) => s && s.id && s.name && s.urls && s.urls.length > 0)
+    if (valid.length === 0) return []
+    const picked = shuffle(valid).slice(0, Math.min(count, valid.length))
+    return picked.map((s) => {
+      const idx = Math.floor(Math.random() * s.urls.length)
+      const others = shuffle(valid.filter((x) => x.id !== s.id))
+        .slice(0, 3)
+        .map((x) => x.name)
+      const choices = shuffle([s.name, ...others])
+      return {
+        shapeId: s.id,
+        shapeName: s.name,
+        imageUrl: s.urls[idx]!,
+        stillId: s.stillIds[idx] ?? `default_${s.id}_${idx}`,
+        choices,
+      }
+    })
+  } catch {
+    return []
+  }
 }
 
 function CroppedImage({
@@ -153,17 +159,23 @@ export default function PublicShapeTest({
   const [saved, setSaved] = useState(false)
 
   // Build questions from library shapes (reactive to changes).
+  // Wrapped in try-catch to prevent blank screen on any error.
   const questions = useMemo(() => {
-    if (libraryShapes && libraryShapes.length > 0) {
-      const withUrls = libraryShapes.filter((s) => s.urls.length > 0)
-      if (withUrls.length > 0) {
-        return buildQuestionsFromUrls(withUrls)
+    try {
+      if (libraryShapes && libraryShapes.length > 0) {
+        const withUrls = libraryShapes.filter((s) => s && s.urls && s.urls.length > 0)
+        if (withUrls.length > 0) {
+          return buildQuestionsFromUrls(withUrls)
+        }
       }
+      const shapes = SHAPES.filter(
+        (s) => s && !STUDY_EXCLUDE.has(s.id) && shippedFileList(s.id).length > 0,
+      )
+      if (shapes.length === 0) return []
+      return buildQuestions(shapes)
+    } catch {
+      return []
     }
-    const shapes = SHAPES.filter(
-      (s) => !STUDY_EXCLUDE.has(s.id) && shippedFileList(s.id).length > 0,
-    )
-    return buildQuestions(shapes)
   }, [libraryShapes])
 
   // Load crops
