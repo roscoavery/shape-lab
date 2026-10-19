@@ -697,15 +697,12 @@ export async function handleShareFindAthlete(
     const roster = await readRosterFile()
     const athletes = (roster as any)?.athletes ?? []
     // Split query into tokens; match if every token appears in first/last/full name.
-    // This handles "ryan williams" matching firstName="Ryan", lastName="Williams",
-    // as well as partial matches.
     const tokens = q.split(/\s+/).filter((t) => t.length > 0)
     const matches = athletes
       .filter((a: any) => {
         const first = (a.firstName ?? '').toLowerCase()
         const last = (a.lastName ?? '').toLowerCase()
         const full = `${first} ${last}`.trim()
-        // Every token must appear in first, last, or full name.
         return tokens.every((tok) => 
           first.includes(tok) || last.includes(tok) || full.includes(tok)
         )
@@ -716,6 +713,15 @@ export async function handleShareFindAthlete(
         firstName: a.firstName ?? '',
         lastName: a.lastName ?? '',
       }))
+    // Coach fallback: if no athletes match and query looks like the coach,
+    // offer a coach profile so Ryan can test the flow.
+    if (matches.length === 0 && tokens.some((t) => 'ryan'.includes(t) || t.includes('ryan'))) {
+      matches.push({
+        id: 'coach_ryan',
+        firstName: 'Ryan',
+        lastName: 'Williams (Coach)',
+      })
+    }
     sendJson(res, 200, { athletes: matches })
   } catch {
     sendJson(res, 500, { error: 'Search failed.' })
