@@ -22,6 +22,7 @@ import {
   postToChalkboard,
   removeBoard,
   renameBoard,
+  reorderChalkboardItems,
   setActiveBoard,
   subscribeChalkboards,
   updateChalkboardItem,
@@ -114,6 +115,7 @@ export function ChalkboardPanel({
   const [tick, setTick] = useState(0)
   const [size, setSize] = useState<Size>('more')
   const [coachEdit, setCoachEdit] = useState(false)
+  const [reordering, setReordering] = useState(false)
   const showCoachChrome = coach && (size !== 'full' || coachEdit)
   const [offerings, setOfferings] = useState(() =>
     viewer?.id ? loadOfferingsForCoach(viewer.id) : loadOfferings(),
@@ -244,6 +246,17 @@ export function ChalkboardPanel({
                 }`}
               >
                 {coachEdit ? 'Athlete view' : 'Coach edit'}
+              </button>
+            )}
+            {coach && (
+              <button
+                type="button"
+                onClick={() => setReordering((on) => !on)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+                  reordering ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
+                }`}
+              >
+                {reordering ? 'Done' : 'Reorder'}
               </button>
             )}
             <button
@@ -772,6 +785,42 @@ function ChalkboardBody({
             ? 'Nothing on the board yet. Post a clip, still, drill, or collage from anywhere in the app.'
             : 'Pin a reference from Compare, Learn, drills, or collages, for every class with this name, or only this hour.'}
         </p>
+      ) : reordering ? (
+        <ul className="grid gap-2 pb-4">
+          {items.map(({ item }, idx) => (
+            <li key={item.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-sm">{item.title || kindLabel(item.kind)}</span>
+              <button
+                type="button"
+                disabled={idx === 0}
+                onClick={() => {
+                  const ids = items.map(({ item: it }) => it.id)
+                  const newIds = [...ids]
+                  ;[newIds[idx - 1], newIds[idx]] = [newIds[idx], newIds[idx - 1]]
+                  if (board?.id) reorderChalkboardItems(board.id, newIds)
+                  setTick((t) => t + 1)
+                }}
+                className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
+              >
+                Up
+              </button>
+              <button
+                type="button"
+                disabled={idx === items.length - 1}
+                onClick={() => {
+                  const ids = items.map(({ item: it }) => it.id)
+                  const newIds = [...ids]
+                  ;[newIds[idx], newIds[idx + 1]] = [newIds[idx + 1], newIds[idx]]
+                  if (board?.id) reorderChalkboardItems(board.id, newIds)
+                  setTick((t) => t + 1)
+                }}
+                className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
+              >
+                Down
+              </button>
+            </li>
+          ))}
+        </ul>
       ) : (
         <ul className="grid gap-3 pb-4">
           {items.map(({ item, source }) => (

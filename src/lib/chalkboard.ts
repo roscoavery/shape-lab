@@ -705,6 +705,23 @@ export function eraseChalkboardItem(itemId: string) {
   })
 }
 
+export function reorderChalkboardItems(boardId: string, orderedIds: string[]) {
+  const file = read()
+  const orderMap = new Map(orderedIds.map((id, idx) => [id, idx]))
+  write({
+    ...file,
+    boards: file.boards.map((b) => {
+      if (b.id !== boardId) return b
+      const sorted = [...b.items].sort((a, b2) => {
+        const ai = orderMap.get(a.id) ?? 9999
+        const bi = orderMap.get(b2.id) ?? 9999
+        return ai - bi
+      })
+      return { ...b, items: sorted, updatedAt: new Date().toISOString() }
+    }),
+  })
+}
+
 export function postToClassType(input: {
   className: string
   createdById: string
