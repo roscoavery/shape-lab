@@ -52,6 +52,27 @@ function buildQuestions(
   })
 }
 
+function buildQuestionsFromUrls(
+  shapes: { id: string; name: string; urls: string[]; stillIds: string[] }[],
+  count = 10,
+): TestQuestion[] {
+  const picked = shuffle(shapes).slice(0, Math.min(count, shapes.length))
+  return picked.map((s) => {
+    const idx = Math.floor(Math.random() * s.urls.length)
+    const others = shuffle(shapes.filter((x) => x.id !== s.id))
+      .slice(0, 3)
+      .map((x) => x.name)
+    const choices = shuffle([s.name, ...others])
+    return {
+      shapeId: s.id,
+      shapeName: s.name,
+      imageUrl: s.urls[idx]!,
+      stillId: s.stillIds[idx] ?? `default_${s.id}_${idx}`,
+      choices,
+    }
+  })
+}
+
 function CroppedImage({
   src,
   stillId,
@@ -113,10 +134,12 @@ export default function PublicShapeTest({
   token,
   onExit,
   presetName,
+  libraryShapes,
 }: {
   token: string
   onExit: () => void
   presetName?: { firstName: string; lastName: string }
+  libraryShapes?: { id: string; name: string; urls: string[]; stillIds: string[] }[]
 }) {
   const [step, setStep] = useState<'who' | 'test' | 'done'>(presetName ? 'test' : 'who')
   const [firstName, setFirstName] = useState(presetName?.firstName ?? '')
@@ -125,6 +148,12 @@ export default function PublicShapeTest({
     ...SHIPPED_STILL_CROPS,
   }))
   const [questions] = useState(() => {
+    // Use library shapes if provided (ensures test matches the library).
+    // Otherwise fall back to SHAPES with shipped files.
+    if (libraryShapes && libraryShapes.length > 0) {
+      const withUrls = libraryShapes.filter((s) => s.urls.length > 0)
+      return buildQuestionsFromUrls(withUrls)
+    }
     const shapes = SHAPES.filter(
       (s) => !STUDY_EXCLUDE.has(s.id) && shippedFileList(s.id).length > 0,
     )

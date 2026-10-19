@@ -128,7 +128,7 @@ export default function PublicLibraryPage({
   const [showTest, setShowTest] = useState(false)
 
   if (showTest) {
-    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} />
+    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} />
   }
   const [valid, setValid] = useState<boolean | null>(null)
   const [crops, setCrops] = useState<Record<string, StillCropRect>>(() => ({
