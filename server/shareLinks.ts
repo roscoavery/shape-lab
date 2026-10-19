@@ -435,7 +435,35 @@ export async function handleShareLibrary(
   } catch {
     // coach stills are best-effort
   }
-  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills })
+  // IG stills: same — shapes with IG stills show in the app's library.
+  let igStills: { shapeId: string; stillId: string }[] = []
+  try {
+    const { readIgStillMeta } = await import('./igStillDisk.ts')
+    const meta = await readIgStillMeta()
+    const stills = (meta as any)?.stills
+    if (Array.isArray(stills)) {
+      for (const s of stills) {
+        if (s?.shapeId && s?.id) {
+          igStills.push({ shapeId: String(s.shapeId), stillId: String(s.id) })
+        }
+      }
+    }
+  } catch {
+    // IG stills are best-effort
+  }
+  // Coach-still tombstones (deleted extras and hidden shipped originals).
+  let removedCoachStillIds: string[] = []
+  try {
+    const { readCoachStillsFile } = await import('./coachStillStore.ts')
+    const file = await readCoachStillsFile()
+    const ids = (file as any)?.removedCoachStillIds
+    if (Array.isArray(ids)) {
+      removedCoachStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    }
+  } catch {
+    // tombstones are best-effort
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, igStills, removedCoachStillIds })
 }
 
 /**
@@ -493,9 +521,8 @@ export async function handleShareQuizSubmit(
 }
 
 /**
- * Serve a coach-uploaded still file for the public study link.
- * Validates the library share token; the still ID must be in the
- * coach stills list.
+ * Serve a coach-uploaded or IG still file for the public study link.
+ * Validates the library share token.
  */
 export async function handleShareStillFile(
   _req: IncomingMessage,
@@ -514,10 +541,15 @@ export async function handleShareStillFile(
   }
   try {
     const { sendCoachStillFile } = await import('./coachStillStore.ts')
-    if (!(await sendCoachStillFile(id, res))) {
-      sendJson(res, 404, { error: 'Still not found.' })
-    }
+    if (await sendCoachStillFile(id, res)) return
   } catch {
-    sendJson(res, 500, { error: 'Could not load still.' })
+    // try IG next
   }
+  try {
+    const { sendIgStillFile } = await import('./igStillDisk.ts')
+    if (await sendIgStillFile(id, res)) return
+  } catch {
+    // fall through
+  }
+  sendJson(res, 404, { error: 'Still not found.' })
 }

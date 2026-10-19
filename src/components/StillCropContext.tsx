@@ -16,6 +16,7 @@ import { stillCropLookupIds } from '../lib/shippedRefs'
 import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../lib/shippedStillCrops'
 import { pullStillCrops, pushStillCrops } from '../lib/stillCropStore'
 import { pullMainStills } from '../lib/coachStillPrefs'
+import { pullRemovedCoachStills } from '../lib/removedCoachStills'
 
 type StillCropCtx = {
   canEdit: boolean
@@ -43,6 +44,8 @@ export function StillCropProvider({
     })
     // Sync main-still picks to the server so the public study link sees them.
     void pullMainStills()
+    // Migrate coach-still tombstones to the server.
+    void pullRemovedCoachStills()
   }, [])
 
   const cropFor = useCallback(

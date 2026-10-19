@@ -118,6 +118,8 @@ export default function PublicLibraryPage({
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
   const [mainStills, setMainStills] = useState<Record<string, string>>({})
   const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string }[]>([])
+  const [igStills, setIgStills] = useState<{ shapeId: string; stillId: string }[]>([])
+  const [removedCoachStillIds, setRemovedCoachStillIds] = useState<Set<string>>(new Set())
   const [index, setIndex] = useState(0)
   const [stillIdx, setStillIdx] = useState(0)
   const touchX = useRef<number | null>(null)
@@ -144,44 +146,56 @@ export default function PublicLibraryPage({
         if (Array.isArray(data?.coachStills)) {
           setCoachStills(data.coachStills)
         }
+        if (Array.isArray(data?.igStills)) {
+          setIgStills(data.igStills)
+        }
+        if (Array.isArray(data?.removedCoachStillIds)) {
+          setRemovedCoachStillIds(new Set(data.removedCoachStillIds))
+        }
         setValid(true)
       })
       .catch(() => setValid(false))
   }, [token])
 
   // Apply Ryan's deletions and main-still ordering.
-  // Includes coach-uploaded stills so the list matches the in-app library.
+  // Includes coach-uploaded and IG stills so the list matches the in-app library.
   const shapes = useMemo(() => {
-    // Group coach stills by shape.
-    const coachByShape = new Map<string, { shapeId: string; stillId: string }[]>()
-    for (const c of coachStills) {
-      const list = coachByShape.get(c.shapeId) ?? []
+    // Group extra stills by shape.
+    const extraByShape = new Map<string, { shapeId: string; stillId: string }[]>()
+    for (const c of [...coachStills, ...igStills]) {
+      const list = extraByShape.get(c.shapeId) ?? []
       list.push(c)
-      coachByShape.set(c.shapeId, list)
+      extraByShape.set(c.shapeId, list)
     }
 
-    // All shape IDs with any stills (shipped or coach-uploaded).
+    // All shape IDs with any stills (shipped, coach-uploaded, or IG).
     const shapeIds = new Set<string>()
     for (const s of SHAPES) {
       if (STUDY_EXCLUDE.has(s.id)) continue
       if (shippedFileList(s.id).length > 0) shapeIds.add(s.id)
     }
-    for (const id of coachByShape.keys()) {
+    for (const id of extraByShape.keys()) {
       if (!STUDY_EXCLUDE.has(id)) shapeIds.add(id)
     }
 
     return SHAPES.filter((s) => shapeIds.has(s.id)).map((s) => {
       const files = shippedFileList(s.id)
       // Build (stillId, url) pairs, filter out deleted.
+      // Check both the IG removed list and the coach-still tombstones.
+      const isRemoved = (stillId: string, fileName: string) =>
+        removedStillIds.has(stillId) ||
+        removedCoachStillIds.has(stillId) ||
+        removedCoachStillIds.has(fileName)
       const pairs = files
-        .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}` }))
-        .filter((p) => !removedStillIds.has(p.stillId))
-      // Add coach-uploaded stills.
-      for (const c of coachByShape.get(s.id) ?? []) {
-        if (!removedStillIds.has(c.stillId)) {
+        .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}`, file: f }))
+        .filter((p) => !isRemoved(p.stillId, p.file))
+      // Add coach-uploaded and IG stills.
+      for (const c of extraByShape.get(s.id) ?? []) {
+        if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
           pairs.push({
             stillId: c.stillId,
             url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
+            file: '',
           })
         }
       }
@@ -196,7 +210,7 @@ export default function PublicLibraryPage({
       }
       return { ...s, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) }
     }).filter((s) => s.urls.length > 0)
-  }, [removedStillIds, mainStills, coachStills, token])
+  }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, token])
 
   // shapes with deletions applied is defined above
 
@@ -312,21 +326,7 @@ export default function PublicLibraryPage({
               data-shape-slide={i}
               className="flex h-full w-full shrink-0 snap-start flex-col items-center justify-center px-6"
             >
-              <div
-                className="relative flex max-h-[70%] w-full items-center justify-center"
-                onClick={(e) => {
-                  // Tap the picture to step through its stills.
-                  // Skip if this tap was actually a swipe (shape change).
-                  if (swiped.current) {
-                    swiped.current = false
-                    return
-                  }
-                  if (active && hasMany) {
-                    e.stopPropagation()
-                    setStillIdx((sIdx + 1) % urls.length)
-                  }
-                }}
-              >
+              <div className="relative flex max-h-[70%] w-full items-center justify-center">
                 <CroppedImage
                   src={urls[sIdx]}
                   stillId={s.stillIds[sIdx] ?? stillIdFor(s.id, sIdx)}
@@ -338,6 +338,12 @@ export default function PublicLibraryPage({
                     <button
                       type="button"
                       aria-label="Previous picture"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        setStillIdx((sIdx - 1 + urls.length) % urls.length)
+                      }}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx - 1 + urls.length) % urls.length)
@@ -349,6 +355,12 @@ export default function PublicLibraryPage({
                     <button
                       type="button"
                       aria-label="Next picture"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        setStillIdx((sIdx + 1) % urls.length)
+                      }}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx + 1) % urls.length)
@@ -357,7 +369,11 @@ export default function PublicLibraryPage({
                     >
                       ›
                     </button>
-                    <div className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5">
+                    <div
+                      className="absolute bottom-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                    >
                       <span className="text-xs font-semibold text-white">
                         {sIdx + 1} / {urls.length}
                       </span>
@@ -366,6 +382,11 @@ export default function PublicLibraryPage({
                           key={d}
                           type="button"
                           aria-label={`Picture ${d + 1}`}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            setStillIdx(d)
+                          }}
                           onClick={(e) => {
                             e.stopPropagation()
                             setStillIdx(d)
