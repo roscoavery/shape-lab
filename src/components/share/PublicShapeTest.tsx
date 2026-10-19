@@ -147,22 +147,24 @@ export default function PublicShapeTest({
   const [crops, setCrops] = useState<Record<string, StillCropRect>>(() => ({
     ...SHIPPED_STILL_CROPS,
   }))
-  const [questions] = useState(() => {
-    // Use library shapes if provided (ensures test matches the library).
-    // Otherwise fall back to SHAPES with shipped files.
+  const [index, setIndex] = useState(0)
+  const [picked, setPicked] = useState<string | null>(null)
+  const [answers, setAnswers] = useState<string[]>([])
+  const [saved, setSaved] = useState(false)
+
+  // Build questions from library shapes (reactive to changes).
+  const questions = useMemo(() => {
     if (libraryShapes && libraryShapes.length > 0) {
       const withUrls = libraryShapes.filter((s) => s.urls.length > 0)
-      return buildQuestionsFromUrls(withUrls)
+      if (withUrls.length > 0) {
+        return buildQuestionsFromUrls(withUrls)
+      }
     }
     const shapes = SHAPES.filter(
       (s) => !STUDY_EXCLUDE.has(s.id) && shippedFileList(s.id).length > 0,
     )
     return buildQuestions(shapes)
-  })
-  const [index, setIndex] = useState(0)
-  const [picked, setPicked] = useState<string | null>(null)
-  const [answers, setAnswers] = useState<string[]>([])
-  const [saved, setSaved] = useState(false)
+  }, [libraryShapes])
 
   // Load crops
   useState(() => {
@@ -177,6 +179,21 @@ export default function PublicShapeTest({
   })
 
   const q = questions[index]
+  // If no questions (shapes not loaded yet), show loading.
+  if (!q) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
+        <p className="text-white/60">Loading the test…</p>
+        <button
+          type="button"
+          onClick={onExit}
+          className="mt-4 text-sm text-white/60"
+        >
+          ‹ Back
+        </button>
+      </div>
+    )
+  }
   const score = answers.filter((a, i) => a === questions[i]?.shapeName).length
 
   const submitAnswer = (choice: string) => {
