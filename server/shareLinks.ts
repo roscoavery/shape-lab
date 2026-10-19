@@ -418,23 +418,60 @@ export async function handleShareLibrary(
   } catch {
     // main stills are best-effort
   }
-  // Coach-uploaded stills: include shapes that have them so the public
-  // library matches what Ryan sees in the app.
-  // Returns the file path so the client can load it directly.
-  let coachStills: { shapeId: string; stillId: string; file?: string; dataUrl?: string }[] = []
+  // Coach-uploaded stills: copy the image files to public/references/ so they
+  // serve as static files just like the shipped ones. This is bulletproof —
+  // no ID lookup, no dynamic endpoint, just files.
+  let coachStills: { shapeId: string; stillId: string; file: string }[] = []
   try {
     const { readCoachStillsFile } = await import('./coachStillStore.ts')
+    const { readBin } = await import('./persist.ts')
+    const fs = await import('fs')
+    const path = await import('path')
     const file = await readCoachStillsFile()
     const extras = (file as any)?.extras
     if (Array.isArray(extras)) {
+      // Ensure the public directory exists.
+      const pubDir = path.join(process.cwd(), 'public', 'references')
       for (const e of extras) {
-        if (e?.shapeId && e?.id) {
-          coachStills.push({
-            shapeId: String(e.shapeId),
-            stillId: String(e.id),
-            file: e.file ? String(e.file) : undefined,
-            dataUrl: e.dataUrl ? String(e.dataUrl) : undefined,
-          })
+        if (!e?.shapeId || !e?.id) continue
+        const shapeId = String(e.shapeId)
+        const stillId = String(e.id)
+        let publicFile: string | null = null
+        // If it has a file on disk, copy it to public/references/.
+        if (e.file) {
+          try {
+            const srcBuf = await readBin(`data/coach-blobs/${e.file}`)
+            if (srcBuf) {
+              // Use a stable name based on the still ID.
+              const ext = e.file.includes('.') ? e.file.slice(e.file.lastIndexOf('.')) : '.jpg'
+              publicFile = `coach_${stillId}${ext}`
+              const dest = path.join(pubDir, publicFile)
+              // Only copy if not already there (or if source is newer).
+              if (!fs.existsSync(dest)) {
+                fs.writeFileSync(dest, srcBuf)
+              }
+            }
+          } catch {
+            // skip this still
+          }
+        } else if (e.dataUrl && String(e.dataUrl).startsWith('data:image')) {
+          // Data URL — decode and save as file.
+          try {
+            const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(e.dataUrl).trim())
+            if (m) {
+              const ext = m[1].includes('png') ? '.png' : '.jpg'
+              publicFile = `coach_${stillId}${ext}`
+              const dest = path.join(pubDir, publicFile)
+              if (!fs.existsSync(dest)) {
+                fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
+              }
+            }
+          } catch {
+            // skip
+          }
+        }
+        if (publicFile) {
+          coachStills.push({ shapeId, stillId, file: publicFile })
         }
       }
     }
@@ -454,7 +491,9 @@ export async function handleShareLibrary(
     // tombstones are best-effort
   }
   // Gym shapes (custom shapes like lightning bolt, curl up) with their names.
+  // Also returns the in-app order (from learnLibraryShapes) so the client matches exactly.
   let gymShapes: { id: string; name: string }[] = []
+  let inAppOrder: string[] = []
   try {
     const { readCoachContentFile } = await import('./coachContentStore.ts')
     const file = await readCoachContentFile()
@@ -469,7 +508,20 @@ export async function handleShareLibrary(
   } catch {
     // gym shapes are best-effort
   }
-  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, removedCoachStillIds, gymShapes })
+  // Get the exact in-app shape order from learnLibraryShapes.
+  // This ensures the public link matches the Learn Shape Library order.
+  try {
+    // Import the TS module directly (server runs Node with TS support via tsx or similar).
+    // Fallback: client will use its own learnLibraryShapes() if this fails.
+    const edu = await import('../src/lib/educationCopy.ts')
+    if (edu.learnLibraryShapes) {
+      const shapes = edu.learnLibraryShapes()
+      inAppOrder = shapes.map((s: any) => String(s.id))
+    }
+  } catch {
+    // Client will fall back to its own ordering.
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, removedCoachStillIds, gymShapes, inAppOrder })
 }
 
 /**

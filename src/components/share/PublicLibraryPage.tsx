@@ -136,7 +136,7 @@ export default function PublicLibraryPage({
   }))
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
   const [mainStills, setMainStills] = useState<Record<string, string>>({})
-  const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string; file?: string; dataUrl?: string }[]>([])
+  const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string; file: string }[]>([])
   const [removedCoachStillIds, setRemovedCoachStillIds] = useState<Set<string>>(new Set())
   const [gymShapes, setGymShapes] = useState<{ id: string; name: string }[]>([])
   const [index, setIndex] = useState(0)
@@ -181,7 +181,7 @@ export default function PublicLibraryPage({
   // Uses learnLibraryShapes() for the exact in-app order, then gym shapes in gymLibrary order.
   const shapes = useMemo(() => {
     // Group coach stills by shape.
-    const extraByShape = new Map<string, { shapeId: string; stillId: string; file?: string; dataUrl?: string }[]>()
+    const extraByShape = new Map<string, { shapeId: string; stillId: string; file: string }[]>()
     for (const c of coachStills) {
       const list = extraByShape.get(c.shapeId) ?? []
       list.push(c)
@@ -205,24 +205,14 @@ export default function PublicLibraryPage({
       const pairs = files
         .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}`, file: f }))
         .filter((p) => !isRemoved(p.stillId, p.file))
-      // Add coach-uploaded stills.
+      // Add coach-uploaded stills (now served as static files from /references/).
       for (const c of extraByShape.get(s.id) ?? []) {
         if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
-          if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
-            pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
-          } else if (c.file) {
-            pairs.push({
-              stillId: c.stillId,
-              url: `/api/share/still-direct?token=${encodeURIComponent(token)}&file=${encodeURIComponent(c.file)}`,
-              file: '',
-            })
-          } else {
-            pairs.push({
-              stillId: c.stillId,
-              url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
-              file: '',
-            })
-          }
+          pairs.push({
+            stillId: c.stillId,
+            url: `/references/${c.file}`,
+            file: c.file,
+          })
         }
       }
       if (pairs.length === 0) continue
@@ -242,25 +232,14 @@ export default function PublicLibraryPage({
     for (const g of gymShapes) {
       if (STUDY_EXCLUDE.has(g.id)) continue
       const pairs: { stillId: string; url: string; file: string }[] = []
-      // Gym shapes have no shipped files, only coach-uploaded.
+      // Gym shapes have no shipped files, only coach-uploaded (now in /references/).
       for (const c of extraByShape.get(g.id) ?? []) {
         if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
-          if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
-            pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
-          } else if (c.file) {
-            // Direct file serve — no ID lookup needed.
-            pairs.push({
-              stillId: c.stillId,
-              url: `/api/share/still-direct?token=${encodeURIComponent(token)}&file=${encodeURIComponent(c.file)}`,
-              file: '',
-            })
-          } else {
-            pairs.push({
-              stillId: c.stillId,
-              url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
-              file: '',
-            })
-          }
+          pairs.push({
+            stillId: c.stillId,
+            url: `/references/${c.file}`,
+            file: c.file,
+          })
         }
       }
       if (pairs.length === 0) continue
@@ -488,7 +467,7 @@ export default function PublicLibraryPage({
           ←
         </button>
         <p className="min-w-32 text-center text-sm text-white/60">
-          Swipe or tap to move
+          Swipe to move between shapes · Tap picture to see more
         </p>
         <button
           type="button"
