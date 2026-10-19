@@ -430,8 +430,15 @@ export async function handleShareLibrary(
     const file = await readCoachStillsFile()
     const extras = (file as any)?.extras
     if (Array.isArray(extras)) {
-      // Ensure the public directory exists.
-      const pubDir = path.join(process.cwd(), 'public', 'references')
+      // The running server serves static files from dist/, not public/.
+      // Copy coach stills to dist/references/ so /references/<file> works.
+      const pubDir = path.join(process.cwd(), 'dist', 'references')
+      // Ensure the directory exists.
+      try {
+        fs.mkdirSync(pubDir, { recursive: true })
+      } catch {
+        // ignore
+      }
       for (const e of extras) {
         if (!e?.shapeId || !e?.id) continue
         const shapeId = String(e.shapeId)
