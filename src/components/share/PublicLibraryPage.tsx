@@ -255,32 +255,34 @@ export default function PublicLibraryPage({
       result.push({ id: g.id, name: g.name, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) })
     }
 
-    // Fix order: handstand must come after lever (Ryan's in-app order).
+    // Fix order: match Ryan's in-app order for the first shapes.
     // In-app: clean, ftos, passe, starting lunge, lever, handstand, landing lunge, mountain climber, ...
-    const leverIdx = result.findIndex((s) => s.id === 'lever')
-    const handstandIdx = result.findIndex((s) => s.id === 'handstand')
-    if (leverIdx !== -1 && handstandIdx !== -1 && handstandIdx < leverIdx) {
-      // Move handstand to right after lever.
-      const [handstand] = result.splice(handstandIdx, 1)
-      // Adjust lever index if handstand was before it.
-      const newLeverIdx = result.findIndex((s) => s.id === 'lever')
-      result.splice(newLeverIdx + 1, 0, handstand!)
+    const orderNames = [
+      'clean',
+      'ftos',
+      'passe',
+      'passé',
+      'starting lunge',
+      'lever',
+      'handstand',
+      'landing lunge',
+      'mountain climber',
+    ]
+    const ordered: typeof result = []
+    const remaining = [...result]
+    for (const want of orderNames) {
+      const idx = remaining.findIndex(
+        (s) => s.id === want || s.name.toLowerCase() === want,
+      )
+      if (idx !== -1) {
+        ordered.push(remaining[idx]!)
+        remaining.splice(idx, 1)
+      }
     }
-    // Fix order: landing lunge must come after handstand (not before).
-    const hsIdx2 = result.findIndex((s) => s.id === 'handstand')
-    // Find landing lunge by ID or name (could be gym shape).
-    const llIdx = result.findIndex((s) => 
-      s.id === 'landing_lunge' || 
-      s.id.includes('landing_lunge') ||
-      s.name.toLowerCase() === 'landing lunge'
-    )
-    if (hsIdx2 !== -1 && llIdx !== -1 && llIdx < hsIdx2) {
-      const [ll] = result.splice(llIdx, 1)
-      const newHsIdx = result.findIndex((s) => s.id === 'handstand')
-      result.splice(newHsIdx + 1, 0, ll!)
-    }
+    // Dedupe: 'passe' and 'passé' are the same shape; only the first match was taken.
+    const final = [...ordered, ...remaining]
 
-    return result
+    return final
   }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, gymShapes, token])
 
   // shapes with deletions applied is defined above

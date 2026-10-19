@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type LibraryShape = {
   id: string
@@ -37,12 +37,43 @@ export default function PublicShapeTest({
   libraryShapes?: LibraryShape[]
 }) {
   const [step, setStep] = useState<'who' | 'test' | 'done'>(presetName ? 'test' : 'who')
-  const [firstName, setFirstName] = useState(presetName?.firstName ?? '')
-  const [lastName, setLastName] = useState(presetName?.lastName ?? '')
+  const [search, setSearch] = useState(
+    presetName ? `${presetName.firstName} ${presetName.lastName}`.trim() : ''
+  )
+  const [matches, setMatches] = useState<{ id: string; firstName: string; lastName: string }[]>([])
+  const [selected, setSelected] = useState<{ id: string; firstName: string; lastName: string } | null>(null)
+  const [searching, setSearching] = useState(false)
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
   const [answers, setAnswers] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
+
+  // Search for matching profiles as the user types (debounced).
+  useEffect(() => {
+    if (selected) {
+      setMatches([])
+      return
+    }
+    const q = search.trim()
+    if (q.length < 2) {
+      setMatches([])
+      return
+    }
+    setSearching(true)
+    const t = setTimeout(() => {
+      fetch(`/api/share/find-athlete?token=${encodeURIComponent(token)}&q=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setMatches(data?.athletes ?? [])
+          setSearching(false)
+        })
+        .catch(() => {
+          setMatches([])
+          setSearching(false)
+        })
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search, selected, token])
 
   // Build 10 questions from library shapes.
   const questions: Question[] = useMemo(() => {
@@ -80,14 +111,15 @@ export default function PublicShapeTest({
     setTimeout(() => {
       if (index + 1 >= questions.length) {
         setStep('done')
-        // Submit score to server.
+        // Submit score to server, tied to the selected profile.
         try {
           fetch(`/api/share/quiz-submit?token=${encodeURIComponent(token)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              firstName: firstName.trim(),
-              lastName: lastName.trim(),
+              athleteId: selected?.id ?? '',
+              firstName: selected?.firstName ?? '',
+              lastName: selected?.lastName ?? '',
               score: next.filter((a, i) => a === questions[i]?.shapeName).length,
               total: questions.length,
               answers: next,
@@ -103,30 +135,68 @@ export default function PublicShapeTest({
     }, 600)
   }
 
-  // Name entry step.
+  // Name entry step: search for and select an existing profile.
   if (step === 'who') {
-    const ready = firstName.trim().length > 0 && lastName.trim().length > 0
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
         <h1 className="text-2xl font-bold">Who's taking the test?</h1>
         <p className="mt-2 text-center text-sm text-white/60">
-          Type your name so your coach knows whose score this is.
+          Type your name and pick your profile. Your score goes to your coach.
         </p>
-        <input
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          placeholder="First name"
-          className="mt-6 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-white/40"
-        />
-        <input
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          placeholder="Last name"
-          className="mt-3 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-white/40"
-        />
+        {selected ? (
+          <div className="mt-6 w-full max-w-xs rounded-xl border border-sky-500 bg-sky-500/10 px-4 py-3">
+            <p className="font-semibold text-white">
+              {selected.firstName} {selected.lastName}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(null)
+                setSearch('')
+              }}
+              className="mt-1 text-xs text-sky-400"
+            >
+              Not you? Search again
+            </button>
+          </div>
+        ) : (
+          <>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Type your name"
+              autoFocus
+              className="mt-6 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-white/40"
+            />
+            {searching && (
+              <p className="mt-2 text-xs text-white/40">Searching…</p>
+            )}
+            {matches.length > 0 && (
+              <div className="mt-3 w-full max-w-xs overflow-hidden rounded-xl border border-white/10">
+                {matches.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelected(m)}
+                    className="block w-full border-b border-white/5 bg-white/5 px-4 py-3 text-left last:border-0 hover:bg-white/10"
+                  >
+                    <span className="font-semibold text-white">
+                      {m.firstName} {m.lastName}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!searching && search.trim().length >= 2 && matches.length === 0 && (
+              <p className="mt-2 text-xs text-white/40">
+                No profile found. Ask your coach to add you.
+              </p>
+            )}
+          </>
+        )}
         <button
           type="button"
-          disabled={!ready}
+          disabled={!selected}
           onClick={() => setStep('test')}
           className="mt-6 w-full max-w-xs rounded-xl bg-sky-500 py-3 font-bold text-white disabled:opacity-40"
         >
@@ -152,7 +222,7 @@ export default function PublicShapeTest({
           {score} / {questions.length}
         </p>
         <p className="mt-2 text-sm text-white/60">
-          {firstName} {lastName}
+          {selected?.firstName} {selected?.lastName}
         </p>
         <button
           type="button"

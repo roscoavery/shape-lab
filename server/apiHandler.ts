@@ -138,6 +138,7 @@ import {
   handleShareIntake,
   handleShareIntakeSubmit,
   handleShareLibrary,
+  handleShareFindAthlete,
   handleShareQuizSubmit,
   handleShareStillFile,
 } from './shareLinks.ts'
@@ -291,6 +292,7 @@ const API_PATHS = new Set([
   '/api/share/intake',
   '/api/share/intake-submit',
   '/api/share/library',
+  '/api/share/find-athlete',
   '/api/athlete-videos/folder-token',
   '/api/athlete-videos/file-class',
   '/api/share-links/intake-token',
@@ -411,6 +413,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/library') {
     await handleShareLibrary(req, res, url)
+    return true
+  }
+  if (path === '/api/share/find-athlete') {
+    await handleShareFindAthlete(req, res, url)
     return true
   }
   if (path === '/api/share/quiz-submit') {

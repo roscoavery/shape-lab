@@ -670,3 +670,46 @@ export async function handleShareStillDirect(
   }
   sendJson(res, 404, { error: 'Still not found.' })
 }
+
+/**
+ * GET /api/share/find-athlete?token=<library_token>&q=<name>
+ * Searches Ryan's athlete roster for profiles matching the name query.
+ * Requires a valid library share token. Returns minimal info (id, names)
+ * for matching profiles only — never the full roster.
+ */
+export async function handleShareFindAthlete(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
+  const rec = await validateShareToken(url.searchParams.get('token') ?? '')
+  if (!rec || rec.type !== 'library') {
+    sendJson(res, 404, { error: 'Invalid or expired link.' })
+    return
+  }
+  const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+  if (q.length < 2) {
+    sendJson(res, 200, { athletes: [] })
+    return
+  }
+  try {
+    const { readRosterFile } = await import('./rosterStore.ts')
+    const roster = await readRosterFile()
+    const matches = (roster ?? [])
+      .filter((a: any) => {
+        const first = (a.firstName ?? '').toLowerCase()
+        const last = (a.lastName ?? '').toLowerCase()
+        const full = `${first} ${last}`.trim()
+        return first.includes(q) || last.includes(q) || full.includes(q)
+      })
+      .slice(0, 10)
+      .map((a: any) => ({
+        id: a.id,
+        firstName: a.firstName ?? '',
+        lastName: a.lastName ?? '',
+      }))
+    sendJson(res, 200, { athletes: matches })
+  } catch {
+    sendJson(res, 500, { error: 'Search failed.' })
+  }
+}
