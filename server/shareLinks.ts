@@ -444,7 +444,7 @@ export async function handleShareLibrary(
         const shapeId = String(e.shapeId)
         const stillId = String(e.id)
         let publicFile: string | null = null
-        // If it has a file on disk, copy it to public/references/.
+        // If it has a file on disk, copy it to dist/references/.
         if (e.file) {
           try {
             const srcBuf = await readBin(`data/coach-blobs/${e.file}`)
@@ -453,10 +453,8 @@ export async function handleShareLibrary(
               const ext = e.file.includes('.') ? e.file.slice(e.file.lastIndexOf('.')) : '.jpg'
               publicFile = `coach_${stillId}${ext}`
               const dest = path.join(pubDir, publicFile)
-              // Only copy if not already there (or if source is newer).
-              if (!fs.existsSync(dest)) {
-                fs.writeFileSync(dest, srcBuf)
-              }
+              // Always overwrite to ensure the file is fresh (not corrupt from failed copy).
+              fs.writeFileSync(dest, srcBuf)
             }
           } catch {
             // skip this still
@@ -469,9 +467,8 @@ export async function handleShareLibrary(
               const ext = m[1].includes('png') ? '.png' : '.jpg'
               publicFile = `coach_${stillId}${ext}`
               const dest = path.join(pubDir, publicFile)
-              if (!fs.existsSync(dest)) {
-                fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
-              }
+              // Always overwrite.
+              fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
             }
           } catch {
             // skip

@@ -442,41 +442,11 @@ export default function PublicLibraryPage({
         })}
       </div>
 
-      {/* Tap zones */}
-      <button
-        type="button"
-        aria-label="Previous shape"
-        onClick={() => go(index - 1)}
-        className="absolute left-0 top-0 h-full w-1/4"
-      />
-      <button
-        type="button"
-        aria-label="Next shape"
-        onClick={() => go(index + 1)}
-        className="absolute right-0 top-0 h-full w-1/4"
-      />
-
-      {/* Bottom nav */}
+      {/* Bottom nav: swipe-only for shapes per Ryan's rule. */}
       <div className="flex items-center justify-center gap-6 px-4 pb-6 pt-2">
-        <button
-          type="button"
-          onClick={() => go(index - 1)}
-          className="h-12 w-12 rounded-full border border-white/20 text-xl text-white"
-          aria-label="Previous"
-        >
-          ←
-        </button>
         <p className="min-w-32 text-center text-sm text-white/60">
           Swipe to move between shapes · Tap picture to see more
         </p>
-        <button
-          type="button"
-          onClick={() => go(index + 1)}
-          className="h-12 w-12 rounded-full border border-white/20 text-xl text-white"
-          aria-label="Next"
-        >
-          →
-        </button>
       </div>
 
       {/* Shape test button */}
