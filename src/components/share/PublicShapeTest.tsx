@@ -165,7 +165,9 @@ export default function PublicShapeTest({
       const count = questionCount === 'all' ? shapes.length : Math.min(questionCount, shapes.length)
       const pickedShapes = shuffle(shapes).slice(0, count)
       return pickedShapes.map((s) => {
-        const imgIdx = Math.floor(Math.random() * s.urls.length)
+        // Use the main still (index 0) — Ryan's picked representative photo.
+        // Random photos can show variations (e.g. tucked handstand photo under wall handstand).
+        const imgIdx = 0
         const others = shuffle(shapes.filter((x) => x.id !== s.id))
           .slice(0, 3)
           .map((x) => x.name)
