@@ -1489,10 +1489,18 @@ function ReelSlide({
             })
           }}
         >
-          {/* DEBUG: show URL */}
-          <div className="absolute left-2 top-2 z-50 max-w-full truncate bg-red-500 px-2 py-1 text-xs text-white">
-            URL: {item.url ?? 'NO URL'}
-          </div>
+          {/* Simplified fullscreen video player - bypass GymClipPlayer complexity */}
+          {item.url && (
+            <video
+              src={item.url}
+              controls
+              autoPlay
+              playsInline
+              className="h-full w-full object-contain"
+              style={{ maxHeight: '70vh' }}
+            />
+          )}
+          {false && (
           <GymClipPlayer
             url={item.url}
             itemId={gymClip?.id}
@@ -1515,6 +1523,7 @@ function ReelSlide({
             onToggleChrome={onToggleChrome}
             tapTogglesChrome={tapTogglesChrome && !editing}
           />
+          )}
           <OverlayLayer
             overlays={overlays}
             coach={coachProfile}
