@@ -53,7 +53,6 @@ import {
 } from '../../lib/skillRegistry'
 import { guideCardColor, SkillGuideCardContent } from '../learn/SkillPathCards'
 import { GymClipPlayer } from '../GymClipPlayer'
-import { isGymHostedClipUrl } from '../../lib/persistLibraryClip'
 import { instagramSlideIndex } from '../../lib/socialUrls'
 import { CroppedStill } from '../CroppedStill'
 import { PortraitVideoPlayer } from '../PortraitVideoPlayer'
@@ -1411,9 +1410,6 @@ function ReelSlide({
 }) {
   const { clipForUrl } = useGymLibrary()
   const gymClip = item.url ? clipForUrl(item.url) : undefined
-  // Resolve the playable URL like GymClipPlayer does.
-  const hosted = gymClip?.savedUrl && isGymHostedClipUrl(gymClip.savedUrl) ? gymClip.savedUrl : null
-  const videoSrc = hosted || item.url || ''
   const overlays = item.overlays ?? []
   const comment = item.comment?.trim() || ''
   const commentAbove = item.commentPlacement === 'above'
@@ -1493,23 +1489,6 @@ function ReelSlide({
             })
           }}
         >
-          {/* Fullscreen video: simple player like reference scroll */}
-          {videoSrc ? (
-            <video
-              src={videoSrc}
-              autoPlay
-              playsInline
-              preload="auto"
-              controls
-              className="h-full w-full object-contain"
-              style={{ maxHeight: '70vh' }}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-white/60">
-              No video URL
-            </div>
-          )}
-          {false && (
           <GymClipPlayer
             url={item.url}
             itemId={gymClip?.id}
@@ -1522,17 +1501,17 @@ function ReelSlide({
               })
             }
             onSlideChange={setSlideIndex}
+            compact
             fill
             fit="contain"
             smartFit={false}
             quiet
             markupSwipeSafe
-            active
+            active={active}
             chromeOpen={chromeOpen || editing}
             onToggleChrome={onToggleChrome}
             tapTogglesChrome={tapTogglesChrome && !editing}
           />
-          )}
           <OverlayLayer
             overlays={overlays}
             coach={coachProfile}
