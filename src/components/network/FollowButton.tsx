@@ -67,7 +67,6 @@ export function FollowButton({
     }
   }
 
-  const followers = social ? followerCount(social, person.id) : 0
   const follows = social ? followingCount(social, person.id) : 0
 
   return (
@@ -90,7 +89,7 @@ export function FollowButton({
       </button>
       {variant === 'row' && (
         <p className="text-[11px] text-[var(--muted)]">
-          {followers} follower{followers === 1 ? '' : 's'} · following {follows}
+          following {follows}
         </p>
       )}
       {error && <p className="w-full text-[11px] text-[var(--bad)]">{error}</p>}
