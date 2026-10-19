@@ -126,10 +126,6 @@ export default function PublicLibraryPage({
   hideTestButton?: boolean
 }) {
   const [showTest, setShowTest] = useState(false)
-
-  if (showTest) {
-    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} />
-  }
   const [valid, setValid] = useState<boolean | null>(null)
   const [crops, setCrops] = useState<Record<string, StillCropRect>>(() => ({
     ...SHIPPED_STILL_CROPS,
@@ -356,6 +352,11 @@ export default function PublicLibraryPage({
       swiped.current = true
       go(index - 1)
     }
+  }
+
+  // Show the shape test instead of the library (after all hooks).
+  if (showTest) {
+    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} />
   }
 
   return (
