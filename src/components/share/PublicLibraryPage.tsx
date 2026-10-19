@@ -343,7 +343,7 @@ export default function PublicLibraryPage({
 
   // Show the shape test instead of the library (after all hooks).
   if (showTest) {
-    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} />
+    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} crops={crops} />
   }
 
   return (

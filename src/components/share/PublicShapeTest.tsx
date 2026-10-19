@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { stillCropLookupIds } from '../../lib/shippedRefs'
+import { cropSourcePixels, type StillCropRect } from '../../lib/stillCrop'
 
 type LibraryShape = {
   id: string
@@ -11,6 +13,7 @@ type Question = {
   shapeId: string
   shapeName: string
   imageUrl: string
+  stillId: string
   choices: string[]
 }
 
@@ -25,28 +28,104 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+/**
+ * Image with Ryan's saved crop applied (canvas clip). Same as the library.
+ */
+function CroppedImage({
+  src,
+  stillId,
+  crops,
+  alt,
+  className,
+}: {
+  src: string
+  stillId: string
+  crops: Record<string, StillCropRect>
+  alt: string
+  className?: string
+}) {
+  const [clipped, setClipped] = useState<string | null>(null)
+
+  const crop = useMemo(() => {
+    for (const id of stillCropLookupIds(stillId)) {
+      const c = crops[id]
+      if (c) return c
+    }
+    return null
+  }, [crops, stillId])
+
+  useEffect(() => {
+    if (!crop) {
+      setClipped(null)
+      return
+    }
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (cancelled) return
+      try {
+        const { sx, sy, sw, sh } = cropSourcePixels(crop, img.naturalWidth, img.naturalHeight)
+        const canvas = document.createElement('canvas')
+        canvas.width = sw
+        canvas.height = sh
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh)
+        canvas.toBlob(
+          (blob) => {
+            if (!cancelled && blob) setClipped(URL.createObjectURL(blob))
+          },
+          'image/jpeg',
+          0.92,
+        )
+      } catch {
+        // fall back to the plain image
+      }
+    }
+    img.src = src
+    return () => {
+      cancelled = true
+    }
+  }, [src, crop])
+
+  return (
+    <img
+      src={clipped ?? src}
+      alt={alt}
+      className={className ?? 'max-h-[40vh] max-w-full rounded-2xl object-contain'}
+      draggable={false}
+    />
+  )
+}
+
 export default function PublicShapeTest({
   token,
   onExit,
   presetName,
   libraryShapes,
+  crops,
 }: {
   token: string
   onExit: () => void
   presetName?: { firstName: string; lastName: string }
   libraryShapes?: LibraryShape[]
+  crops?: Record<string, StillCropRect>
 }) {
-  const [step, setStep] = useState<'who' | 'test' | 'done'>(presetName ? 'test' : 'who')
+  const [step, setStep] = useState<'who' | 'length' | 'test' | 'done'>(
+    presetName ? 'length' : 'who'
+  )
   const [search, setSearch] = useState(
     presetName ? `${presetName.firstName} ${presetName.lastName}`.trim() : ''
   )
   const [matches, setMatches] = useState<{ id: string; firstName: string; lastName: string }[]>([])
   const [selected, setSelected] = useState<{ id: string; firstName: string; lastName: string } | null>(null)
   const [searching, setSearching] = useState(false)
+  const [questionCount, setQuestionCount] = useState<number | 'all'>(12)
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
   const [answers, setAnswers] = useState<string[]>([])
-  const [saved, setSaved] = useState(false)
+
+  const cropMap = crops ?? {}
 
   // Search for matching profiles as the user types (debounced).
   useEffect(() => {
@@ -75,14 +154,16 @@ export default function PublicShapeTest({
     return () => clearTimeout(t)
   }, [search, selected, token])
 
-  // Build 10 questions from library shapes.
+  // Build questions: random selection, length based on user choice.
+  // Each test shuffles anew, so repeats see different questions.
   const questions: Question[] = useMemo(() => {
     try {
       const shapes = (libraryShapes ?? []).filter(
         (s) => s && s.id && s.name && s.urls && s.urls.length > 0,
       )
       if (shapes.length === 0) return []
-      const pickedShapes = shuffle(shapes).slice(0, 10)
+      const count = questionCount === 'all' ? shapes.length : Math.min(questionCount, shapes.length)
+      const pickedShapes = shuffle(shapes).slice(0, count)
       return pickedShapes.map((s) => {
         const imgIdx = Math.floor(Math.random() * s.urls.length)
         const others = shuffle(shapes.filter((x) => x.id !== s.id))
@@ -92,13 +173,14 @@ export default function PublicShapeTest({
           shapeId: s.id,
           shapeName: s.name,
           imageUrl: s.urls[imgIdx] ?? '',
+          stillId: s.stillIds[imgIdx] ?? `default_${s.id}_${imgIdx}`,
           choices: shuffle([s.name, ...others]),
         }
       })
     } catch {
       return []
     }
-  }, [libraryShapes])
+  }, [libraryShapes, questionCount, step])
 
   const q = questions[index]
   const score = answers.filter((a, i) => a === questions[i]?.shapeName).length
@@ -111,7 +193,6 @@ export default function PublicShapeTest({
     setTimeout(() => {
       if (index + 1 >= questions.length) {
         setStep('done')
-        // Submit score to server, tied to the selected profile.
         try {
           fetch(`/api/share/quiz-submit?token=${encodeURIComponent(token)}`, {
             method: 'POST',
@@ -135,7 +216,15 @@ export default function PublicShapeTest({
     }, 600)
   }
 
-  // Name entry step: search for and select an existing profile.
+  const startTest = (count: number | 'all') => {
+    setQuestionCount(count)
+    setIndex(0)
+    setPicked(null)
+    setAnswers([])
+    setStep('test')
+  }
+
+  // Who's taking it: search and select an existing profile.
   if (step === 'who') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
@@ -168,9 +257,7 @@ export default function PublicShapeTest({
               autoFocus
               className="mt-6 w-full max-w-xs rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-white/40"
             />
-            {searching && (
-              <p className="mt-2 text-xs text-white/40">Searching…</p>
-            )}
+            {searching && <p className="mt-2 text-xs text-white/40">Searching…</p>}
             {matches.length > 0 && (
               <div className="mt-3 w-full max-w-xs overflow-hidden rounded-xl border border-white/10">
                 {matches.map((m) => (
@@ -197,23 +284,61 @@ export default function PublicShapeTest({
         <button
           type="button"
           disabled={!selected}
-          onClick={() => setStep('test')}
+          onClick={() => setStep('length')}
           className="mt-6 w-full max-w-xs rounded-xl bg-sky-500 py-3 font-bold text-white disabled:opacity-40"
         >
-          Start test
+          Continue
         </button>
-        <button
-          type="button"
-          onClick={onExit}
-          className="mt-4 text-sm text-white/60"
-        >
+        <button type="button" onClick={onExit} className="mt-4 text-sm text-white/60">
           ‹ Back to library
         </button>
       </div>
     )
   }
 
-  // Done step.
+  // How many questions?
+  if (step === 'length') {
+    const totalShapes = (libraryShapes ?? []).filter((s) => s.urls.length > 0).length
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
+        <h1 className="text-2xl font-bold">How many questions?</h1>
+        <p className="mt-2 text-center text-sm text-white/60">
+          {selected?.firstName}, pick your test length.
+        </p>
+        <div className="mt-6 flex w-full max-w-xs flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => startTest(12)}
+            className="rounded-xl border border-white/20 bg-white/10 px-4 py-4 text-left"
+          >
+            <span className="block text-lg font-bold">12 questions</span>
+            <span className="block text-xs text-white/60">Quick test</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => startTest(24)}
+            className="rounded-xl border border-white/20 bg-white/10 px-4 py-4 text-left"
+          >
+            <span className="block text-lg font-bold">24 questions</span>
+            <span className="block text-xs text-white/60">Half the shapes</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => startTest('all')}
+            className="rounded-xl border border-white/20 bg-white/10 px-4 py-4 text-left"
+          >
+            <span className="block text-lg font-bold">All {totalShapes} shapes</span>
+            <span className="block text-xs text-white/60">Full test</span>
+          </button>
+        </div>
+        <button type="button" onClick={onExit} className="mt-6 text-sm text-white/60">
+          ‹ Back to library
+        </button>
+      </div>
+    )
+  }
+
+  // Done.
   if (step === 'done') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
@@ -235,23 +360,19 @@ export default function PublicShapeTest({
     )
   }
 
-  // Loading (no questions yet).
+  // Loading.
   if (!q) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
         <p className="text-white/60">Loading the test…</p>
-        <button
-          type="button"
-          onClick={onExit}
-          className="mt-4 text-sm text-white/60"
-        >
+        <button type="button" onClick={onExit} className="mt-4 text-sm text-white/60">
           ‹ Back
         </button>
       </div>
     )
   }
 
-  // Test question.
+  // Question.
   return (
     <div className="flex min-h-dvh flex-col bg-black text-white">
       <div className="flex items-center justify-between px-4 pt-4">
@@ -265,11 +386,12 @@ export default function PublicShapeTest({
       <div className="flex flex-1 flex-col items-center justify-center px-6">
         <p className="mb-4 text-lg font-semibold">What shape is this?</p>
         {q.imageUrl ? (
-          <img
+          <CroppedImage
             src={q.imageUrl}
+            stillId={q.stillId}
+            crops={cropMap}
             alt="Shape"
             className="max-h-[40vh] max-w-full rounded-2xl object-contain"
-            draggable={false}
           />
         ) : (
           <div className="flex h-48 w-48 items-center justify-center rounded-2xl bg-white/10">
