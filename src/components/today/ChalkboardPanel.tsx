@@ -1489,6 +1489,10 @@ function ReelSlide({
             })
           }}
         >
+          {/* DEBUG: show URL */}
+          <div className="absolute left-2 top-2 z-50 max-w-full truncate bg-red-500 px-2 py-1 text-xs text-white">
+            URL: {item.url ?? 'NO URL'}
+          </div>
           <GymClipPlayer
             url={item.url}
             itemId={gymClip?.id}
