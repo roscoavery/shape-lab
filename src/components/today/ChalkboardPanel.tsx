@@ -1479,7 +1479,8 @@ function ReelSlide({
       )}
       {item.url ? (
         <div
-          className="relative mx-auto w-full max-w-3xl flex-1 bg-black min-h-[min(58vh,30rem)]"
+          className="relative mx-auto w-full max-w-3xl bg-black"
+          style={{ height: '70vh', minHeight: '20rem' }}
           onClick={(e) => {
             if (!coach || !editing) return
             const rect = e.currentTarget.getBoundingClientRect()
