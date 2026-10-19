@@ -163,6 +163,7 @@ export default function PublicShapeTest({
   // Build questions: random selection, length based on user choice.
   // Each test shuffles anew, so repeats see different questions.
   // Detail shapes (hands, hand positions, etc.) are excluded — they're not body shapes.
+  // NOTE: step is NOT in deps — questions must stay stable during the test.
   const questions: Question[] = useMemo(() => {
     try {
       const shapes = (libraryShapes ?? []).filter(
@@ -180,7 +181,6 @@ export default function PublicShapeTest({
       const pickedShapes = shuffle(shapes).slice(0, count)
       return pickedShapes.map((s) => {
         // Use the main still (index 0) — Ryan's picked representative photo.
-        // Random photos can show variations (e.g. tucked handstand photo under wall handstand).
         const imgIdx = 0
         const others = shuffle(shapes.filter((x) => x.id !== s.id))
           .slice(0, 3)
@@ -196,7 +196,7 @@ export default function PublicShapeTest({
     } catch {
       return []
     }
-  }, [libraryShapes, questionCount, step])
+  }, [libraryShapes, questionCount])
 
   const q = questions[index]
   const score = answers.filter((a, i) => a === questions[i]?.shapeName).length
