@@ -695,12 +695,19 @@ export async function handleShareFindAthlete(
   try {
     const { readRosterFile } = await import('./rosterStore.ts')
     const roster = await readRosterFile()
+    // Split query into tokens; match if every token appears in first/last/full name.
+    // This handles "ryan williams" matching firstName="Ryan", lastName="Williams",
+    // as well as partial matches.
+    const tokens = q.split(/\s+/).filter((t) => t.length > 0)
     const matches = (roster ?? [])
       .filter((a: any) => {
         const first = (a.firstName ?? '').toLowerCase()
         const last = (a.lastName ?? '').toLowerCase()
         const full = `${first} ${last}`.trim()
-        return first.includes(q) || last.includes(q) || full.includes(q)
+        // Every token must appear in first, last, or full name.
+        return tokens.every((tok) => 
+          first.includes(tok) || last.includes(tok) || full.includes(tok)
+        )
       })
       .slice(0, 10)
       .map((a: any) => ({
