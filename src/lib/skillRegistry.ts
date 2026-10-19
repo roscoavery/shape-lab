@@ -33,9 +33,10 @@ export const TRACK_LABELS: Record<UnifiedSkillTrack, string> = {
   standing: 'Standing',
   walking: 'Walking',
   foundation: 'Foundation',
+  acro: 'Acro',
 }
 
-export const TRACK_ORDER: UnifiedSkillTrack[] = ['running', 'standing', 'walking', 'foundation']
+export const TRACK_ORDER: UnifiedSkillTrack[] = ['running', 'standing', 'walking', 'foundation', 'acro']
 
 const ALL_SKILLS: UnifiedSkill[] = UNIFIED_SKILL_SEED
 

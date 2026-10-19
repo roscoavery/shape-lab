@@ -13,7 +13,7 @@
  * from the original guide — organized, never rewritten.
  */
 
-export type UnifiedSkillTrack = 'running' | 'standing' | 'walking' | 'foundation'
+export type UnifiedSkillTrack = 'running' | 'standing' | 'walking' | 'foundation' | 'acro'
 
 export interface UnifiedSkill {
   /** Stable skl_* id. Reused from the progression seed where one existed. */
