@@ -97,7 +97,7 @@ export const EMPTY_COACH_STILL_SLOTS: ReferencePhoto[] = [
     shapeId: 'gym_cartwheel_head_placement',
     athleteId: null,
     dataUrl: '',
-    label: 'Cartwheel head placement',
+    label: 'Cartwheel head position',
     createdAt: '2026-09-13T18:00:00.000Z',
     library: 'coach',
   },

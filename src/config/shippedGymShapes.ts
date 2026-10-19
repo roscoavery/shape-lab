@@ -38,7 +38,7 @@ export const SHIPPED_GYM_SHAPES: GymLibraryShape[] = [
   gym('gym_piked_handstand', 'Piked handstand', 'Handstand with a pike fold.', 'handstand'),
   gym('gym_l_handstand', 'L handstand', 'Handstand with one leg vertical and one on a block or wall.', 'handstand'),
   gym('gym_curl_up', 'Curl up', 'On the back, one knee bent, ready to curl.'),
-  gym('gym_cartwheel_head_placement', 'Cartwheel head placement', 'Head looks at the hands before the cartwheel.'),
+  gym('gym_cartwheel_head_placement', 'Cartwheel head position', 'Head looks at the hands before the cartwheel.'),
   gym('gym_hands_turned_in_position', 'Hands turned in position', 'Squat with the hands turned in.'),
   gym('gym_kneeling_wall_hollow', 'Kneeling wall hollow', 'Kneeling at the wall, arms up in a hollow.', 'hollow_arms_up'),
 ]

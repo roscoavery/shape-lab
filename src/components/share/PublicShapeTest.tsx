@@ -17,6 +17,12 @@ type Question = {
   choices: string[]
 }
 
+// Detail shapes excluded from the test — they're close-ups, not body shapes
+// to identify. (e.g. "Hands" is a hand-position detail, not a shape.)
+const TEST_EXCLUDE = new Set([
+  'hands_push_through', // "Hands" — hand position detail
+])
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -156,10 +162,18 @@ export default function PublicShapeTest({
 
   // Build questions: random selection, length based on user choice.
   // Each test shuffles anew, so repeats see different questions.
+  // Detail shapes (hands, hand positions, etc.) are excluded — they're not body shapes.
   const questions: Question[] = useMemo(() => {
     try {
       const shapes = (libraryShapes ?? []).filter(
-        (s) => s && s.id && s.name && s.urls && s.urls.length > 0,
+        (s) =>
+          s &&
+          s.id &&
+          s.name &&
+          s.urls &&
+          s.urls.length > 0 &&
+          !TEST_EXCLUDE.has(s.id) &&
+          !s.name.toLowerCase().includes('hand position'),
       )
       if (shapes.length === 0) return []
       const count = questionCount === 'all' ? shapes.length : Math.min(questionCount, shapes.length)
