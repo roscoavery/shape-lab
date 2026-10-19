@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { learnLibraryShapes } from '../../lib/educationCopy'
+import { firstPathwayTaskIndex, learnLibraryShapes } from '../../lib/educationCopy'
 import { shippedFileList, stillCropLookupIds } from '../../lib/shippedRefs'
 import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../../lib/shippedStillCrops'
 import { cropSourcePixels, type StillCropRect } from '../../lib/stillCrop'
@@ -255,36 +255,19 @@ export default function PublicLibraryPage({
       result.push({ id: g.id, name: g.name, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) })
     }
 
-    // Fix order: match Ryan's in-app order for the first shapes.
-    // 1. stand clean, 2. ftos, 3. passe, 4. starting lunge, 5. lever,
-    // 6. handstand, 7. landing lunge, 8. mountain climber. The rest stays as-is.
-    const orderNames = [
-      'clean',
-      'stand clean',
-      'ftos',
-      'passe',
-      'passé',
-      'starting lunge',
-      'lever',
-      'handstand',
-      'landing lunge',
-      'mountain climber',
-    ]
-    const ordered: typeof result = []
-    const remaining = [...result]
-    for (const want of orderNames) {
-      const idx = remaining.findIndex(
-        (s) => s.id === want || s.name.toLowerCase() === want,
-      )
-      if (idx !== -1) {
-        ordered.push(remaining[idx]!)
-        remaining.splice(idx, 1)
-      }
-    }
-    // Dedupe: 'passe' and 'passé' are the same shape; only the first match was taken.
-    const final = [...ordered, ...remaining]
-
-    return final
+    // Order: match the in-app Shape Library exactly.
+    // The app sorts by firstPathwayTaskIndex (pathway shapes first by curriculum
+    // order, then alphabetical). Apply the same sort here.
+    // Gym shapes (no pathway index) go after, in their existing order.
+    const sorted = [...result].sort((a, b) => {
+      const ai = firstPathwayTaskIndex(a.id)
+      const bi = firstPathwayTaskIndex(b.id)
+      if (ai != null && bi != null) return ai - bi
+      if (ai != null) return -1
+      if (bi != null) return 1
+      return 0 // keep original relative order for non-pathway shapes
+    })
+    return sorted
   }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, gymShapes, token])
 
   // shapes with deletions applied is defined above
