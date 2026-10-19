@@ -286,6 +286,19 @@ export default function PublicLibraryPage({
       const newLeverIdx = result.findIndex((s) => s.id === 'lever')
       result.splice(newLeverIdx + 1, 0, handstand!)
     }
+    // Fix order: landing lunge must come after handstand (not before).
+    const hsIdx2 = result.findIndex((s) => s.id === 'handstand')
+    // Find landing lunge by ID or name (could be gym shape).
+    const llIdx = result.findIndex((s) => 
+      s.id === 'landing_lunge' || 
+      s.id.includes('landing_lunge') ||
+      s.name.toLowerCase() === 'landing lunge'
+    )
+    if (hsIdx2 !== -1 && llIdx !== -1 && llIdx < hsIdx2) {
+      const [ll] = result.splice(llIdx, 1)
+      const newHsIdx = result.findIndex((s) => s.id === 'handstand')
+      result.splice(newHsIdx + 1, 0, ll!)
+    }
 
     return result
   }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, gymShapes, token])
