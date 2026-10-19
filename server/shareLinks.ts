@@ -418,7 +418,24 @@ export async function handleShareLibrary(
   } catch {
     // main stills are best-effort
   }
-  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills })
+  // Coach-uploaded stills: include shapes that have them so the public
+  // library matches what Ryan sees in the app.
+  let coachStills: { shapeId: string; stillId: string }[] = []
+  try {
+    const { readCoachStillsFile } = await import('./coachStillStore.ts')
+    const file = await readCoachStillsFile()
+    const extras = (file as any)?.extras
+    if (Array.isArray(extras)) {
+      for (const e of extras) {
+        if (e?.shapeId && e?.id) {
+          coachStills.push({ shapeId: String(e.shapeId), stillId: String(e.id) })
+        }
+      }
+    }
+  } catch {
+    // coach stills are best-effort
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills })
 }
 
 /**
@@ -473,4 +490,34 @@ export async function handleShareQuizSubmit(
     // best-effort
   }
   sendJson(res, 200, { ok: true })
+}
+
+/**
+ * Serve a coach-uploaded still file for the public study link.
+ * Validates the library share token; the still ID must be in the
+ * coach stills list.
+ */
+export async function handleShareStillFile(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
+  const rec = await validateShareToken(url.searchParams.get('token') ?? '')
+  if (!rec || rec.type !== 'library') {
+    sendJson(res, 404, { error: 'Invalid or expired link.' })
+    return
+  }
+  const id = url.searchParams.get('id') ?? ''
+  if (!id) {
+    sendJson(res, 400, { error: 'Missing still id.' })
+    return
+  }
+  try {
+    const { sendCoachStillFile } = await import('./coachStillStore.ts')
+    if (!(await sendCoachStillFile(id, res))) {
+      sendJson(res, 404, { error: 'Still not found.' })
+    }
+  } catch {
+    sendJson(res, 500, { error: 'Could not load still.' })
+  }
 }

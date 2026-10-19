@@ -117,6 +117,7 @@ export default function PublicLibraryPage({
   }))
   const [removedStillIds, setRemovedStillIds] = useState<Set<string>>(new Set())
   const [mainStills, setMainStills] = useState<Record<string, string>>({})
+  const [coachStills, setCoachStills] = useState<{ shapeId: string; stillId: string }[]>([])
   const [index, setIndex] = useState(0)
   const [stillIdx, setStillIdx] = useState(0)
   const touchX = useRef<number | null>(null)
@@ -140,22 +141,50 @@ export default function PublicLibraryPage({
         if (data?.mainStills && typeof data.mainStills === 'object') {
           setMainStills(data.mainStills)
         }
+        if (Array.isArray(data?.coachStills)) {
+          setCoachStills(data.coachStills)
+        }
         setValid(true)
       })
       .catch(() => setValid(false))
   }, [token])
 
   // Apply Ryan's deletions and main-still ordering.
+  // Includes coach-uploaded stills so the list matches the in-app library.
   const shapes = useMemo(() => {
-    return SHAPES.filter((s) => {
-      if (STUDY_EXCLUDE.has(s.id)) return false
-      return true
-    }).map((s) => {
+    // Group coach stills by shape.
+    const coachByShape = new Map<string, { shapeId: string; stillId: string }[]>()
+    for (const c of coachStills) {
+      const list = coachByShape.get(c.shapeId) ?? []
+      list.push(c)
+      coachByShape.set(c.shapeId, list)
+    }
+
+    // All shape IDs with any stills (shipped or coach-uploaded).
+    const shapeIds = new Set<string>()
+    for (const s of SHAPES) {
+      if (STUDY_EXCLUDE.has(s.id)) continue
+      if (shippedFileList(s.id).length > 0) shapeIds.add(s.id)
+    }
+    for (const id of coachByShape.keys()) {
+      if (!STUDY_EXCLUDE.has(id)) shapeIds.add(id)
+    }
+
+    return SHAPES.filter((s) => shapeIds.has(s.id)).map((s) => {
       const files = shippedFileList(s.id)
       // Build (stillId, url) pairs, filter out deleted.
       const pairs = files
         .map((f, i) => ({ stillId: stillIdFor(s.id, i), url: `/references/${f}` }))
         .filter((p) => !removedStillIds.has(p.stillId))
+      // Add coach-uploaded stills.
+      for (const c of coachByShape.get(s.id) ?? []) {
+        if (!removedStillIds.has(c.stillId)) {
+          pairs.push({
+            stillId: c.stillId,
+            url: `/api/share/still-file?token=${encodeURIComponent(token)}&id=${encodeURIComponent(c.stillId)}`,
+          })
+        }
+      }
       // Move Ryan's main-still pick to the front.
       const mainId = mainStills[s.id]
       if (mainId) {
@@ -167,7 +196,7 @@ export default function PublicLibraryPage({
       }
       return { ...s, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) }
     }).filter((s) => s.urls.length > 0)
-  }, [removedStillIds, mainStills])
+  }, [removedStillIds, mainStills, coachStills, token])
 
   // shapes with deletions applied is defined above
 
