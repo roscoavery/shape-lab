@@ -259,6 +259,18 @@ export default function PublicLibraryPage({
       result.push({ id: g.id, name: g.name, urls: pairs.map((p) => p.url), stillIds: pairs.map((p) => p.stillId) })
     }
 
+    // Fix order: handstand must come after lever (Ryan's in-app order).
+    // In-app: clean, ftos, passe, starting lunge, lever, handstand, landing lunge, mountain climber, ...
+    const leverIdx = result.findIndex((s) => s.id === 'lever')
+    const handstandIdx = result.findIndex((s) => s.id === 'handstand')
+    if (leverIdx !== -1 && handstandIdx !== -1 && handstandIdx < leverIdx) {
+      // Move handstand to right after lever.
+      const [handstand] = result.splice(handstandIdx, 1)
+      // Adjust lever index if handstand was before it.
+      const newLeverIdx = result.findIndex((s) => s.id === 'lever')
+      result.splice(newLeverIdx + 1, 0, handstand!)
+    }
+
     return result
   }, [removedStillIds, removedCoachStillIds, mainStills, coachStills, igStills, gymShapes, token])
 
