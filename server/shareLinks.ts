@@ -528,7 +528,7 @@ export async function handleShareQuizSubmit(
 
 /**
  * Serve a coach-uploaded or IG still file for the public study link.
- * Validates the library share token.
+ * Validates the library share token. (ID-based lookup, fallback.)
  */
 export async function handleShareStillFile(
   _req: IncomingMessage,
@@ -549,11 +549,40 @@ export async function handleShareStillFile(
     const { sendCoachStillFile } = await import('./coachStillStore.ts')
     if (await sendCoachStillFile(id, res)) return
   } catch {
-    // try IG next
+    // fall through
+  }
+  sendJson(res, 404, { error: 'Still not found.' })
+}
+
+/**
+ * Serve a coach-uploaded still file for the public study link by filename.
+ * Validates the library share token. Simpler than ID lookup — direct file serve.
+ */
+export async function handleShareStillDirect(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
+  const rec = await validateShareToken(url.searchParams.get('token') ?? '')
+  if (!rec || rec.type !== 'library') {
+    sendJson(res, 404, { error: 'Invalid or expired link.' })
+    return
+  }
+  const filename = url.searchParams.get('file') ?? ''
+  if (!filename || filename.includes('..') || filename.includes('/')) {
+    sendJson(res, 400, { error: 'Invalid filename.' })
+    return
   }
   try {
-    const { sendIgStillFile } = await import('./igStillDisk.ts')
-    if (await sendIgStillFile(id, res)) return
+    const { readBin } = await import('./persist.ts')
+    const buf = await readBin(`data/coach-blobs/${filename}`)
+    if (buf) {
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'image/jpeg')
+      res.setHeader('Cache-Control', 'public, max-age=86400')
+      res.end(buf)
+      return
+    }
   } catch {
     // fall through
   }

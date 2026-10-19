@@ -421,6 +421,11 @@ export async function handleShapeLabApi(
     await handleShareStillFile(req, res, url)
     return true
   }
+  if (path === '/api/share/still-direct') {
+    const { handleShareStillDirect } = await import('./shareLinks.ts')
+    await handleShareStillDirect(req, res, url)
+    return true
+  }
 
   const gate = await gateApiRequest(req, res, path)
   if (gate.handled) return true

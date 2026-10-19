@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { SHAPES } from '../../config/shapes'
+import { learnLibraryShapes } from '../../lib/educationCopy'
 import { shippedFileList, stillCropLookupIds } from '../../lib/shippedRefs'
 import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../../lib/shippedStillCrops'
 import { cropSourcePixels, type StillCropRect } from '../../lib/stillCrop'
@@ -178,7 +178,7 @@ export default function PublicLibraryPage({
 
   // Apply Ryan's deletions and main-still ordering.
   // Matches the in-app Shape Library exactly: same shapes, same order, same pictures.
-  // In-app order: SHAPES (in defined order) then gym shapes (in gymLibrary order).
+  // Uses learnLibraryShapes() for the exact in-app order, then gym shapes in gymLibrary order.
   const shapes = useMemo(() => {
     // Group coach stills by shape.
     const extraByShape = new Map<string, { shapeId: string; stillId: string; file?: string; dataUrl?: string }[]>()
@@ -196,8 +196,10 @@ export default function PublicLibraryPage({
     // Build the shape list in in-app order.
     const result: { id: string; name: string; urls: string[]; stillIds: string[] }[] = []
 
-    // 1. Main shapes with stills, in SHAPES order.
-    for (const s of SHAPES) {
+    // 1. Main shapes in learnLibraryShapes() order (exact in-app order).
+    // This already excludes arm positions, scaffold, etc.
+    const inAppOrder = learnLibraryShapes()
+    for (const s of inAppOrder) {
       if (STUDY_EXCLUDE.has(s.id)) continue
       const files = shippedFileList(s.id)
       const pairs = files
@@ -208,6 +210,12 @@ export default function PublicLibraryPage({
         if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
           if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
             pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
+          } else if (c.file) {
+            pairs.push({
+              stillId: c.stillId,
+              url: `/api/share/still-direct?token=${encodeURIComponent(token)}&file=${encodeURIComponent(c.file)}`,
+              file: '',
+            })
           } else {
             pairs.push({
               stillId: c.stillId,
@@ -239,6 +247,13 @@ export default function PublicLibraryPage({
         if (!removedStillIds.has(c.stillId) && !removedCoachStillIds.has(c.stillId)) {
           if (c.dataUrl && c.dataUrl.startsWith('data:image')) {
             pairs.push({ stillId: c.stillId, url: c.dataUrl, file: '' })
+          } else if (c.file) {
+            // Direct file serve — no ID lookup needed.
+            pairs.push({
+              stillId: c.stillId,
+              url: `/api/share/still-direct?token=${encodeURIComponent(token)}&file=${encodeURIComponent(c.file)}`,
+              file: '',
+            })
           } else {
             pairs.push({
               stillId: c.stillId,
@@ -387,10 +402,12 @@ export default function PublicLibraryPage({
                 {hasMany && active && (
                   <>
                     {/* Tap zones: left third = previous still, right third = next still.
-                        Swipe anywhere = change shape. */}
+                        Swipe anywhere = change shape. Touch events stopped so swipe doesn't hijack. */}
                     <button
                       type="button"
                       aria-label="Previous picture"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx - 1 + urls.length) % urls.length)
@@ -404,6 +421,8 @@ export default function PublicLibraryPage({
                     <button
                       type="button"
                       aria-label="Next picture"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation()
                         setStillIdx((sIdx + 1) % urls.length)
