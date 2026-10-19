@@ -256,15 +256,16 @@ export default function PublicLibraryPage({
     }
 
     // Fix order: match Ryan's in-app order for the first shapes.
-    // In-app: clean, ftos, passe, starting lunge, lever, handstand, landing lunge, mountain climber, ...
+    // 1. stand clean, 2. ftos, 3. passe, 4. starting lunge, 5. lever,
+    // 6. landing lunge, 7. mountain climber. The rest stays as-is.
     const orderNames = [
       'clean',
+      'stand clean',
       'ftos',
       'passe',
       'passé',
       'starting lunge',
       'lever',
-      'handstand',
       'landing lunge',
       'mountain climber',
     ]
