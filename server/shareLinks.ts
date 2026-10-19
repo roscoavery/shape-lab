@@ -435,22 +435,6 @@ export async function handleShareLibrary(
   } catch {
     // coach stills are best-effort
   }
-  // IG stills: same — shapes with IG stills show in the app's library.
-  let igStills: { shapeId: string; stillId: string }[] = []
-  try {
-    const { readIgStillMeta } = await import('./igStillDisk.ts')
-    const meta = await readIgStillMeta()
-    const stills = (meta as any)?.stills
-    if (Array.isArray(stills)) {
-      for (const s of stills) {
-        if (s?.shapeId && s?.id) {
-          igStills.push({ shapeId: String(s.shapeId), stillId: String(s.id) })
-        }
-      }
-    }
-  } catch {
-    // IG stills are best-effort
-  }
   // Coach-still tombstones (deleted extras and hidden shipped originals).
   let removedCoachStillIds: string[] = []
   try {
@@ -463,7 +447,23 @@ export async function handleShareLibrary(
   } catch {
     // tombstones are best-effort
   }
-  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, igStills, removedCoachStillIds })
+  // Gym shapes (custom shapes like lightning bolt, curl up) with their names.
+  let gymShapes: { id: string; name: string }[] = []
+  try {
+    const { readCoachContentFile } = await import('./coachContentStore.ts')
+    const file = await readCoachContentFile()
+    const lib = (file as any)?.gymLibrary
+    if (Array.isArray(lib)) {
+      for (const g of lib) {
+        if (g?.id && g?.name) {
+          gymShapes.push({ id: String(g.id), name: String(g.name) })
+        }
+      }
+    }
+  } catch {
+    // gym shapes are best-effort
+  }
+  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, removedCoachStillIds, gymShapes })
 }
 
 /**
