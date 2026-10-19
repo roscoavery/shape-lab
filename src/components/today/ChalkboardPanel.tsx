@@ -1507,7 +1507,6 @@ function ReelSlide({
             smartFit={false}
             quiet
             markupSwipeSafe
-            active={active}
             chromeOpen={chromeOpen || editing}
             onToggleChrome={onToggleChrome}
             tapTogglesChrome={tapTogglesChrome && !editing}
