@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { createId } from '../../lib/storage'
 import type { AthleteSkillGoal, TrainingSurface } from '../../types'
 import { CollapsibleSection } from '../CollapsibleSection'
+import { ACRO_SKILLS } from '../../lib/acroSkills'
 import {
   makeRegistrySkillGoal,
   matchRegistrySkill,
@@ -79,7 +80,9 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
   const hits: SkillSearchHit[] = useMemo(() => {
     const trimmed = query.trim()
     if (!trimmed) return []
-    return searchSkills(trimmed).filter(
+    const q = trimmed.toLowerCase()
+    // Registry skills
+    const registryHits = searchSkills(trimmed).filter(
       (h) =>
         !value.some(
           (g) =>
@@ -87,6 +90,29 @@ export function SkillGoalPicker({ value, onChange, athleteFacing = true }: Props
             g.surface === (surface || undefined),
         ),
     )
+    // Acro skills (not in registry) — match by name
+    const acroHits: SkillSearchHit[] = ACRO_SKILLS.filter((s) =>
+      s.name.toLowerCase().includes(q),
+    )
+      .filter(
+        (s) =>
+          !value.some(
+            (g) =>
+              g.label.toLowerCase() === s.name.toLowerCase() &&
+              g.surface === (surface || undefined),
+          ),
+      )
+      .map((s) => ({
+        // Adapt AcroSkill to SkillSearchHit shape
+        skill: {
+          id: s.id,
+          name: s.name,
+          track: 'acro' as const,
+          aliases: [],
+        } as any,
+        rank: 1,
+      }))
+    return [...registryHits, ...acroHits].slice(0, 30)
   }, [query, value, surface])
 
   const grouped = useMemo(() => {
