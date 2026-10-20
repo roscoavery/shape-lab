@@ -456,8 +456,16 @@ function sameTask(a: ClassPlanTask, b: ClassPlanTask): boolean {
 }
 
 /** How many of the source plan's tasks are not already in the target plan. */
-export function tasksNotYetIn(from: ClassPlan, to: ClassPlan): number {
-  return from.tasks.filter((t) => !to.tasks.some((m) => sameTask(m, t))).length
+export function tasksNotYetIn(
+  from: ClassPlan,
+  to: ClassPlan,
+  onlyAthleteId?: string,
+): number {
+  return from.tasks.filter(
+    (t) =>
+      (!onlyAthleteId || t.athleteIds.includes(onlyAthleteId)) &&
+      !to.tasks.some((m) => sameTask(m, t)),
+  ).length
 }
 
 /**
@@ -470,6 +478,7 @@ export function tasksNotYetIn(from: ClassPlan, to: ClassPlan): number {
 export function copyPlanTasksFresh(
   fromPlanId: string,
   toPlanId: string,
+  onlyAthleteId?: string,
 ): ClassPlan | null {
   const plans = loadClassPlans()
   const from = plans.find((p) => p.id === fromPlanId)
@@ -477,6 +486,7 @@ export function copyPlanTasksFresh(
   if (!from || !to) return null
   const fresh: ClassPlanTask[] = []
   for (const task of from.tasks) {
+    if (onlyAthleteId && !task.athleteIds.includes(onlyAthleteId)) continue
     if (to.tasks.some((t) => sameTask(t, task))) continue
     fresh.push({
       id: createId('ctask'),

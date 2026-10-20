@@ -3,6 +3,7 @@ import {
   ACRO_SKILLS,
   ACRO_TRACKS,
   ACRO_TRACK_LABELS,
+  acroMapName,
   acroSkillToUnified,
   getAcroSkill,
   type AcroSkill,
@@ -163,42 +164,31 @@ export function AcroMapView({ onTileTap }: Props) {
                 return (
                   <div
                     key={track}
-                    className={dense ? 'grid grid-cols-2 gap-1' : 'flex flex-col gap-1'}
+                    className={dense ? 'grid grid-cols-2 content-start gap-1.5' : 'flex flex-col gap-1.5'}
                   >
                     {skills.map((skill) => {
                       const isShine = shinePathIds.has(skill.id)
                       const isTarget = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
                       const hasCard = !!mainSkill?.guideId
-                      const nameLen = skill.name.length
-                      const tileText =
-                        dense
-                          ? nameLen > 18
-                            ? 'text-[7px]'
-                            : nameLen > 12
-                              ? 'text-[8px]'
-                              : 'text-[9px]'
-                          : nameLen > 22
-                            ? 'text-[8px]'
-                            : nameLen > 15
-                              ? 'text-[9px]'
-                              : 'text-[10px] sm:text-[11px]'
+                      // Same tile spec as the main map: fixed height, 2px
+                      // full-strength border, word-boundary wrapping. Tiles
+                      // never stretch to the band height.
+                      const tileText = dense
+                        ? 'text-[9px] sm:text-[10px]'
+                        : 'text-[10px] sm:text-[11px]'
                       return (
                         <button
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className={`relative flex w-full items-center justify-center overflow-hidden rounded-xl border px-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
-                            dense ? 'min-h-[44px] py-1' : 'min-h-[60px] flex-1 py-2'
+                          className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl border px-1 py-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
+                            dense ? 'h-[48px]' : 'h-[60px]'
                           } ${tileText}`}
                           style={{
                             background: '#000000',
-                            borderColor: isTarget
-                              ? `rgba(${rgb},1)`
-                              : isShine
-                                ? `rgba(${rgb},0.9)`
-                                : `rgba(${rgb},0.55)`,
-                            borderWidth: isTarget || isShine ? '2px' : '1px',
+                            borderColor: `rgba(${rgb},1)`,
+                            borderWidth: '2px',
                             boxShadow: isTarget
                               ? `0 0 0 2px #ffffff, 0 0 0 5px rgba(${rgb},1)`
                               : isShine
@@ -214,7 +204,7 @@ export function AcroMapView({ onTileTap }: Props) {
                               aria-hidden
                             />
                           )}
-                          <span className="break-all hyphens-auto">{skill.name}</span>
+                          <span className="break-words">{acroMapName(skill)}</span>
                         </button>
                       )
                     })}

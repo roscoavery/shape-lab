@@ -300,6 +300,15 @@ function ClassPlanCard({
       })
     : ''
 
+  // When exactly one athlete is picked in the task writer, offer that
+  // athlete's own checklist from last time instead of the whole class's.
+  const soloAthlete =
+    taskAthleteIds.length === 1 && taskAthleteIds[0] !== 'all'
+      ? athleteById(athletes, taskAthleteIds[0])
+      : undefined
+  const soloCopyCount =
+    prevPlan && soloAthlete ? tasksNotYetIn(prevPlan, plan, soloAthlete.id) : 0
+
   const [repsInput, setRepsInput] = useState('')
 
   const { handleProps, rowStyle } = useDragList((from, to) => {
@@ -563,6 +572,20 @@ function ClassPlanCard({
                 setRepsInput(reps ? String(reps) : '')
               }}
             />
+            {prevPlan && soloAthlete && soloCopyCount > 0 && (
+              <button
+                type="button"
+                onClick={() => copyPlanTasksFresh(prevPlan.id, plan.id, soloAthlete.id)}
+                className="w-full rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2 text-left text-sm text-[var(--text)]"
+              >
+                <span className="font-semibold">
+                  Use {soloAthlete.firstName || soloAthlete.name}'s checklist
+                </span>{' '}
+                <span className="text-[var(--muted)]">
+                  Copy {soloCopyCount} task{soloCopyCount === 1 ? '' : 's'} from {prevDateLabel}.
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}
