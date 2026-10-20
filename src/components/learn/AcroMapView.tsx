@@ -137,17 +137,42 @@ export function AcroMapView({ onTileTap }: Props) {
             </div>
           )}
         </div>
-        {shineSkill && (
-          <button
-            type="button"
-            onClick={() => setShineId(null)}
-            className="flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-200"
-          >
-            <span aria-hidden>✦</span> {shineSkill.name}{' '}
-            <span aria-hidden className="opacity-70">✕</span>
-          </button>
-        )}
       </div>
+
+      {/* Selected skill: full name in a bar that sticks while scrolling, so
+          the (often abbreviated) tile you tapped is always readable. */}
+      {shineSkill && (
+        <div
+          className="sticky top-0 z-20 -mx-1 mb-2 border-b bg-black/95 px-2 py-2 backdrop-blur"
+          style={{ borderColor: `rgba(${TRACK_RGB[shineSkill.track]},0.5)` }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: `rgba(${TRACK_RGB[shineSkill.track]},1)` }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-bold leading-snug text-white">
+                {shineSkill.name}
+              </p>
+              <p className="text-[11px] leading-snug text-white/60">
+                Level {shineSkill.level} · {ACRO_TRACK_LABELS[shineSkill.track]} · tap the card
+                again to open it
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShineId(null)}
+              aria-label="Clear selection"
+              className="shrink-0 rounded-full border border-white/25 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-white/10"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 7 level bands, level 7 at top, level 1 at bottom. One band per level. */}
       <div className="space-y-1.5">
@@ -160,21 +185,21 @@ export function AcroMapView({ onTileTap }: Props) {
               {ACRO_TRACKS.map((track: AcroTrack) => {
                 const skills = ACRO_SKILLS.filter((s) => s.track === track && s.level === level)
                 const rgb = TRACK_RGB[track]
-                const dense = skills.length > 2
+                // Cells with 3+ skills use the main map's compact tile
+                // height so a tall stack does not balloon the whole band.
+                const compact = skills.length > 2
                 return (
-                  <div
-                    key={track}
-                    className={dense ? 'grid grid-cols-2 content-start gap-1.5' : 'flex flex-col gap-1.5'}
-                  >
+                  <div key={track} className="flex h-full flex-col gap-1.5">
                     {skills.map((skill) => {
                       const isShine = shinePathIds.has(skill.id)
                       const isTarget = skill.id === shineId
                       const mainSkill = getRegistrySkillByName(skill.name)
                       const hasCard = !!mainSkill?.guideId
-                      // Same tile spec as the main map: fixed height, 2px
-                      // full-strength border, word-boundary wrapping. Tiles
-                      // never stretch to the band height.
-                      const tileText = dense
+                      // Same tile spec as the main map: 2px full-strength
+                      // border, word-boundary wrapping. Tiles flex to fill
+                      // their cell so every bottom in the band lines up
+                      // flush; min-height keeps them from ballooning.
+                      const tileText = compact
                         ? 'text-[9px] sm:text-[10px]'
                         : 'text-[10px] sm:text-[11px]'
                       return (
@@ -182,8 +207,8 @@ export function AcroMapView({ onTileTap }: Props) {
                           key={skill.id}
                           type="button"
                           onClick={() => handleTap(skill)}
-                          className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl border px-1 py-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
-                            dense ? 'h-[48px]' : 'h-[60px]'
+                          className={`relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-2xl border px-1 py-1 text-center font-bold leading-tight text-white transition-transform active:scale-95 ${
+                            compact ? 'min-h-[46px]' : 'min-h-[60px]'
                           } ${tileText}`}
                           style={{
                             background: '#000000',
