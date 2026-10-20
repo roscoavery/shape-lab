@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { DragReorderHandle, rowIndexFromPoint } from '../DragReorderHandle'
 import type { Athlete } from '../../types'
 import { isCoachProfile } from '../../lib/profileRole'
 import {
@@ -431,6 +433,39 @@ function ChalkboardBody({
   const [skillQuery, setSkillQuery] = useState('')
   const [pinDrillsOpen, setPinDrillsOpen] = useState(false)
   const [pinSkillCardOpen, setPinSkillCardOpen] = useState(false)
+  // Drag reorder, same pattern as the reference library: rows reorder
+  // live under the finger and the new order saves once, on release.
+  const [dragItemId, setDragItemId] = useState<string | null>(null)
+  const [liveIds, setLiveIds] = useState<string[] | null>(null)
+  const displayItems = useMemo(() => {
+    if (!liveIds) return items
+    const rank = new Map(liveIds.map((id, i) => [id, i] as const))
+    return [...items].sort(
+      (a, b) => (rank.get(a.item.id) ?? 0) - (rank.get(b.item.id) ?? 0),
+    )
+  }, [items, liveIds])
+  const beginItemDrag = (id: string, e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDragItemId(id)
+    setLiveIds(items.map(({ item }) => item.id))
+  }
+  const moveItemDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!dragItemId || !liveIds) return
+    const to = rowIndexFromPoint(e.currentTarget.closest('ul'), e.clientY, liveIds.length)
+    const from = liveIds.indexOf(dragItemId)
+    if (from < 0 || from === to) return
+    const next = [...liveIds]
+    next.splice(from, 1)
+    next.splice(to, 0, dragItemId)
+    setLiveIds(next)
+  }
+  const endItemDrag = () => {
+    if (liveIds && board?.id) reorderChalkboardItems(board.id, liveIds)
+    setDragItemId(null)
+    setLiveIds(null)
+  }
   const skillHits = useMemo(() => {
     const q = skillQuery.trim()
     if (q) return searchSkills(q, 8).map((hit) => hit.skill)
@@ -800,36 +835,27 @@ function ChalkboardBody({
             : 'Pin a reference from Compare, Learn, drills, or collages, for every class with this name, or only this hour.'}
         </p>
       ) : reordering ? (
-        <ul className="grid gap-2 pb-4">
-          {items.map(({ item }, idx) => (
-            <li key={item.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-              <span className="min-w-0 flex-1 truncate text-sm">{item.title || kindLabel(item.kind)}</span>
-              <button
-                type="button"
-                disabled={idx === 0}
-                onClick={() => {
-                  const ids = items.map(({ item: it }) => it.id)
-                  const newIds = [...ids]
-                  ;[newIds[idx - 1], newIds[idx]] = [newIds[idx], newIds[idx - 1]]
-                  if (board?.id) reorderChalkboardItems(board.id, newIds)
-                }}
-                className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
-              >
-                Up
-              </button>
-              <button
-                type="button"
-                disabled={idx === items.length - 1}
-                onClick={() => {
-                  const ids = items.map(({ item: it }) => it.id)
-                  const newIds = [...ids]
-                  ;[newIds[idx], newIds[idx + 1]] = [newIds[idx + 1], newIds[idx]]
-                  if (board?.id) reorderChalkboardItems(board.id, newIds)
-                }}
-                className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
-              >
-                Down
-              </button>
+        <ul className="grid min-w-0 gap-2 pb-4">
+          {displayItems.map(({ item }) => (
+            <li
+              key={item.id}
+              data-reorder-row={item.id}
+              className={`flex min-w-0 items-center gap-1 rounded-xl border border-white/10 bg-black/20 px-2 py-1 ${
+                dragItemId === item.id
+                  ? 'z-10 scale-[1.02] bg-white/10 shadow-lg ring-1 ring-white/25'
+                  : ''
+              }`}
+            >
+              <DragReorderHandle
+                label={item.title || kindLabel(item.kind)}
+                className="-ml-1 text-white/70"
+                onPointerDown={(e) => beginItemDrag(item.id, e)}
+                onPointerMove={moveItemDrag}
+                onPointerUp={endItemDrag}
+              />
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {item.title || kindLabel(item.kind)}
+              </span>
             </li>
           ))}
         </ul>
