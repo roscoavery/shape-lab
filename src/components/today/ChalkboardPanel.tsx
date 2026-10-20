@@ -214,6 +214,7 @@ export function ChalkboardPanel({
       viewBoardId={viewBoardId}
       onViewBoard={setViewBoardId}
       allBoards={listAllBoards()}
+      reordering={reordering}
     />
   )
 
@@ -376,6 +377,7 @@ function ChalkboardBody({
   viewBoardId,
   onViewBoard,
   allBoards,
+  reordering,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -410,6 +412,7 @@ function ChalkboardBody({
   viewBoardId: string | null
   onViewBoard: (id: string | null) => void
   allBoards: ChalkboardBoard[]
+  reordering: boolean
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -798,7 +801,6 @@ function ChalkboardBody({
                   const newIds = [...ids]
                   ;[newIds[idx - 1], newIds[idx]] = [newIds[idx], newIds[idx - 1]]
                   if (board?.id) reorderChalkboardItems(board.id, newIds)
-                  setTick((t) => t + 1)
                 }}
                 className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
               >
@@ -812,7 +814,6 @@ function ChalkboardBody({
                   const newIds = [...ids]
                   ;[newIds[idx], newIds[idx + 1]] = [newIds[idx + 1], newIds[idx]]
                   if (board?.id) reorderChalkboardItems(board.id, newIds)
-                  setTick((t) => t + 1)
                 }}
                 className="rounded-lg bg-white/10 px-2 py-1 text-xs disabled:opacity-30"
               >
@@ -1422,13 +1423,12 @@ function ReelTheater({
           if (best !== index) setIndex(best)
         }}
       >
-        {items.map((item, i) => (
+        {items.map((item) => (
           <ReelSlide
             key={item.id}
             item={item}
             coach={coach}
             allowEdit={coach && coachEdit}
-            active={i === index}
             chromeOpen={chromeOpen}
             onToggleChrome={toggleChrome}
             tapTogglesChrome
@@ -1444,7 +1444,6 @@ function ReelSlide({
   item,
   coach,
   allowEdit,
-  active,
   chromeOpen,
   onToggleChrome,
   tapTogglesChrome,
@@ -1452,7 +1451,6 @@ function ReelSlide({
   item: ChalkboardItem
   coach: boolean
   allowEdit: boolean
-  active: boolean
   chromeOpen: boolean
   onToggleChrome: () => void
   tapTogglesChrome?: boolean

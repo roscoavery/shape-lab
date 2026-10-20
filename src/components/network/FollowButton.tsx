@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Athlete } from '../../types'
 import {
-  followerCount,
   followingCount,
   isFollowing,
   loadSocial,
