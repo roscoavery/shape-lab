@@ -218,6 +218,32 @@ export function ChalkboardPanel({
     />
   )
 
+  // Coach controls ride every board header (section, embed, full screen),
+  // not just the full-screen one, so Reorder is reachable wherever the
+  // board is open.
+  const coachButtons = coach ? (
+    <>
+      <button
+        type="button"
+        onClick={() => setCoachEdit((on) => !on)}
+        className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+          coachEdit ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
+        }`}
+      >
+        {coachEdit ? 'Athlete view' : 'Coach edit'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setReordering((on) => !on)}
+        className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+          reordering ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
+        }`}
+      >
+        {reordering ? 'Done' : 'Reorder'}
+      </button>
+    </>
+  ) : null
+
   if (size === 'full') {
     return createPortal(
       <div className="fixed inset-0 z-[80] flex h-[100dvh] max-h-[100dvh] flex-col bg-[#07110e] text-[var(--text)]">
@@ -238,28 +264,7 @@ export function ChalkboardPanel({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
-            {coach && (
-              <button
-                type="button"
-                onClick={() => setCoachEdit((on) => !on)}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-                  coachEdit ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
-                }`}
-              >
-                {coachEdit ? 'Athlete view' : 'Coach edit'}
-              </button>
-            )}
-            {coach && (
-              <button
-                type="button"
-                onClick={() => setReordering((on) => !on)}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-                  reordering ? 'bg-[#2dd4a8] text-[#061418]' : 'bg-white/15'
-                }`}
-              >
-                {reordering ? 'Done' : 'Reorder'}
-              </button>
-            )}
+            {coachButtons}
             <button
               type="button"
               onClick={() => {
@@ -310,7 +315,10 @@ export function ChalkboardPanel({
             {offering ? offering.name : 'Chalkboard'}
             {inSession ? ' · live' : ''}
           </p>
-          {sizeButtons}
+          <div className="flex flex-wrap justify-end gap-2">
+            {coachButtons}
+            {sizeButtons}
+          </div>
         </div>
         <div className="panel-scroll max-h-[min(70dvh,calc(var(--sl-vh)-9rem))] overflow-y-auto overscroll-contain">
           {body}
@@ -336,7 +344,10 @@ export function ChalkboardPanel({
               : 'Pin work for every Connections time, or only this class time. It opens here when that class is running.'}
           </p>
         </div>
-        {sizeButtons}
+        <div className="flex flex-wrap justify-end gap-2">
+          {coachButtons}
+          {sizeButtons}
+        </div>
       </div>
       {body}
     </section>
