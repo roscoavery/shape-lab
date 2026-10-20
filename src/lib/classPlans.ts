@@ -434,6 +434,64 @@ export function carryOverTasks(
   return updatePlan(toPlanId, (p) => ({ ...p, tasks: [...p.tasks, ...carried] }))
 }
 
+/**
+ * The most recent plan for an offering before the given date that has at
+ * least one task. For a weekly class this is last week's checklist.
+ */
+export function previousPlanForOffering(
+  offeringId: string,
+  beforeDate: string,
+): ClassPlan | null {
+  const earlier = loadClassPlans()
+    .filter((p) => p.offeringId === offeringId && p.date < beforeDate && p.tasks.length > 0)
+    .sort((a, b) => b.date.localeCompare(a.date))
+  return earlier[0] ?? null
+}
+
+function sameTask(a: ClassPlanTask, b: ClassPlanTask): boolean {
+  if (a.text.trim().toLowerCase() !== b.text.trim().toLowerCase()) return false
+  const as = [...a.athleteIds].sort().join(',')
+  const bs = [...b.athleteIds].sort().join(',')
+  return as === bs
+}
+
+/** How many of the source plan's tasks are not already in the target plan. */
+export function tasksNotYetIn(from: ClassPlan, to: ClassPlan): number {
+  return from.tasks.filter((t) => !to.tasks.some((m) => sameTask(m, t))).length
+}
+
+/**
+ * Copy every task from one plan into another as a fresh checklist: done
+ * flags and rep progress reset, rep targets kept. Tasks already present in
+ * the target (same text and athletes) are skipped, so tapping twice is
+ * harmless. Unlike carryOverTasks this copies completed tasks too — it is a
+ * starting template the coach then trims, not a carry-forward of leftovers.
+ */
+export function copyPlanTasksFresh(
+  fromPlanId: string,
+  toPlanId: string,
+): ClassPlan | null {
+  const plans = loadClassPlans()
+  const from = plans.find((p) => p.id === fromPlanId)
+  const to = plans.find((p) => p.id === toPlanId)
+  if (!from || !to) return null
+  const fresh: ClassPlanTask[] = []
+  for (const task of from.tasks) {
+    if (to.tasks.some((t) => sameTask(t, task))) continue
+    fresh.push({
+      id: createId('ctask'),
+      athleteIds: [...task.athleteIds],
+      text: task.text,
+      done: false,
+      ...(task.repsTarget ? { repsTarget: task.repsTarget, repsDone: 0 } : {}),
+      carriedFromPlanId: from.id,
+      createdAt: new Date().toISOString(),
+    })
+  }
+  if (fresh.length === 0) return null
+  return updatePlan(toPlanId, (p) => ({ ...p, tasks: [...p.tasks, ...fresh] }))
+}
+
 /** Today as YYYY-MM-DD in local time. */
 export function todayKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

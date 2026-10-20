@@ -14,6 +14,9 @@ import {
   removePlanTask,
   reorderPlanTask,
   carryOverTasks,
+  previousPlanForOffering,
+  copyPlanTasksFresh,
+  tasksNotYetIn,
   pastTasksForAthlete,
   subscribeClassPlans,
   pullClassPlans,
@@ -281,6 +284,22 @@ function ClassPlanCard({
     return out
   }, [lastWeek, regulars])
 
+  // The most recent earlier checklist for this same class, offered as a
+  // starting template so the coach trims it instead of rewriting it.
+  const prevPlan = useMemo(
+    () => previousPlanForOffering(offering.id, plan.date),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [offering.id, plan.date, plansTick, plan.tasks],
+  )
+  const prevCopyCount = prevPlan ? tasksNotYetIn(prevPlan, plan) : 0
+  const prevDateLabel = prevPlan
+    ? new Date(`${prevPlan.date}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
+    : ''
+
   const [repsInput, setRepsInput] = useState('')
 
   const { handleProps, rowStyle } = useDragList((from, to) => {
@@ -404,6 +423,19 @@ function ClassPlanCard({
                 </button>
               ))}
             </div>
+          )}
+          {prevPlan && prevCopyCount > 0 && (
+            <button
+              type="button"
+              onClick={() => copyPlanTasksFresh(prevPlan.id, plan.id)}
+              className="mt-2 w-full rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2 text-left text-sm text-[var(--text)]"
+            >
+              <span className="font-semibold">Use last week's checklist</span>{' '}
+              <span className="text-[var(--muted)]">
+                Copy {prevCopyCount} task{prevCopyCount === 1 ? '' : 's'} from {prevDateLabel},
+                then trim what changed.
+              </span>
+            </button>
           )}
           {plan.tasks.length > 0 && (
             <ul className="mt-2 space-y-1.5">
