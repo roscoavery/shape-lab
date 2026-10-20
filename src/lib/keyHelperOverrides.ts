@@ -13,6 +13,7 @@
  */
 import { SKILL_KEY_HELPERS } from '../config/skillKeyHelpers'
 import { getRegistrySkill } from './skillRegistry'
+import { getAcroSkill } from './acroSkills'
 import { markedFetch } from './authSession'
 
 export type KeyHelperOverrides = Record<string, string[][]>
@@ -175,8 +176,13 @@ export async function toggleKeyHelperWiggle(
   const canon = canonical(targetSkillId)
   const skill = canonical(skillId)
   if (!canon || !skill) return { ok: false, error: 'Bad skill id' }
-  if (!getRegistrySkill(skill)) return { ok: false, error: `Not in registry: ${skill}` }
-  const current = keyHelperCombosForTarget(canon, (id) => !!getRegistrySkill(id))
+  if (!getRegistrySkill(skill) && !getAcroSkill(skill)) {
+    return { ok: false, error: `Unknown skill: ${skill}` }
+  }
+  const current = keyHelperCombosForTarget(
+    canon,
+    (id) => !!getRegistrySkill(id) || !!getAcroSkill(id),
+  )
   const set = new Set(current.flat())
   if (on) set.add(skill)
   else set.delete(skill)
@@ -185,5 +191,5 @@ export async function toggleKeyHelperWiggle(
 
 /** Skill-name lookup for the editor and combo labels. */
 export function skillNameFor(id: string): string {
-  return getRegistrySkill(canonical(id))?.name ?? id
+  return getRegistrySkill(canonical(id))?.name ?? getAcroSkill(canonical(id))?.name ?? id
 }

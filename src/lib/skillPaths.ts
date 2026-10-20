@@ -78,6 +78,12 @@ export type SkillNeed = {
   label?: string
   kind: SkillNeedKind
   note?: string
+  /**
+   * Either/or group id: required needs on the same skill that share a
+   * group are alternatives — any one of them satisfies the requirement.
+   * The note is shared across the group.
+   */
+  group?: string
   surfaces?: TrainingSurface[]
   order: number
   shipped?: boolean

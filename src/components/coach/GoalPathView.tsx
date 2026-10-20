@@ -32,7 +32,24 @@ export function GoalPathView({ goal, onGoalChange, defaultOpen = false }: Props)
     const out: PathItem[] = []
     const needs = needsForSkill(resolved.id, goal.surface)
     for (const kind of ['required', 'helpful'] as const) {
-      for (const n of needs.filter((row) => row.kind === kind)) {
+      const rows = needs.filter((row) => row.kind === kind)
+      const seenGroups = new Set<string>()
+      for (const n of rows) {
+        // Either/or group mates collapse into one "A or B" item.
+        if (kind === 'required' && n.group) {
+          if (seenGroups.has(n.group)) continue
+          seenGroups.add(n.group)
+          const mates = rows.filter((row) => row.group === n.group)
+          if (mates.length > 1) {
+            out.push({
+              key: `needgroup:${n.group}`,
+              label: mates.map((m) => needLabel(m)).join(' or '),
+              note: mates.map((m) => m.note).find((x) => x?.trim()) ?? undefined,
+              section: NEED_KIND_LABEL[kind],
+            })
+            continue
+          }
+        }
         out.push({
           key: `need:${n.id}`,
           label: needLabel(n),

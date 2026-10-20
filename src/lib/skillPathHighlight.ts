@@ -18,6 +18,20 @@ import {
   type ConditioningNeed,
 } from './skillPaths'
 import { getRegistrySkill } from './skillRegistry'
+import { getAcroSkill } from './acroSkills'
+
+/**
+ * A skill that can sit in a path tree: a main-registry skill or an acro
+ * skill. Acro skills live outside the registry, but their cards, paths and
+ * wiggles work exactly like main-map skills.
+ */
+export function isPathSkill(id: string): boolean {
+  return !!getRegistrySkill(id) || !!getAcroSkill(id)
+}
+
+export function pathSkillName(id: string): string | null {
+  return getRegistrySkill(id)?.name ?? getAcroSkill(id)?.name ?? null
+}
 import {
   keyHelperCombosForTarget,
   subscribeKeyHelpers,
@@ -80,8 +94,8 @@ export function buildPathHighlight(
   opts?: { comboIdx?: number; direct?: boolean },
 ): PathHighlight | null {
   const target = canonicalSkillId(targetSkillId)
-  const reg = getRegistrySkill(target)
-  if (!target || !reg) return null
+  const targetName = pathSkillName(target)
+  if (!target || !targetName) return null
 
   const required = new Map<string, number>([[target, 0]])
   const queue: Array<[string, number]> = [[target, 0]]
@@ -90,7 +104,7 @@ export function buildPathHighlight(
     for (const need of needsForSkillConsolidated(id)) {
       if (need.kind !== 'required' || !need.needSkillId) continue
       const canon = canonicalSkillId(need.needSkillId)
-      if (!getRegistrySkill(canon) || required.has(canon)) continue
+      if (!isPathSkill(canon) || required.has(canon)) continue
       required.set(canon, d + 1)
       queue.push([canon, d + 1])
     }
@@ -104,7 +118,7 @@ export function buildPathHighlight(
     for (const need of needsForSkillConsolidated(id)) {
       if ((need.kind !== 'required' && need.kind !== 'helpful') || !need.needSkillId) continue
       const canon = canonicalSkillId(need.needSkillId)
-      if (!getRegistrySkill(canon) || seen.has(canon)) continue
+      if (!isPathSkill(canon) || seen.has(canon)) continue
       seen.add(canon)
       if (!required.has(canon)) helpful.set(canon, d + 1)
       queue2.push([canon, d + 1])
@@ -115,12 +129,12 @@ export function buildPathHighlight(
   for (const d of required.values()) {
     if (d > maxDist) maxDist = d
   }
-  const combos = keyHelperCombosForTarget(target, (id) => !!getRegistrySkill(id))
+  const combos = keyHelperCombosForTarget(target, (id) => isPathSkill(id))
   const comboIdx =
     combos.length > 0 ? Math.min(Math.max(opts?.comboIdx ?? 0, 0), combos.length - 1) : 0
   return {
     target,
-    targetName: reg.name,
+    targetName,
     required,
     helpful,
     maxDist,

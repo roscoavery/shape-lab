@@ -37,6 +37,7 @@ import {
   saveNeed,
   saveVersion,
   versionsForSkill,
+  type SkillNeed,
   type SkillNeedKind,
 } from '../../lib/skillPaths'
 import {
@@ -1046,10 +1047,11 @@ function PathNode({
   onSelectSkill?: (s: UnifiedSkill) => void
 }) {
   const reg = getRegistrySkill(skillId)
-  const name = reg?.name ?? getAcroSkill(skillId)?.name ?? skillId
+  const acro = !reg ? getAcroSkill(skillId) : undefined
+  const name = reg?.name ?? acro?.name ?? skillId
   const family: SkillFamily = FAMILY_BY_SKILL[skillId] ?? 'foundations'
   const layer = hlGlowStyle(hl, role, dist, family, hl.keyHelpers.has(canonicalSkillId(skillId)))
-  const canOpen = !!reg?.guideId && !!onSelectSkill
+  const canOpen = (!!reg?.guideId || !!acro) && !!onSelectSkill
   const cls =
     'flex w-full items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5'
   const style = {
@@ -1083,7 +1085,10 @@ function PathNode({
   return canOpen ? (
     <button
       type="button"
-      onClick={() => reg && onSelectSkill(reg)}
+      onClick={() => {
+        if (reg) onSelectSkill(reg)
+        else if (acro) onSelectSkill(acroSkillToUnified(acro))
+      }}
       className={`${cls} active:scale-[0.99]`}
       style={style}
     >
@@ -1238,6 +1243,35 @@ function SkillDrills({ skillId, canEdit }: { skillId: string; canEdit: boolean }
 }
 
 /**
+ * Note field for one path piece. Saves on blur (or Enter) so typing is
+ * never interrupted by the store round-trip.
+ */
+function NeedNoteInput({
+  initial,
+  onSave,
+}: {
+  initial: string
+  onSave: (text: string) => void
+}) {
+  const [text, setText] = useState(initial)
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        if (text.trim() !== initial.trim()) onSave(text)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
+      placeholder="Add a note…"
+      aria-label="Note for this prerequisite"
+      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-xs text-white placeholder-white/35 outline-none"
+    />
+  )
+}
+
+/**
  * Coach editor for a skill's path pieces: which skills and shapes are
  * required vs helpful. Every change writes locally first, then awaits the
  * sync to the gym server and reports saved / failed — work is never
@@ -1252,6 +1286,83 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
   const [shapeQuery, setShapeQuery] = useState('')
   const [shapeKind, setShapeKind] = useState<SkillNeedKind>('required')
   const [save, setSave] = useState<CardSave>({ state: 'idle' })
+  const [linkFrom, setLinkFrom] = useState<string | null>(null)
+
+  // Either/or groups: required pieces sharing a group are alternatives.
+  const groupMembers = (g?: string) => (g ? needs.filter((m) => m.group === g) : [])
+  const saveNoteFor = (n: SkillNeed, text: string) => {
+    const note = text.trim() || undefined
+    const targets = n.group ? groupMembers(n.group) : [n]
+    void mutatePath(setSave, () => {
+      for (const m of targets) saveNeed({ ...m, note })
+    })
+  }
+  const linkNeeds = (a: SkillNeed, b: SkillNeed) => {
+    const g = a.group ?? b.group ?? `grp:${a.id}`
+    void mutatePath(setSave, () => {
+      saveNeed({ ...a, group: g })
+      saveNeed({ ...b, group: g })
+    })
+    setLinkFrom(null)
+  }
+  const unlinkNeed = (n: SkillNeed) => {
+    const mates = groupMembers(n.group)
+    void mutatePath(setSave, () => {
+      saveNeed({ ...n, group: undefined })
+      const rest = mates.filter((m) => m.id !== n.id)
+      if (rest.length === 1) saveNeed({ ...rest[0], group: undefined })
+    })
+  }
+  const eitherOrButton = (n: SkillNeed) => {
+    if (n.kind !== 'required' || !n.needSkillId) return null
+    const linkingFrom = linkFrom ? needs.find((m) => m.id === linkFrom) : undefined
+    const base =
+      'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider'
+    if (linkingFrom && linkingFrom.id !== n.id) {
+      return (
+        <button
+          type="button"
+          onClick={() => linkNeeds(linkingFrom, n)}
+          className={`${base} border-[var(--accent)] bg-[var(--accent)]/20 text-white`}
+        >
+          Link either/or
+        </button>
+      )
+    }
+    if (linkingFrom && linkingFrom.id === n.id) {
+      return (
+        <button
+          type="button"
+          onClick={() => setLinkFrom(null)}
+          className={`${base} border-amber-300/70 bg-amber-300/15 text-amber-200`}
+        >
+          Linking… tap another
+        </button>
+      )
+    }
+    if (n.group) {
+      return (
+        <button
+          type="button"
+          onClick={() => unlinkNeed(n)}
+          title="In an either/or group. Tap to remove it from the group."
+          className={`${base} border-amber-300/70 bg-amber-300/15 text-amber-200`}
+        >
+          Either/or ✓
+        </button>
+      )
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setLinkFrom(n.id)}
+        title="Pair this requirement with another one, so either skill counts."
+        className={`${base} border-white/15 text-white/40 hover:text-white/70`}
+      >
+        Either/or
+      </button>
+    )
+  }
 
   // Acro cards search the acro map; main-map cards search the main registry.
   const isAcro = skillId.startsWith('acro_')
@@ -1289,24 +1400,50 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
       <Label>Path pieces</Label>
-      <p className="mt-1 text-xs opacity-70">Choose what this skill needs, and what just helps.</p>
+      <p className="mt-1 text-xs opacity-70">
+        Choose what this skill needs, and what just helps. Add a note to any piece, or pair two
+        required pieces as either/or.
+      </p>
+      {linkFrom && (
+        <p className="mt-1 text-[11px] font-semibold text-amber-200">
+          Now tap “Link either/or” on the other requirement.
+        </p>
+      )}
 
       {needs.length > 0 && (
         <ul className="mt-2 space-y-1.5">
           {needs.map((n) => {
             const name = needLabel(n)
+            const isFirstOfGroup =
+              !n.group || needs.find((m) => m.group === n.group)?.id === n.id
             return (
-              <li key={n.id} className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2">
-                <span className="min-w-0 flex-1 truncate text-sm text-white">{name}</span>
-                {kindSelect(n.kind, (k) => void mutatePath(setSave, () => saveNeed({ ...n, kind: k })), `How ${name} relates to this skill`)}
-                <button
-                  type="button"
-                  onClick={() => void mutatePath(setSave, () => deleteNeed(n.id))}
-                  aria-label={`Remove ${name}`}
-                  className="shrink-0 rounded-full px-2 py-0.5 text-xs text-white/50 hover:bg-white/10 hover:text-white"
-                >
-                  ✕
-                </button>
+              <li key={n.id} className="rounded-xl bg-white/5 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-white">{name}</span>
+                  {kindSelect(n.kind, (k) => void mutatePath(setSave, () => saveNeed({ ...n, kind: k })), `How ${name} relates to this skill`)}
+                  <button
+                    type="button"
+                    onClick={() => void mutatePath(setSave, () => deleteNeed(n.id))}
+                    aria-label={`Remove ${name}`}
+                    className="shrink-0 rounded-full px-2 py-0.5 text-xs text-white/50 hover:bg-white/10 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  {isFirstOfGroup ? (
+                    <NeedNoteInput
+                      key={`${n.id}:${n.group ?? ''}`}
+                      initial={n.note ?? ''}
+                      onSave={(text) => saveNoteFor(n, text)}
+                    />
+                  ) : (
+                    <span className="min-w-0 flex-1 text-[10px] text-white/40">
+                      Shares the either/or note above.
+                    </span>
+                  )}
+                  {eitherOrButton(n)}
+                </div>
               </li>
             )
           })}
@@ -1444,6 +1581,25 @@ function PathTab({
   const canon = canonicalSkillId(skill.id)
   const hl = useMemo(() => buildPathHighlight(canon), [canon, tick])
   const shapes = useMemo(() => conditioningForSkillConsolidated(canon), [canon, tick])
+  const directNeeds = useMemo(() => needsForSkillConsolidated(canon), [canon, tick])
+  // Notes and either/or groups live on this skill's direct needs; deeper
+  // nodes in the chain belong to other skills' cards.
+  const noteBySkill = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const n of directNeeds) {
+      if (n.needSkillId && n.note?.trim()) m.set(canonicalSkillId(n.needSkillId), n.note.trim())
+    }
+    return m
+  }, [directNeeds])
+  const groupBySkill = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const n of directNeeds) {
+      if (n.kind === 'required' && n.group && n.needSkillId) {
+        m.set(canonicalSkillId(n.needSkillId), n.group)
+      }
+    }
+    return m
+  }, [directNeeds])
   const required = useMemo(
     () =>
       hl
@@ -1456,6 +1612,52 @@ function PathTab({
   const helpful = useMemo(
     () => (hl ? [...hl.helpful.entries()].sort((a, b) => a[1] - b[1]) : []),
     [hl],
+  )
+  // Merge either/or group mates (same distance) into one chain step.
+  type ReqItem =
+    | { type: 'single'; id: string; dist: number }
+    | { type: 'group'; group: string; ids: string[]; dist: number }
+  const requiredItems: ReqItem[] = []
+  {
+    const used = new Set<string>()
+    for (const [id, dist] of required) {
+      if (used.has(id)) continue
+      const g = groupBySkill.get(id)
+      if (g) {
+        const mates = required
+          .filter(([mid, md]) => md === dist && groupBySkill.get(mid) === g)
+          .map(([mid]) => mid)
+        if (mates.length > 1) {
+          mates.forEach((mid) => used.add(mid))
+          requiredItems.push({ type: 'group', group: g, ids: mates, dist })
+          continue
+        }
+      }
+      used.add(id)
+      requiredItems.push({ type: 'single', id, dist })
+    }
+  }
+  const nodeRow = (
+    highlight: NonNullable<typeof hl>,
+    id: string,
+    dist: number,
+    role: 'required' | 'helpful',
+  ) => (
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <PathNode skillId={id} dist={dist} hl={highlight} role={role} onSelectSkill={onSelectSkill} />
+      </div>
+      {canEdit && (
+        <WiggleToggle
+          targetId={canon}
+          skillId={id}
+          on={highlight.keyHelpers.has(canonicalSkillId(id))}
+        />
+      )}
+    </div>
+  )
+  const noteLine = (text: string) => (
+    <p className="mt-1 pl-3 text-[11px] leading-snug text-white/60">{text}</p>
   )
   return (
     <div className="space-y-4" data-card-section="path">
@@ -1476,27 +1678,28 @@ function PathTab({
       {hl && (
         <div>
           <PathNode skillId={hl.target} dist={0} hl={hl} role="target" onSelectSkill={onSelectSkill} />
-          {required.map(([id]) => (
-            <div key={id}>
+          {requiredItems.map((item) => (
+            <div key={item.type === 'group' ? `grp:${item.group}` : item.id}>
               <div aria-hidden className="mx-auto h-2.5 w-0.5 bg-white/20" />
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <PathNode
-                    skillId={id}
-                    dist={hl.required.get(id) ?? 1}
-                    hl={hl}
-                    role="required"
-                    onSelectSkill={onSelectSkill}
-                  />
+              {item.type === 'single' ? (
+                <>
+                  {nodeRow(hl, item.id, item.dist, 'required')}
+                  {noteBySkill.get(item.id) && noteLine(noteBySkill.get(item.id)!)}
+                </>
+              ) : (
+                <div className="rounded-2xl border border-amber-300/30 bg-amber-300/5 p-2">
+                  <p className="px-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-200/80">
+                    Either one works
+                  </p>
+                  <div className="space-y-1.5">
+                    {item.ids.map((id) => (
+                      <div key={id}>{nodeRow(hl, id, item.dist, 'required')}</div>
+                    ))}
+                  </div>
+                  {item.ids.map((id) => noteBySkill.get(id)).find(Boolean) &&
+                    noteLine(item.ids.map((id) => noteBySkill.get(id)).find(Boolean)!)}
                 </div>
-                {canEdit && (
-                  <WiggleToggle
-                    targetId={canon}
-                    skillId={id}
-                    on={hl.keyHelpers.has(canonicalSkillId(id))}
-                  />
-                )}
-              </div>
+              )}
             </div>
           ))}
         </div>
@@ -1532,17 +1735,9 @@ function PathTab({
           <Label>Also helps</Label>
           <div className="mt-1.5 space-y-1.5">
             {helpful.map(([id, dist]) => (
-              <div key={id} className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <PathNode skillId={id} dist={dist} hl={hl} role="helpful" onSelectSkill={onSelectSkill} />
-                </div>
-                {canEdit && (
-                  <WiggleToggle
-                    targetId={canon}
-                    skillId={id}
-                    on={hl.keyHelpers.has(canonicalSkillId(id))}
-                  />
-                )}
+              <div key={id}>
+                {nodeRow(hl, id, dist, 'helpful')}
+                {noteBySkill.get(id) && noteLine(noteBySkill.get(id)!)}
               </div>
             ))}
           </div>
