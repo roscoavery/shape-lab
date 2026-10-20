@@ -462,7 +462,25 @@ function ChalkboardBody({
     setLiveIds(next)
   }
   const endItemDrag = () => {
-    if (liveIds && board?.id) reorderChalkboardItems(board.id, liveIds)
+    if (liveIds) {
+      // The visible list can merge boards (pins for every class time plus
+      // pins for this hour only), while each item lives on exactly one
+      // board. Write the dragged order into every contributing board,
+      // restricted to that board's own items, or the save lands on the
+      // wrong board and the list snaps back.
+      const idsByBoard = new Map<string, Set<string>>()
+      for (const { item } of items) {
+        const bid = item.boardId ?? board?.id
+        if (!bid) continue
+        const set = idsByBoard.get(bid) ?? new Set<string>()
+        set.add(item.id)
+        idsByBoard.set(bid, set)
+      }
+      for (const [bid, own] of idsByBoard) {
+        const sub = liveIds.filter((id) => own.has(id))
+        if (sub.length > 1) reorderChalkboardItems(bid, sub)
+      }
+    }
     setDragItemId(null)
     setLiveIds(null)
   }
