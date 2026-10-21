@@ -843,7 +843,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
     "guideNeeds": [
       "A strong layout first. Non-negotiable.",
       "Layout standards before twisting: solid blocking angle to convert travel to height; shape deadline at 3 o’clock (first quarter of flip); set with head in; enough rotation to keep hips open all the way through (no piking)",
-      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better, the half turn spots the ground so the athlete does not feel lost, while still maximizing the set and staying hollow to land",
+      "Twist timing: commonly taught 11 to 1, but 10 to 12 may be better, the half turn spots the ground so the athlete does not feel lost, while still maximizing the set, leaving time to finish the twist and open to control the landing",
       "Front halves (barani) and back halves can both help build toward a full"
     ],
     "canBend": [
