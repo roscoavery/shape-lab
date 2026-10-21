@@ -626,6 +626,26 @@ export function copyChecklistForAthlete(
   return updatePlan(toPlanId, (p) => ({ ...p, tasks: [...p.tasks, ...fresh] }))
 }
 
+/** Tasks on this plan that arrived by copying a past checklist for her. */
+export function copiedTasksForAthlete(plan: ClassPlan, athleteId: string): ClassPlanTask[] {
+  return plan.tasks.filter(
+    (t) => t.carriedFromPlanId && t.athleteIds.includes(athleteId),
+  )
+}
+
+/** Undo a checklist copy: remove every task copied in for this athlete,
+ * leaving tasks the coach typed by hand untouched. */
+export function removeCopiedTasksForAthlete(planId: string, athleteId: string) {
+  const plan = loadClassPlans().find((p) => p.id === planId)
+  if (!plan || copiedTasksForAthlete(plan, athleteId).length === 0) return
+  updatePlan(planId, (p) => ({
+    ...p,
+    tasks: p.tasks.filter(
+      (t) => !(t.carriedFromPlanId && t.athleteIds.includes(athleteId)),
+    ),
+  }))
+}
+
 function sameTask(a: ClassPlanTask, b: ClassPlanTask): boolean {
   if (a.text.trim().toLowerCase() !== b.text.trim().toLowerCase()) return false
   const as = [...a.athleteIds].sort().join(',')
