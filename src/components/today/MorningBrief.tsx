@@ -15,6 +15,7 @@ import {
   reorderPlanTask,
   carryOverTasks,
   previousPlanForOffering,
+  previousPlanForAthlete,
   copyPlanTasksFresh,
   tasksNotYetIn,
   pastTasksForAthlete,
@@ -302,12 +303,28 @@ function ClassPlanCard({
 
   // When exactly one athlete is picked in the task writer, offer that
   // athlete's own checklist from last time instead of the whole class's.
+  // Same class last time wins; if she wasn't in this class before, fall
+  // back to her most recent checklist from any class or lesson — a
+  // Thursday regular showing up on Tuesday still gets her checklist.
   const soloAthlete =
     taskAthleteIds.length === 1 && taskAthleteIds[0] !== 'all'
       ? athleteById(athletes, taskAthleteIds[0])
       : undefined
+  const soloPrevPlan = useMemo(() => {
+    if (!soloAthlete) return null
+    if (prevPlan && tasksNotYetIn(prevPlan, plan, soloAthlete.id) > 0) return prevPlan
+    return previousPlanForAthlete(soloAthlete.id, plan.date, plan.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soloAthlete?.id, prevPlan, plan.date, plan.id, plan.tasks])
   const soloCopyCount =
-    prevPlan && soloAthlete ? tasksNotYetIn(prevPlan, plan, soloAthlete.id) : 0
+    soloPrevPlan && soloAthlete ? tasksNotYetIn(soloPrevPlan, plan, soloAthlete.id) : 0
+  const soloDateLabel = soloPrevPlan
+    ? new Date(`${soloPrevPlan.date}T12:00:00`).toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
+    : ''
 
   const [repsInput, setRepsInput] = useState('')
 
@@ -572,17 +589,17 @@ function ClassPlanCard({
                 setRepsInput(reps ? String(reps) : '')
               }}
             />
-            {prevPlan && soloAthlete && soloCopyCount > 0 && (
+            {soloPrevPlan && soloAthlete && soloCopyCount > 0 && (
               <button
                 type="button"
-                onClick={() => copyPlanTasksFresh(prevPlan.id, plan.id, soloAthlete.id)}
+                onClick={() => copyPlanTasksFresh(soloPrevPlan.id, plan.id, soloAthlete.id)}
                 className="w-full rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2 text-left text-sm text-[var(--text)]"
               >
                 <span className="font-semibold">
                   Use {soloAthlete.firstName || soloAthlete.name}'s checklist
                 </span>{' '}
                 <span className="text-[var(--muted)]">
-                  Copy {soloCopyCount} task{soloCopyCount === 1 ? '' : 's'} from {prevDateLabel}.
+                  Copy {soloCopyCount} task{soloCopyCount === 1 ? '' : 's'} from {soloDateLabel}.
                 </span>
               </button>
             )}

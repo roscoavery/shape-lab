@@ -448,6 +448,32 @@ export function previousPlanForOffering(
   return earlier[0] ?? null
 }
 
+/**
+ * The most recent plan, from ANY class or lesson, that has tasks written
+ * for this athlete — their last checklist, wherever it was used. Powers
+ * "use her checklist from last time" when she shows up to a different
+ * class or a new lesson. Same-day plans count (a lesson this morning can
+ * seed tonight's class); the target plan itself is excluded.
+ */
+export function previousPlanForAthlete(
+  athleteId: string,
+  beforeDate: string,
+  excludePlanId?: string,
+): ClassPlan | null {
+  const earlier = loadClassPlans()
+    .filter(
+      (p) =>
+        p.id !== excludePlanId &&
+        p.date <= beforeDate &&
+        p.tasks.some((t) => t.athleteIds.includes(athleteId)),
+    )
+    .sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt),
+    )
+  return earlier[0] ?? null
+}
+
 function sameTask(a: ClassPlanTask, b: ClassPlanTask): boolean {
   if (a.text.trim().toLowerCase() !== b.text.trim().toLowerCase()) return false
   const as = [...a.athleteIds].sort().join(',')

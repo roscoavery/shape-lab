@@ -11,6 +11,10 @@ import {
   pullClassPlans,
   loadClassPlans,
   todayKey,
+  getOrCreateClassPlan,
+  previousPlanForAthlete,
+  tasksNotYetIn,
+  copyPlanTasksFresh,
   type ClassPlan,
   type ClassPlanTask,
 } from '../../lib/classPlans'
@@ -24,6 +28,14 @@ type Props = {
 
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
   return athletes.find((a) => a.id === id)
+}
+
+function fmtDay(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 type TaskRow = { plan: ClassPlan; task: ClassPlanTask; offeringName: string; time: string }
@@ -126,6 +138,43 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     return athletesWithTasks.filter((a) => presentIds.has(a.id))
   }, [athletesWithTasks, presentIds])
 
+  // Present athletes with nothing planned today, but with a checklist
+  // from a previous day (any class or lesson). They still get a name
+  // row, so a Thursday regular who shows up on Tuesday can pull up
+  // her last checklist and copy it onto today's class plan.
+  const targetPlan = useMemo(
+    () =>
+      liveMeeting
+        ? plans.find((p) => p.offeringId === liveMeeting.offeringId) ?? null
+        : null,
+    [plans, liveMeeting],
+  )
+  const presentNoTasks = useMemo(() => {
+    if (!liveMeeting || !presentIds) return []
+    const have = new Set(athletesWithTasks.map((a) => a.id))
+    const out: { athlete: Athlete; prev: ClassPlan; count: number }[] = []
+    for (const id of presentIds) {
+      if (have.has(id)) continue
+      const a = athleteById(athletes, id)
+      if (!a) continue
+      const prev = previousPlanForAthlete(id, dateKey, targetPlan?.id)
+      if (!prev) continue
+      const count = targetPlan
+        ? tasksNotYetIn(prev, targetPlan, id)
+        : prev.tasks.filter((t) => t.athleteIds.includes(id)).length
+      if (count > 0) out.push({ athlete: a, prev, count })
+    }
+    return out.sort((x, y) =>
+      (x.athlete.firstName || x.athlete.name).localeCompare(
+        y.athlete.firstName || y.athlete.name,
+      ),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMeeting, presentIds, athletesWithTasks, athletes, dateKey, targetPlan, tick])
+  const selectedPrev = selectedId
+    ? presentNoTasks.find((r) => r.athlete.id === selectedId)
+    : undefined
+
   // Rows visible for the current selection. 'Everyone' tasks only apply to
   // athletes in that task's class, not every athlete the coach sees that day.
   const visible: TaskRow[] = useMemo(() => {
@@ -215,7 +264,25 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
               </button>
             )
           })}
-          {visibleAthletes.length === 0 && (
+          {presentNoTasks.map(({ athlete: a, prev, count }) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setSelectedId(a.id)}
+              className="flex items-center justify-between rounded-2xl border border-white/15 bg-[#111418] p-5 text-left active:bg-white/10"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <AthleteAvatar athlete={a} size="md" />
+                <span className="truncate text-2xl font-bold text-white">
+                  {a.firstName || a.name}
+                </span>
+              </span>
+              <span className="shrink-0 text-sm text-white/50">
+                Last checklist {fmtDay(prev.date)} · {count} task{count === 1 ? '' : 's'}
+              </span>
+            </button>
+          ))}
+          {visibleAthletes.length === 0 && presentNoTasks.length === 0 && (
             <div className="rounded-2xl border border-white/10 p-8 text-center">
               <p className="text-white/70">
                 {liveMeeting
@@ -236,7 +303,34 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
         <div className="grid gap-4">
           {visible.length === 0 ? (
             <div className="rounded-2xl border border-white/10 p-8 text-center">
-              <p className="text-white/70">No tasks for you today. Ask your coach.</p>
+              {selectedPrev && liveMeeting ? (
+                <>
+                  <p className="text-white/70">No tasks for you today yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = getOrCreateClassPlan(
+                        dateKey,
+                        liveMeeting.offeringId,
+                        coach.id,
+                      )
+                      copyPlanTasksFresh(selectedPrev.prev.id, target.id, selectedPrev.athlete.id)
+                    }}
+                    className="mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-base text-white"
+                  >
+                    <span className="font-semibold">
+                      Use {selectedPrev.athlete.firstName || selectedPrev.athlete.name}'s
+                      checklist
+                    </span>{' '}
+                    <span className="text-white/60">
+                      Copy {selectedPrev.count} task{selectedPrev.count === 1 ? '' : 's'} from{' '}
+                      {fmtDay(selectedPrev.prev.date)}.
+                    </span>
+                  </button>
+                </>
+              ) : (
+                <p className="text-white/70">No tasks for you today. Ask your coach.</p>
+              )}
             </div>
           ) : (
             visible.map(({ plan, task, offeringName, time }) => (
