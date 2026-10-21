@@ -2,8 +2,9 @@
  * Fullscreen proof player for skill cards (and spotting cards).
  *
  * Any video in a card's "References" section can be opened here: the player
- * goes (near-)fullscreen, arrows and swipe move through the other videos on
- * the card, and every video gets the same analysis controls — scrub, slow
+ * goes (near-)fullscreen, the side arrows move through the other videos on
+ * the card (no swipe navigation — it interfered with tap-hold scrub), and
+ * every video gets the same analysis controls — scrub, slow
  * motion, flip (mirror), A/B loop. Local videos autoplay and loop on open.
  *
  * The Adjust mode lets a coach set per-video playback adjustments that are
@@ -1135,13 +1136,13 @@ export function ProofFullscreenPlayer({
     if (!t) return
     const dx = t.clientX - st.x
     const dy = t.clientY - st.y
-    // A deliberate downward swipe closes the player.
+    // A deliberate downward swipe closes the player. There is no
+    // horizontal swipe navigation: it fought the tap-hold scrub, so
+    // moving between videos is the side arrows only.
     if (dy > 90 && Math.abs(dy) > Math.abs(dx) * 1.4) {
       onClose()
       return
     }
-    if (dx < -60) onIndex((index + 1) % videos.length)
-    else if (dx > 60) onIndex((index - 1 + videos.length) % videos.length)
   }
 
   if (!video) return null
