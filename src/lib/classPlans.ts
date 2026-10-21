@@ -449,29 +449,118 @@ export function previousPlanForOffering(
 }
 
 /**
- * The most recent plan, from ANY class or lesson, that has tasks written
- * for this athlete — their last checklist, wherever it was used. Powers
- * "use her checklist from last time" when she shows up to a different
- * class or a new lesson. Same-day plans count (a lesson this morning can
- * seed tonight's class); the target plan itself is excluded.
+ * The tasks that appeared under an athlete's name in a plan: tasks
+ * written for her, plus "everyone" tasks she actually had — for a class
+ * she was a member of, or in a lesson plan that was hers (it holds at
+ * least one of her tasks). This is her checklist from that session,
+ * exactly as it showed under her name that day.
  */
-export function previousPlanForAthlete(
+export function effectiveChecklistTasks(
+  plan: ClassPlan,
+  athleteId: string,
+  roster?: Athlete[],
+): ClassPlanTask[] {
+  const isLesson = plan.offeringId.startsWith('lesson:')
+  const hasOwn = plan.tasks.some((t) => t.athleteIds.includes(athleteId))
+  const everyoneApplies = isLesson
+    ? hasOwn
+    : classMemberIds(plan.offeringId, roster ?? loadAthletes()).has(athleteId)
+  return plan.tasks.filter(
+    (t) =>
+      t.athleteIds.includes(athleteId) ||
+      (everyoneApplies && t.athleteIds.includes('all')),
+  )
+}
+
+/**
+ * Past sessions whose checklist can be reused for this athlete: every
+ * earlier plan (any class or lesson) where she had a checklist, most
+ * recent first. Same-day plans count (a lesson this morning can seed
+ * tonight's class); the target plan itself is excluded.
+ */
+export function checklistSourcesForAthlete(
   athleteId: string,
   beforeDate: string,
   excludePlanId?: string,
-): ClassPlan | null {
-  const earlier = loadClassPlans()
-    .filter(
-      (p) =>
-        p.id !== excludePlanId &&
-        p.date <= beforeDate &&
-        p.tasks.some((t) => t.athleteIds.includes(athleteId)),
-    )
+  limit = 6,
+): { plan: ClassPlan; tasks: ClassPlanTask[] }[] {
+  const plans = loadClassPlans()
+    .filter((p) => p.id !== excludePlanId && p.date <= beforeDate)
     .sort(
       (a, b) =>
         b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt),
     )
-  return earlier[0] ?? null
+  const out: { plan: ClassPlan; tasks: ClassPlanTask[] }[] = []
+  for (const plan of plans) {
+    const tasks = effectiveChecklistTasks(plan, athleteId)
+    if (tasks.length > 0) out.push({ plan, tasks })
+    if (out.length >= limit) break
+  }
+  return out
+}
+
+/** How many of a source checklist's tasks are not already the athlete's in the target. */
+export function checklistCopyCount(
+  from: ClassPlan,
+  to: ClassPlan | null,
+  athleteId: string,
+): number {
+  const seen = new Set<string>()
+  let n = 0
+  for (const task of effectiveChecklistTasks(from, athleteId)) {
+    const key = task.text.trim().toLowerCase()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    if (
+      to?.tasks.some(
+        (t) => t.athleteIds.includes(athleteId) && t.text.trim().toLowerCase() === key,
+      )
+    )
+      continue
+    n += 1
+  }
+  return n
+}
+
+/**
+ * Copy an athlete's checklist from a past session into the target plan
+ * as her personal checklist: every task lands under her name alone
+ * (including ones that were "everyone" tasks in the source), done flags
+ * and rep progress reset, rep targets kept, duplicates skipped.
+ */
+export function copyChecklistForAthlete(
+  fromPlanId: string,
+  toPlanId: string,
+  athleteId: string,
+): ClassPlan | null {
+  const plans = loadClassPlans()
+  const from = plans.find((p) => p.id === fromPlanId)
+  const to = plans.find((p) => p.id === toPlanId)
+  if (!from || !to || from.id === to.id) return null
+  const seen = new Set<string>()
+  const fresh: ClassPlanTask[] = []
+  for (const task of effectiveChecklistTasks(from, athleteId)) {
+    const key = task.text.trim().toLowerCase()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    if (
+      to.tasks.some(
+        (t) => t.athleteIds.includes(athleteId) && t.text.trim().toLowerCase() === key,
+      )
+    )
+      continue
+    fresh.push({
+      id: createId('ctask'),
+      athleteIds: [athleteId],
+      text: task.text,
+      done: false,
+      ...(task.repsTarget ? { repsTarget: task.repsTarget, repsDone: 0 } : {}),
+      carriedFromPlanId: from.id,
+      createdAt: new Date().toISOString(),
+    })
+  }
+  if (fresh.length === 0) return null
+  return updatePlan(toPlanId, (p) => ({ ...p, tasks: [...p.tasks, ...fresh] }))
 }
 
 function sameTask(a: ClassPlanTask, b: ClassPlanTask): boolean {

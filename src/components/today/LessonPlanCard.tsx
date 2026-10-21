@@ -9,11 +9,10 @@ import {
   togglePlanTask,
   removePlanTask,
   reorderPlanTask,
-  previousPlanForAthlete,
-  tasksNotYetIn,
-  copyPlanTasksFresh,
+  copyChecklistForAthlete,
   type ClassPlan,
 } from '../../lib/classPlans'
+import { ReuseChecklist } from './ReuseChecklist'
 import { useDragList, DragGrip } from './useDragList'
 
 function formatTime(iso: string): string {
@@ -68,23 +67,6 @@ export function LessonPlanCard({
     [dateKey, planId, coachId, plansTick],
   )
   const [repsInput, setRepsInput] = useState('')
-
-  // Her last checklist from any earlier lesson or class, offered as a
-  // starting template so the coach trims instead of rewriting it.
-  const prevForAthlete = useMemo(
-    () => (athlete ? previousPlanForAthlete(athlete.id, dateKey, plan.id) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [athlete?.id, dateKey, plan.id, plansTick, plan.tasks],
-  )
-  const prevCopyCount =
-    prevForAthlete && athlete ? tasksNotYetIn(prevForAthlete, plan, athlete.id) : 0
-  const prevDateLabel = prevForAthlete
-    ? new Date(`${prevForAthlete.date}T12:00:00`).toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      })
-    : ''
 
   const { handleProps, rowStyle } = useDragList((from, to) => {
     const task = plan.tasks[from]
@@ -181,19 +163,15 @@ export function LessonPlanCard({
           Add
         </button>
       </div>
-      {athlete && prevForAthlete && prevCopyCount > 0 && (
-        <button
-          type="button"
-          onClick={() => copyPlanTasksFresh(prevForAthlete.id, plan.id, athlete.id)}
-          className="mt-2 w-full rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2 text-left text-sm text-[var(--text)]"
-        >
-          <span className="font-semibold">
-            Use {athlete.firstName || athlete.name}'s checklist
-          </span>{' '}
-          <span className="text-[var(--muted)]">
-            Copy {prevCopyCount} task{prevCopyCount === 1 ? '' : 's'} from {prevDateLabel}.
-          </span>
-        </button>
+      {athlete && (
+        <ReuseChecklist
+          athlete={athlete}
+          beforeDate={dateKey}
+          target={plan}
+          refreshKey={plansTick}
+          className="mt-2"
+          onPick={(src) => copyChecklistForAthlete(src.id, plan.id, athlete.id)}
+        />
       )}
     </>
   )

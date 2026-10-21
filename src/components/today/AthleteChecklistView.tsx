@@ -12,12 +12,13 @@ import {
   loadClassPlans,
   todayKey,
   getOrCreateClassPlan,
-  previousPlanForAthlete,
-  tasksNotYetIn,
-  copyPlanTasksFresh,
+  checklistSourcesForAthlete,
+  checklistCopyCount,
+  copyChecklistForAthlete,
   type ClassPlan,
   type ClassPlanTask,
 } from '../../lib/classPlans'
+import { ReuseChecklist, fmtPlanDay } from './ReuseChecklist'
 import { classMemberIds, listLiveMeetings, resolveAttendeeAthletes, subscribeCoachClasses } from '../../lib/coachClasses'
 
 type Props = {
@@ -28,14 +29,6 @@ type Props = {
 
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
   return athletes.find((a) => a.id === id)
-}
-
-function fmtDay(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 type TaskRow = { plan: ClassPlan; task: ClassPlanTask; offeringName: string; time: string }
@@ -157,12 +150,10 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
       if (have.has(id)) continue
       const a = athleteById(athletes, id)
       if (!a) continue
-      const prev = previousPlanForAthlete(id, dateKey, targetPlan?.id)
+      const prev = checklistSourcesForAthlete(id, dateKey, targetPlan?.id)[0]
       if (!prev) continue
-      const count = targetPlan
-        ? tasksNotYetIn(prev, targetPlan, id)
-        : prev.tasks.filter((t) => t.athleteIds.includes(id)).length
-      if (count > 0) out.push({ athlete: a, prev, count })
+      const count = checklistCopyCount(prev.plan, targetPlan, id)
+      if (count > 0) out.push({ athlete: a, prev: prev.plan, count })
     }
     return out.sort((x, y) =>
       (x.athlete.firstName || x.athlete.name).localeCompare(
@@ -171,9 +162,9 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveMeeting, presentIds, athletesWithTasks, athletes, dateKey, targetPlan, tick])
-  const selectedPrev = selectedId
-    ? presentNoTasks.find((r) => r.athlete.id === selectedId)
-    : undefined
+  const selectedHasSources = selectedId
+    ? checklistSourcesForAthlete(selectedId, dateKey, targetPlan?.id).length > 0
+    : false
 
   // Rows visible for the current selection. 'Everyone' tasks only apply to
   // athletes in that task's class, not every athlete the coach sees that day.
@@ -278,7 +269,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                 </span>
               </span>
               <span className="shrink-0 text-sm text-white/50">
-                Last checklist {fmtDay(prev.date)} · {count} task{count === 1 ? '' : 's'}
+                Last checklist {fmtPlanDay(prev.date)} · {count} task{count === 1 ? '' : 's'}
               </span>
             </button>
           ))}
@@ -303,30 +294,25 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
         <div className="grid gap-4">
           {visible.length === 0 ? (
             <div className="rounded-2xl border border-white/10 p-8 text-center">
-              {selectedPrev && liveMeeting ? (
+              {selectedAthlete && liveMeeting && selectedHasSources ? (
                 <>
                   <p className="text-white/70">No tasks for you today yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
+                  <ReuseChecklist
+                    tone="overlay"
+                    className="mx-auto mt-4 max-w-md text-left"
+                    athlete={selectedAthlete}
+                    beforeDate={dateKey}
+                    target={targetPlan}
+                    refreshKey={tick}
+                    onPick={(src) => {
                       const target = getOrCreateClassPlan(
                         dateKey,
                         liveMeeting.offeringId,
                         coach.id,
                       )
-                      copyPlanTasksFresh(selectedPrev.prev.id, target.id, selectedPrev.athlete.id)
+                      copyChecklistForAthlete(src.id, target.id, selectedAthlete.id)
                     }}
-                    className="mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-base text-white"
-                  >
-                    <span className="font-semibold">
-                      Use {selectedPrev.athlete.firstName || selectedPrev.athlete.name}'s
-                      checklist
-                    </span>{' '}
-                    <span className="text-white/60">
-                      Copy {selectedPrev.count} task{selectedPrev.count === 1 ? '' : 's'} from{' '}
-                      {fmtDay(selectedPrev.prev.date)}.
-                    </span>
-                  </button>
+                  />
                 </>
               ) : (
                 <p className="text-white/70">No tasks for you today. Ask your coach.</p>
