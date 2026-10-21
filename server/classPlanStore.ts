@@ -20,6 +20,8 @@ export type DiskClassPlan = {
   coachId: string
   notes: string
   tasks: DiskClassPlanTask[]
+  /** Athletes this plan was made for (lesson plans), stamped client-side. */
+  athleteIds?: string[]
   createdAt: string
   updatedAt: string
 }

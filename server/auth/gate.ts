@@ -45,6 +45,9 @@ const COACH_WRITE_PATHS = new Set([
   '/api/learn-notes',
   '/api/chalkboards',
   '/api/coach-library',
+  '/api/class-plans',
+  '/api/coach-hours',
+  '/api/collages',
 ])
 
 function isWrite(method: string | undefined): boolean {

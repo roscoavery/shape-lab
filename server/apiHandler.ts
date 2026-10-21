@@ -56,6 +56,7 @@ import {
   mergeClassPlans,
   readClassPlans,
   writeClassPlans,
+  type DiskClassPlan,
 } from './classPlanStore.ts'
 import {
   addCoachStillFromBody,
@@ -155,7 +156,7 @@ import {
   consentFieldsOf,
   parseConsentPatch,
 } from './auth/consent.ts'
-import { canAccessAthlete, canCoachAthlete, canEditAthlete, canParentAccessAthlete, isAdmin, type RosterAthlete } from './auth/permissions.ts'
+import { canAccessAthlete, canCoachAthlete, canEditAthlete, canParentAccessAthlete, canWriteCoachTools, isAdmin, parentLinkedFromRoster, type RosterAthlete } from './auth/permissions.ts'
 import { writeAudit } from './auth/audit.ts'
 import type { AuthUser } from './auth/types.ts'
 import { appendHoldLog } from './holdLog.ts'
@@ -356,6 +357,46 @@ async function denyUnlessAthleteAccess(
     return true
   }
   return false
+}
+
+/**
+ * Class plans a non-coach viewer may receive: only the parts that
+ * concern their own athletes. Coaches and admins get everything.
+ * Class plans keep whole-class ('all') tasks plus the viewer's
+ * athletes' tasks; lesson plans are personal and go only to the
+ * athletes the lesson was for (who then see the whole list, exactly
+ * as the lesson card showed it).
+ */
+async function classPlansForViewer(
+  plans: DiskClassPlan[],
+  viewer: AuthUser,
+): Promise<DiskClassPlan[]> {
+  if (canWriteCoachTools(viewer)) return plans
+  let allowed: string[] = []
+  if (viewer.role === 'athlete' && viewer.rosterProfileId) {
+    allowed = [viewer.rosterProfileId]
+  } else if (viewer.role === 'parent') {
+    const { athletes } = await rosterAthleteById('')
+    allowed = parentLinkedFromRoster(viewer, athletes)
+  }
+  const allowedSet = new Set(allowed)
+  if (allowedSet.size === 0) return []
+  const out: DiskClassPlan[] = []
+  for (const plan of plans) {
+    const isLesson = plan.offeringId.startsWith('lesson:')
+    const owner =
+      (plan.athleteIds ?? []).some((id) => allowedSet.has(id)) ||
+      plan.tasks.some((t) => t.athleteIds.some((id) => id !== 'all' && allowedSet.has(id)))
+    if (isLesson) {
+      if (owner) out.push(plan)
+      continue
+    }
+    const tasks = plan.tasks.filter(
+      (t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => allowedSet.has(id)),
+    )
+    if (tasks.length > 0) out.push({ ...plan, tasks })
+  }
+  return out
 }
 
 /** Returns true when this request is a Shape Lab API call (response already written). */
@@ -2038,7 +2079,8 @@ export async function handleShapeLabApi(
   if (path === '/api/class-plans') {
     if (req.method === 'GET') {
       const stored = await readClassPlans()
-      sendJson(res, 200, { kind: 'shape-lab-class-plans', plans: stored.plans })
+      const plans = await classPlansForViewer(stored.plans, viewer)
+      sendJson(res, 200, { kind: 'shape-lab-class-plans', plans })
       return true
     }
     if (req.method === 'PUT') {
@@ -2259,6 +2301,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/coach-hours') {
     if (req.method === 'GET') {
+      if (!canWriteCoachTools(viewer)) {
+        sendJson(res, 403, { error: 'Coach hours are limited to coaches and gym admin.' })
+        return true
+      }
       sendJson(res, 200, await readCoachHoursFile())
       return true
     }
