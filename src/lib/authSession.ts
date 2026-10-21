@@ -2,6 +2,7 @@
  * Client helper for the V4 account session.
  * The 4-digit profile PIN is not used here — the cookie is the real login.
  */
+import { clearParentPin } from './parentPin'
 
 export type SessionRole = 'admin' | 'coach' | 'athlete' | 'parent' | 'gymOwner'
 
@@ -201,6 +202,9 @@ export async function bootstrapAdmin(
 export async function logoutSession(): Promise<void> {
   await fetch('/api/auth/logout', { ...authWriteInit(), method: 'POST' })
   csrfToken = ''
+  // Signing out is also the Parent Gate recovery path: a forgotten PIN
+  // is cleared here so the family can set a new one next sign-in.
+  clearParentPin()
 }
 
 export async function peekInvite(token: string): Promise<{

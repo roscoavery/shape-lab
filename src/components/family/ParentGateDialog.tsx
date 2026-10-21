@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { checkParentPin, hasParentPin, setParentPin } from '../../lib/parentPin'
+import { useEffect, useState } from 'react'
+import { checkParentPin, hasParentPin, parentPinLockSeconds, setParentPin } from '../../lib/parentPin'
 
 type Props = {
   onSuccess: () => void
@@ -14,9 +14,27 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
   const [mode] = useState<'setup' | 'verify'>(hasParentPin() ? 'verify' : 'setup')
   const [pin, setPin] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => {
+    const left = parentPinLockSeconds()
+    return left > 0 ? `Too many wrong tries. Wait ${left} seconds and try again.` : null
+  })
+  const [lockLeft, setLockLeft] = useState(() => parentPinLockSeconds())
+  const [busy, setBusy] = useState(false)
+  const padDisabled = busy || lockLeft > 0
+
+  // Count the retry lock down so the pad reopens on its own.
+  useEffect(() => {
+    if (lockLeft <= 0) return
+    const t = window.setInterval(() => {
+      const left = parentPinLockSeconds()
+      setLockLeft(left)
+      if (left <= 0) setError(null)
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [lockLeft > 0])
 
   const handleDigit = (d: string, target: 'pin' | 'confirm') => {
+    if (padDisabled) return
     if (target === 'pin' && pin.length >= 4) return
     if (target === 'confirm' && confirm.length >= 4) return
     setError(null)
@@ -25,11 +43,13 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
   }
 
   const handleBackspace = (target: 'pin' | 'confirm') => {
+    if (padDisabled) return
     if (target === 'pin') setPin((p) => p.slice(0, -1))
     else setConfirm((c) => c.slice(0, -1))
   }
 
-  const submit = () => {
+  const submit = async () => {
+    if (padDisabled) return
     if (mode === 'setup') {
       if (pin.length !== 4) {
         setError('Enter a 4-digit PIN.')
@@ -45,10 +65,15 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
         setConfirm('')
         return
       }
-      if (setParentPin(pin)) {
-        onSuccess()
-      } else {
-        setError('Could not save that PIN.')
+      setBusy(true)
+      try {
+        if (await setParentPin(pin)) {
+          onSuccess()
+        } else {
+          setError('Could not save that PIN.')
+        }
+      } finally {
+        setBusy(false)
       }
       return
     }
@@ -57,11 +82,22 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
       setError('Enter your 4-digit PIN.')
       return
     }
-    if (checkParentPin(pin)) {
-      onSuccess()
-    } else {
-      setError('Wrong PIN. Try again.')
-      setPin('')
+    setBusy(true)
+    try {
+      if (await checkParentPin(pin)) {
+        onSuccess()
+      } else {
+        const left = parentPinLockSeconds()
+        setPin('')
+        if (left > 0) {
+          setLockLeft(left)
+          setError(`Too many wrong tries. Wait ${left} seconds and try again.`)
+        } else {
+          setError('Wrong PIN. Try again.')
+        }
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -87,30 +123,34 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
           <button
             key={d}
             type="button"
+            disabled={padDisabled}
             onClick={() => handleDigit(d, target)}
-            className="rounded-xl border border-[var(--panel-border)] py-3 text-xl font-semibold text-[var(--text)] hover:bg-white/5"
+            className="rounded-xl border border-[var(--panel-border)] py-3 text-xl font-semibold text-[var(--text)] hover:bg-white/5 disabled:opacity-40"
           >
             {d}
           </button>
         ))}
         <button
           type="button"
+          disabled={padDisabled}
           onClick={() => handleBackspace(target)}
-          className="rounded-xl border border-[var(--panel-border)] py-3 text-sm text-[var(--muted)] hover:bg-white/5"
+          className="rounded-xl border border-[var(--panel-border)] py-3 text-sm text-[var(--muted)] hover:bg-white/5 disabled:opacity-40"
         >
           ⌫
         </button>
         <button
           type="button"
+          disabled={padDisabled}
           onClick={() => handleDigit('0', target)}
-          className="rounded-xl border border-[var(--panel-border)] py-3 text-xl font-semibold text-[var(--text)] hover:bg-white/5"
+          className="rounded-xl border border-[var(--panel-border)] py-3 text-xl font-semibold text-[var(--text)] hover:bg-white/5 disabled:opacity-40"
         >
           0
         </button>
         <button
           type="button"
-          onClick={submit}
-          className="rounded-xl bg-[var(--accent)] py-3 text-sm font-semibold text-[var(--on-accent)]"
+          disabled={padDisabled}
+          onClick={() => void submit()}
+          className="rounded-xl bg-[var(--accent)] py-3 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
         >
           {mode === 'setup' ? (target === 'pin' ? 'Next' : 'Save') : 'Unlock'}
         </button>
@@ -129,7 +169,13 @@ export function ParentGateDialog({ onSuccess, onCancel }: Props) {
             ? 'Create a 4-digit PIN. You\'ll enter it when returning from Athlete View to the Parent experience.'
             : 'Enter your Parent PIN to return to the Parent experience.'}
         </p>
-        {error && <p className="mt-2 text-sm text-[var(--bad)]">{error}</p>}
+        {lockLeft > 0 ? (
+          <p className="mt-2 text-sm text-[var(--bad)]">
+            Too many wrong tries. Try again in {lockLeft} seconds.
+          </p>
+        ) : (
+          error && <p className="mt-2 text-sm text-[var(--bad)]">{error}</p>
+        )}
         <div className="mt-4">
           {mode === 'setup' ? (
             pin.length < 4 ? (

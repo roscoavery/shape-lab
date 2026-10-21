@@ -1012,9 +1012,10 @@ export default function App() {
     window.addEventListener('keydown', bump)
     const timer = window.setInterval(() => {
       if (Date.now() - lastActive > 20 * 60 * 1000) {
-        // Inactivity: return to safe state directly, no PIN needed.
-        setShowParentGate(false)
-        setAthleteViewId(null)
+        // Inactivity: the Parent Gate is the only way back, idle or not.
+        // Show the gate instead of dropping straight into the Parent
+        // experience; cancelling the gate stays in Athlete View.
+        setShowParentGate(true)
       }
     }, 60 * 1000)
     return () => {
