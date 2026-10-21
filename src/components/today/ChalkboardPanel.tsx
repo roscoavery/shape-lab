@@ -56,7 +56,7 @@ import {
 } from '../../lib/skillRegistry'
 import { guideCardColor, SkillGuideCardContent } from '../learn/SkillPathCards'
 import { GymClipPlayer } from '../GymClipPlayer'
-import { instagramSlideIndex } from '../../lib/socialUrls'
+import { instagramSlideIndex, socialPlatform, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { CroppedStill } from '../CroppedStill'
 import { PortraitVideoPlayer } from '../PortraitVideoPlayer'
 import { CollageStage } from '../classes/CollageStage'
@@ -99,6 +99,9 @@ type Props = {
   embed?: boolean
   /** Open this board (skill library or any class board). */
   openBoardId?: string | null
+  /** When set, the reel theater offers Compare for the current clip,
+   * opening it in the compare tool like reference scroll does. */
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }
 
 export function ChalkboardPanel({
@@ -112,6 +115,7 @@ export function ChalkboardPanel({
   onToday = false,
   embed = false,
   openBoardId = null,
+  onCompareItem,
 }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
@@ -217,6 +221,7 @@ export function ChalkboardPanel({
       onViewBoard={setViewBoardId}
       allBoards={listAllBoards()}
       reordering={reordering}
+      onCompareItem={onCompareItem}
     />
   )
 
@@ -391,6 +396,7 @@ function ChalkboardBody({
   onViewBoard,
   allBoards,
   reordering,
+  onCompareItem,
 }: {
   viewer: Athlete | null
   coach: boolean
@@ -426,6 +432,7 @@ function ChalkboardBody({
   onViewBoard: (id: string | null) => void
   allBoards: ChalkboardBoard[]
   reordering: boolean
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }) {
   const drills = listDrills()
   const compact = size === 'compact'
@@ -908,6 +915,7 @@ function ChalkboardBody({
           startId={reelId}
           coach={coach}
           onClose={() => setReelId(null)}
+          onCompareItem={onCompareItem}
         />
       )}
     </div>
@@ -1392,12 +1400,15 @@ function ReelTheater({
   startId,
   coach,
   onClose,
+  onCompareItem,
 }: {
   items: ChalkboardItem[]
   startId: string
   coach: boolean
   onClose: () => void
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }) {
+  const { clipForUrl } = useGymLibrary()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const startIndex = Math.max(0, items.findIndex((item) => item.id === startId))
   const [index, setIndex] = useState(startIndex)
@@ -1432,6 +1443,23 @@ function ReelTheater({
               }`}
             >
               {coachEdit ? 'Athlete view' : 'Coach edit'}
+            </button>
+          )}
+          {onCompareItem && items[index]?.url && (
+            <button
+              type="button"
+              onClick={() => {
+                const current = items[index]
+                if (!current?.url) return
+                onCompareItem({
+                  src: current.url,
+                  name: current.title || 'Reference',
+                  itemId: clipForUrl(current.url)?.id,
+                })
+              }}
+              className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold"
+            >
+              Compare
             </button>
           )}
           <button
@@ -1523,6 +1551,16 @@ function ReelSlide({
   // Carousel slide currently open; per-slide A/B loops are stored on the item.
   const [slideIndex, setSlideIndex] = useState(() => instagramSlideIndex(item.url ?? ''))
   const slideLoop = item.slideLoops?.[String(slideIndex)]
+  // Mirror flip, same rule as reference scroll: direct files and
+  // Instagram (plays from a cached file) can flip; YouTube/TikTok
+  // iframes cannot.
+  const [flipped, setFlipped] = useState(false)
+  useEffect(() => setFlipped(false), [item.id])
+  const itemPlatform = socialPlatform(item.url ?? '')
+  const canFlip =
+    Boolean(item.url) &&
+    !youtubeEmbedSrc(item.url ?? '') &&
+    (itemPlatform === 'instagram' || itemPlatform === null)
   const coachProfile = useMemo(
     () => loadAthletes().find((a) => a.id === item.createdById) ?? null,
     [item.createdById],
@@ -1609,7 +1647,10 @@ function ReelSlide({
             fit="contain"
             smartFit={false}
             quiet
+            markup
             markupSwipeSafe
+            mirror={flipped}
+            onFlip={canFlip ? () => setFlipped((f) => !f) : undefined}
             chromeOpen={chromeOpen || editing}
             onToggleChrome={onToggleChrome}
             tapTogglesChrome={tapTogglesChrome && !editing}

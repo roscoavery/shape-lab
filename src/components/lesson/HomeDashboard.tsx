@@ -134,6 +134,7 @@ type Props = {
   /** When false, this desk is a coach login — not gym-admin. */
   gymAdmin?: boolean
   onOpenChecklist?: () => void
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }
 
 export function HomeDashboard({
@@ -154,6 +155,7 @@ export function HomeDashboard({
   onOpenSkillPathGuide,
   gymAdmin: gymAdminProp,
   onOpenChecklist,
+  onCompareItem,
 }: Props) {
   const coach = Boolean(signedIn && isCoachProfile(signedIn))
   const gymAdmin = gymAdminProp ?? isShapelabAdmin(signedIn)
@@ -580,7 +582,7 @@ export function HomeDashboard({
             title="Prepare chalkboard"
             hint="Pin clips and drills. Tap to open."
           >
-            <ChalkboardPanel viewer={signedIn} onToday embed />
+            <ChalkboardPanel viewer={signedIn} onToday embed onCompareItem={onCompareItem} />
           </TodayDock>
         )}
         {profileRole(signedIn) === 'coach' && signedIn && (
@@ -1422,7 +1424,7 @@ export function HomeDashboard({
             hint="Pin clips and drills. Tap to open."
             defaultOpen
           >
-            <ChalkboardPanel viewer={signedIn} onToday embed />
+            <ChalkboardPanel viewer={signedIn} onToday embed onCompareItem={onCompareItem} />
           </TodayDock>
           {onShortcut && (
             <TodayDock
@@ -1462,7 +1464,7 @@ export function HomeDashboard({
         title="Prepare chalkboard"
         hint="Pin clips and drills. Tap to open."
       >
-        <ChalkboardPanel viewer={signedIn} onToday embed />
+        <ChalkboardPanel viewer={signedIn} onToday embed onCompareItem={onCompareItem} />
       </TodayDock>
       </div>
       )}

@@ -1574,6 +1574,7 @@ export default function App() {
                 landmarks={null}
                 onRequestShape={(shapeId) => onJumpToShape(shapeId)}
                 onGoCompare={() => goTab('compare')}
+                onCompareItem={(payload) => openCompareWithReference(payload)}
                 onOpenSkillPathGuide={() => {
                   stashMobileSearchJump({ kind: 'skillPath' })
                   goTab('learn')
@@ -1588,7 +1589,12 @@ export default function App() {
                 title="Prepare chalkboard"
                 hint="Pin clips and drills. Tap to open."
               >
-                <ChalkboardPanel viewer={activeProfile} onToday embed />
+                <ChalkboardPanel
+                  viewer={activeProfile}
+                  onToday
+                  embed
+                  onCompareItem={(payload) => openCompareWithReference(payload)}
+                />
               </TodayDock>
               <TodayDock
                 id="collage"
@@ -1614,6 +1620,7 @@ export default function App() {
                   viewer={activeProfile}
                   onOpenLibrary={() => goTab('classes')}
                   embed
+                  onCompareItem={(payload) => openCompareWithReference(payload)}
                 />
               </TodayDock>
               </div>
@@ -1640,6 +1647,7 @@ export default function App() {
                 }}
                 classSessionOpen={classSessionOpen}
                 onOpenChecklist={() => setShowChecklist(true)}
+                onCompareItem={(payload) => openCompareWithReference(payload)}
                 onViewProfile={openProfile}
                 onAthletesChange={setAthleteRoster}
                 onParentHomework={(id) => {
@@ -2915,6 +2923,7 @@ export default function App() {
           setNamesQuizGroupId('live')
           setNamesQuizOpen(true)
         }}
+        onCompareItem={(payload) => openCompareWithReference(payload)}
       />
     )}
     {autoEndMeetingId && (() => {

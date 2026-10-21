@@ -58,6 +58,7 @@ type Props = {
   onRequestShape: (shapeId: string) => void
   onEnsureCamera?: () => void | Promise<void>
   onGoCompare: () => void
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
   onOpenSkillPathGuide?: () => void
   onSessionChange: (session: LessonSession) => void
   onEnded: () => void
@@ -74,6 +75,7 @@ export function LessonWorkspace({
   athletes,
   onAthletesChange,
   onGoCompare,
+  onCompareItem,
   onOpenSkillPathGuide,
   onSessionChange,
   onEnded,
@@ -607,6 +609,7 @@ export function LessonWorkspace({
           lessonAthletes={people}
           onPickAthlete={setBoardAthleteId}
           embed
+          onCompareItem={onCompareItem}
         />
       </TodayDock>
 

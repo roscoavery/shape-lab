@@ -86,6 +86,7 @@ type Props = {
   onViewProfile?: (id: string) => void
   /** Offering id to glow on the picker, guiding the coach to the right class. */
   highlightOfferingId?: string | null
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }
 
 type Screen = 'pick' | 'roll' | 'live' | 'assign' | 'schedule'
@@ -100,6 +101,7 @@ export function ClassSession({
   onAthletesChange,
   onViewProfile,
   highlightOfferingId,
+  onCompareItem,
 }: Props) {
   const [offerings, setOfferings] = useState<CoachClassOffering[]>(() =>
     loadOfferingsForCoach(coach.id),
@@ -174,6 +176,7 @@ export function ClassSession({
               setScreen('pick')
             }}
             onChanged={refresh}
+            onCompareItem={onCompareItem}
           />
         )}
 
@@ -273,6 +276,7 @@ export function ClassSession({
             onAthletesChange={onAthletesChange}
             onViewProfile={onViewProfile}
             onAskEnd={() => setEndAsk(true)}
+            onCompareItem={onCompareItem}
           />
         )}
 
@@ -580,6 +584,7 @@ function LiveClass({
   onAthletesChange,
   onViewProfile,
   onAskEnd,
+  onCompareItem,
 }: {
   meeting: ClassMeeting
   offering?: CoachClassOffering
@@ -593,6 +598,7 @@ function LiveClass({
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
   onAskEnd: () => void
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }) {
   const [pickId, setPickId] = useState('')
   const [classNote, setClassNote] = useState('')
@@ -814,7 +820,7 @@ function LiveClass({
         onAthletesChange={onAthletesChange}
       />
 
-      <ChalkboardPanel viewer={coach} offeringId={offering?.id} />
+      <ChalkboardPanel viewer={coach} offeringId={offering?.id} onCompareItem={onCompareItem} />
 
       {/* Class clock with arcade switches, clock, hold contest, or rep counter. */}
       <SessionClock
@@ -1171,6 +1177,7 @@ function ScheduleEditor({
   onAthletesChange,
   onBack,
   onChanged,
+  onCompareItem,
 }: {
   coachId: string
   offerings: CoachClassOffering[]
@@ -1178,6 +1185,7 @@ function ScheduleEditor({
   onAthletesChange: (next: Athlete[]) => void
   onBack: () => void
   onChanged: () => void
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }) {
   const [name, setName] = useState('')
   const [weekday, setWeekday] = useState<Weekday>('Monday')
@@ -1330,6 +1338,7 @@ function ScheduleEditor({
                   viewer={athletes.find((a) => a.id === coachId) ?? null}
                   offeringId={o.id}
                   embed
+                  onCompareItem={onCompareItem}
                 />
               </div>
             )}

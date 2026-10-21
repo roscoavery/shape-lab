@@ -18,9 +18,10 @@ type Props = {
   viewer: Athlete | null
   onOpenLibrary?: () => void
   embed?: boolean
+  onCompareItem?: (payload: { src: string; name: string; itemId?: string }) => void
 }
 
-export function TodayChalkboards({ viewer, onOpenLibrary, embed = false }: Props) {
+export function TodayChalkboards({ viewer, onOpenLibrary, embed = false, onCompareItem }: Props) {
   const coach = Boolean(viewer && isCoachProfile(viewer))
   const [tick, setTick] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -184,7 +185,7 @@ export function TodayChalkboards({ viewer, onOpenLibrary, embed = false }: Props
 
       {openId && (
         <div className="mt-4">
-          <ChalkboardPanel viewer={viewer} openBoardId={openId} embed />
+          <ChalkboardPanel viewer={viewer} openBoardId={openId} embed onCompareItem={onCompareItem} />
         </div>
       )}
     </>
