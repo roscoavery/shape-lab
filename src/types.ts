@@ -298,6 +298,12 @@ export type Athlete = {
    * on public profiles or the feed. Missing on older profiles is allowed.
    */
   dateOfBirth?: string
+  /**
+   * Independent (adult) athletes only: when true, a linked parent keeps
+   * managing their consent, profile, and health info. Set by the athlete
+   * themself or an admin — never by the parent.
+   */
+  parentAccessGranted?: boolean
   /** Set by the server for viewers who may know age but not the birthday. */
   ageYears?: number
   birthdayNeeded?: boolean

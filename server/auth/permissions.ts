@@ -5,6 +5,11 @@
 import { readCoachClassesFile } from '../coachClassStore.ts'
 import { readLessonsFile } from '../lessonStore.ts'
 import { readTrainingEventsFile } from '../trainingEventStore.ts'
+import {
+  getAgeFromDateOfBirth,
+  getAthleteAccessLevel,
+  type AthleteAccessLevel,
+} from '../../src/lib/age.ts'
 import { isAdminRole, type AuthUser } from './types.ts'
 
 export type RosterAthlete = Record<string, unknown> & { id: string }
@@ -91,6 +96,29 @@ export function parentLinkedFromRoster(
 
 function parentSees(user: AuthUser, athlete: RosterAthlete, athletes: RosterAthlete[]): boolean {
   return parentLinkedFromRoster(user, athletes).includes(athlete.id)
+}
+
+/** Access level from the roster row's birthday. Missing or invalid DOB resolves to parentPrimary. */
+export function athleteAccessLevel(athlete: RosterAthlete): AthleteAccessLevel {
+  const dob = typeof athlete.dateOfBirth === 'string' ? athlete.dateOfBirth : ''
+  return getAthleteAccessLevel(getAgeFromDateOfBirth(dob))
+}
+
+/**
+ * Linked-parent managing authority (edit profile/consent, see health and
+ * birthday). Full for child and teen athletes. Once an athlete is
+ * independent, the parent keeps that authority only while the athlete's
+ * grant (parentAccessGranted on their roster row) is on. Read access to
+ * the athlete (canAccessAthlete) is not affected by this.
+ */
+export function parentHasAuthority(
+  user: AuthUser | null | undefined,
+  athlete: RosterAthlete,
+  athletes: RosterAthlete[] = [],
+): boolean {
+  if (!canParentAccessAthlete(user, athlete, athletes)) return false
+  if (athleteAccessLevel(athlete) !== 'independent') return true
+  return athlete.parentAccessGranted === true
 }
 
 type CoachRelContext = {
@@ -209,7 +237,7 @@ export async function canEditAthlete(
   if (!user) return false
   if (isAdminRole(user.role)) return true
   if (user.role === 'athlete' && user.rosterProfileId === athlete.id) return true
-  if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
+  if (parentHasAuthority(user, athlete, athletes)) return true
   if (user.role === 'coach' && (await canCoachAthlete(user, athlete))) return true
   return false
 }
@@ -231,12 +259,12 @@ export async function canSeeHealth(
   if (!user) return false
   if (isAdmin(user)) return true
   if (user.rosterProfileId === athlete.id) return true
-  if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
+  if (parentHasAuthority(user, athlete, athletes)) return true
   if (user.role === 'coach') return canCoachAthlete(user, athlete)
   return false
 }
 
-/** Full birthday. Admin, the athlete, and linked parents only. */
+/** Full birthday. Admin, the athlete, and linked parents (with managing authority) only. */
 export function canSeeDateOfBirth(
   user: AuthUser | null | undefined,
   athlete: RosterAthlete,
@@ -245,7 +273,7 @@ export function canSeeDateOfBirth(
   if (!user) return false
   if (isAdmin(user)) return true
   if (user.rosterProfileId === athlete.id) return true
-  if (user.role === 'parent' && parentSees(user, athlete, athletes)) return true
+  if (parentHasAuthority(user, athlete, athletes)) return true
   return false
 }
 

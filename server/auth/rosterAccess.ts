@@ -103,6 +103,8 @@ function applyAllowedEdits(
     next.parentPhone = existing.parentPhone
     next.passcodeHash = existing.passcodeHash
     next.createdByCoachId = existing.createdByCoachId
+    // The parent-access grant is set by the athlete or an admin only.
+    next.parentAccessGranted = existing.parentAccessGranted
     if (isKiosk(user)) {
       next.worksWithCoachIds = existing.worksWithCoachIds
     } else {
@@ -126,6 +128,9 @@ function applyAllowedEdits(
     next.passcodeHash = incoming.passcodeHash || existing.passcodeHash
     if (user.role === 'parent') {
       next.email = existing.email
+      // A parent cannot grant themself continued access to an
+      // independent athlete; the athlete (or an admin) sets that.
+      next.parentAccessGranted = existing.parentAccessGranted
     }
     if (user.role === 'athlete') {
       const age = getAgeFromDateOfBirth(
@@ -210,6 +215,9 @@ export async function authorizeRosterWrite(
           ].filter(Boolean)),
         ],
       }
+      // The parent-access grant starts unset on a new profile; the
+      // athlete or an admin turns it on later from the profile.
+      if (!isAdmin(user)) delete created.parentAccessGranted
       nextAthletes.push(created)
       byId.set(created.id, created)
       continue

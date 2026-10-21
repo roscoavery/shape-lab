@@ -7,8 +7,8 @@ import { applyPrivacyDefaults, isIntentionallyPublic, type ConsentState } from '
 import {
   athleteRole,
   canAccessAthlete,
-  canParentAccessAthlete,
   isAdmin,
+  parentHasAuthority,
   type RosterAthlete,
 } from './permissions.ts'
 import type { AuthUser } from './types.ts'
@@ -53,7 +53,9 @@ export function canEditConsent(
   if (!user) return false
   if (isAdmin(user)) return true
   if (user.rosterProfileId === athlete.id) return true
-  return canParentAccessAthlete(user, athlete, athletes)
+  // A linked parent manages consent for child and teen athletes. For an
+  // independent athlete, the parent needs the athlete's grant.
+  return parentHasAuthority(user, athlete, athletes)
 }
 
 export function consentFieldsOf(athlete: RosterAthlete): Record<string, unknown> {

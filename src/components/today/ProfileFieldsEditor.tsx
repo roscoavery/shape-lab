@@ -1,5 +1,5 @@
 import type { Athlete, FavoriteColor } from '../../types'
-import { birthdayNeeded } from '../../lib/age'
+import { birthdayNeeded, getAgeFromDateOfBirth, getAthleteAccessLevel } from '../../lib/age'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { BirthdayQuickPick } from './BirthdayQuickPick'
 import { StationSnapshot } from './StationSnapshot'
@@ -51,6 +51,8 @@ type Props = {
   athletes?: Athlete[]
   adminEdit?: boolean
   contactOnly?: boolean
+  /** The viewer may set the parent-access grant (the athlete themself, or an admin). */
+  parentAccessEditable?: boolean
 }
 
 /** Owner-only edits for photo and intake answers. Same fields as the shape-test line. */
@@ -61,8 +63,19 @@ export function ProfileFieldsEditor({
   athletes = [],
   adminEdit = false,
   contactOnly = false,
+  parentAccessEditable = false,
 }: Props) {
   const patch = (next: Partial<Athlete>) => onChange({ ...athlete, ...next })
+  const independentAthlete =
+    profileRole(athlete) === 'athlete' &&
+    getAthleteAccessLevel(getAgeFromDateOfBirth(athlete.dateOfBirth)) === 'independent'
+  const hasLinkedParent =
+    (athlete.guardianRelationships ?? []).length > 0 ||
+    athletes.some(
+      (row) =>
+        profileRole(row) === 'parent' && (row.linkedAthleteIds ?? []).includes(athlete.id),
+    )
+  const showParentAccess = parentAccessEditable && independentAthlete && hasLinkedParent
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,6 +162,25 @@ export function ProfileFieldsEditor({
               className="mt-1"
             />
             <span>Public, anyone at the gym can open this page</span>
+          </label>
+        </section>
+      )}
+      {showParentAccess && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Parent access</h3>
+          <p className="text-xs text-[var(--muted)]">
+            You manage your own profile now. Turn this on if you want your
+            parent to keep helping manage your consent, profile, and health
+            info. They can still see your homework and progress either way.
+          </p>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={athlete.parentAccessGranted === true}
+              onChange={(e) => patch({ parentAccessGranted: e.target.checked })}
+              className="mt-1"
+            />
+            <span>My parent can keep managing my profile</span>
           </label>
         </section>
       )}

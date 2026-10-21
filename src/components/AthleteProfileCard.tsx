@@ -448,6 +448,7 @@ export function AthleteProfileCard({
               athletes={athletes}
               onChange={onAthleteChange}
               adminEdit={canAdminEditRoster(viewer)}
+              parentAccessEditable={own || canAdminEditRoster(viewer)}
             />
             </div>
           )}
