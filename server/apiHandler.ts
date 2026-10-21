@@ -222,6 +222,8 @@ const API_PATHS = new Set([
   '/api/auth/kiosk',
   '/api/auth/invite',
   '/api/auth/invites',
+  '/api/auth/account-invite',
+  '/api/auth/account-invites',
   '/api/auth/audit',
   '/api/auth/sessions',
   '/api/auth/devices',
