@@ -28,6 +28,23 @@ import {
 } from '../../lib/videoAdjustments'
 import type { ProofVideo } from '../../config/techniqueEvidence'
 
+/** Same localStorage key SkillPathCards writes per-video loop overrides to. */
+const PROOF_LOOP_KEY = 'shape-lab.proofLoops.v1'
+
+function loadProofLoopOverrides(): Record<string, { a: number | null; b: number | null }> {
+  try {
+    const raw = localStorage.getItem(PROOF_LOOP_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<
+      string,
+      { a: number | null; b: number | null }
+    >
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 /** True for local video files (public/videos/...) vs social embeds. */
 function isLocalVideo(url: string): boolean {
   return /\.(mp4|mov|webm)(\?|#|$)/i.test(url)
@@ -504,11 +521,16 @@ function AdjustPanel({
  */
 function LocalAnalysisPlayer({
   url,
+  seedLoopA = null,
+  seedLoopB = null,
   onToggleChrome,
   swipeSuppressRef,
   onAdjustingChange,
 }: {
   url: string
+  /** The video's saved loop points; the session starts fenced to them. */
+  seedLoopA?: number | null
+  seedLoopB?: number | null
   onToggleChrome?: () => void
   swipeSuppressRef?: React.MutableRefObject<number>
   onAdjustingChange?: (adjusting: boolean) => void
@@ -522,8 +544,8 @@ function LocalAnalysisPlayer({
   const [dur, setDur] = useState(0)
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1)
   const [flipped, setFlipped] = useState(false)
-  const [loopA, setLoopA] = useState<number | null>(null)
-  const [loopB, setLoopB] = useState<number | null>(null)
+  const [loopA, setLoopA] = useState<number | null>(seedLoopA)
+  const [loopB, setLoopB] = useState<number | null>(seedLoopB)
   const [adjusting, setAdjusting] = useState(false)
   const [adjustTab, setAdjustTab] = useState<'trim' | 'crop' | 'slowmo' | 'text'>('trim')
   const [draft, setDraft] = useState<DraftAdj | null>(null)
@@ -759,11 +781,13 @@ function LocalAnalysisPlayer({
     if (!v) return
     const d = v.duration || 0
     setDur(d)
-    if (trimStart != null && trimStart > 0 && trimStart < d) {
-      v.currentTime = trimStart
-      setNow(trimStart)
+    // Open inside the fenced window (saved loop start, or the trim
+    // start when it is later), so no out-of-loop frame is ever shown.
+    if (lo > 0 && lo < d) {
+      v.currentTime = lo
+      setNow(lo)
     }
-  }, [trimStart])
+  }, [lo])
 
   const handleEnded = useCallback(() => {
     const v = ref.current
@@ -826,10 +850,11 @@ function LocalAnalysisPlayer({
     'rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/20'
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
       <div
         ref={boxRef}
-        className="relative min-h-0 flex-1 overflow-hidden bg-black"
+        className="relative min-h-0 flex-1 overflow-hidden bg-black select-none [-webkit-touch-callout:none] [-webkit-user-select:none] [touch-action:pan-y]"
+        onContextMenu={(e) => e.preventDefault()}
         onPointerDown={onGestureDown}
         onPointerMove={onGestureMove}
         onPointerUp={onGestureUp}
@@ -1036,6 +1061,13 @@ export function ProofFullscreenPlayer({
   }, [chromeVisible, pokeChrome])
 
   const video = videos[index]
+  // Saved loop points for the current video, resolved the same way the
+  // cards resolve them: the per-video override wins over the video's
+  // own start/end. Fullscreen must fence to the same window — nothing
+  // outside the loop points plays here either.
+  const loopOverrides = useMemo(loadProofLoopOverrides, [])
+  const curLoopA = video ? loopOverrides[video.url]?.a ?? video.startAt ?? null : null
+  const curLoopB = video ? loopOverrides[video.url]?.b ?? video.endAt ?? null : null
   const local = video ? isLocalVideo(video.url) : false
   const youTube = video ? !!youtubeEmbedSrc(video.url) : false
   const videoHidden = video ? adjApi?.get(video.url)?.hidden === true : false
@@ -1168,6 +1200,8 @@ export function ProofFullscreenPlayer({
           {local ? (
             <LocalAnalysisPlayer
               url={video.url}
+              seedLoopA={curLoopA}
+              seedLoopB={curLoopB}
               onToggleChrome={toggleChromeVisibility}
               swipeSuppressRef={swipeSuppressRef}
               onAdjustingChange={(v) => {
@@ -1183,6 +1217,8 @@ export function ProofFullscreenPlayer({
                 fit="contain"
                 markup
                 markupSwipeSafe
+                loopA={curLoopA}
+                loopB={curLoopB}
                 postedBy={video.creator}
               />
             </div>
