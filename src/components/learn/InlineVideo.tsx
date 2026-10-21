@@ -324,15 +324,23 @@ export function InlineVideo({
               const v = e.currentTarget
               const d = v.duration || 0
               setDuration(d)
-              // Start inside the trim window when one is saved.
-              if (trimStart != null && trimStart > 0 && trimStart < d) {
-                v.currentTime = trimStart
-                setTime(trimStart)
+              // Start inside the effective window (saved trim or loop
+              // start, whichever is later) instead of at 0, so the first
+              // painted frame is already the moment that matters and the
+              // player never has to seek cold on the first timeupdate.
+              if (lo > 0 && lo < d) {
+                v.currentTime = lo
+                setTime(lo)
               }
             }}
             onTimeUpdate={(e) => {
               const v = e.currentTarget
               const t = v.currentTime
+              // While a seek is in flight, currentTime is the OLD position;
+              // re-issuing the seek from here restarts it on iOS and the
+              // video can sit black at the loop start forever. Wait for
+              // the seek to land, then enforce the window.
+              if (v.seeking) return
               // Saved trim + session A/B loop share one effective window.
               if (trimStart != null && t < trimStart - 0.05) {
                 v.currentTime = trimStart

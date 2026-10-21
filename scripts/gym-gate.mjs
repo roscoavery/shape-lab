@@ -123,7 +123,7 @@ function proxyVite(req, res) {
   req.pipe(p)
 }
 
-function sendFile(res, file) {
+function sendFile(req, res, file) {
   let st
   try {
     st = statSync(file)
@@ -133,16 +133,53 @@ function sendFile(res, file) {
   if (!st.isFile()) return false
   const ext = extname(file).toLowerCase()
   const hashedAsset = file.includes(`${sep}assets${sep}`)
-  const headers = {
-    'Content-Type': MIME[ext] || 'application/octet-stream',
-    'Content-Length': st.size,
-    'Cache-Control': hashedAsset
-      ? 'public, max-age=31536000, immutable'
-      : ext === '.html'
-        ? 'no-store'
-        : 'public, max-age=3600',
+  const cacheControl = hashedAsset
+    ? 'public, max-age=31536000, immutable'
+    : ext === '.html'
+      ? 'no-store'
+      : 'public, max-age=3600'
+  const size = st.size
+  // Byte ranges: iOS Safari needs them to seek. Without range support a
+  // video that must start mid-file (loop points, a saved trim, scrubbing)
+  // sits black and never plays, even though the file itself is fine.
+  const rangeHeader = typeof req?.headers?.range === 'string' ? req.headers.range.trim() : ''
+  const rangeMatch = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader)
+  if (rangeMatch && (rangeMatch[1] !== '' || rangeMatch[2] !== '')) {
+    let start
+    let end
+    if (rangeMatch[1] === '') {
+      start = Math.max(0, size - Number(rangeMatch[2]))
+      end = size - 1
+    } else {
+      start = Number(rangeMatch[1])
+      end = rangeMatch[2] === '' ? size - 1 : Math.min(Number(rangeMatch[2]), size - 1)
+    }
+    if (start > end || start >= size) {
+      res.writeHead(416, {
+        'Content-Range': `bytes */${size}`,
+        'Accept-Ranges': 'bytes',
+      })
+      res.end()
+      return true
+    }
+    res.writeHead(206, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Content-Length': end - start + 1,
+      'Content-Range': `bytes ${start}-${end}/${size}`,
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': cacheControl,
+    })
+    createReadStream(file, { start, end })
+      .on('error', () => res.end())
+      .pipe(res)
+    return true
   }
-  res.writeHead(200, headers)
+  res.writeHead(200, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Content-Length': size,
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': cacheControl,
+  })
   createReadStream(file).on('error', () => res.end()).pipe(res)
   return true
 }
@@ -192,7 +229,7 @@ function serveStatic(req, res) {
   }
   if (pathname === '/') pathname = '/index.html'
   const file = safeDistFile(normalize(pathname))
-  if (file && sendFile(res, file)) return
+  if (file && sendFile(req, res, file)) return
   const hasExt = /\.[a-zA-Z0-9]+$/.test(pathname)
   if (hasExt) {
     res.statusCode = 404
@@ -200,7 +237,7 @@ function serveStatic(req, res) {
     res.end('Not found')
     return
   }
-  sendFile(res, join(DIST, 'index.html'))
+  sendFile(req, res, join(DIST, 'index.html'))
 }
 
 function onRequest(req, res) {

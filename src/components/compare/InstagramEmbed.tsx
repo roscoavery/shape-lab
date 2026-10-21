@@ -78,11 +78,14 @@ function CarouselEdgeNav({
   count,
   onPrev,
   onNext,
+  yRatio = 0.5,
 }: {
   index: number
   count: number
   onPrev: () => void
   onNext: () => void
+  /** Vertical position of the chevrons within the media box (0.5 = centered). */
+  yRatio?: number
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ left: number; right: number; y: number; cx: number; top: number } | null>(
@@ -101,7 +104,7 @@ function CarouselEdgeNav({
       const media = frame.querySelector('video, img') as HTMLVideoElement | HTMLImageElement | null
       if (!media) return
       const box = mediaContainBox(media, frame)
-      const y = box.top + box.height / 2
+      const y = box.top + box.height * yRatio
       let left = box.left - EDGE_BTN / 2
       if (left < HUD_LEFT_CLEAR) left = HUD_LEFT_CLEAR
       let right = box.hostW - (box.left + box.width) - EDGE_BTN / 2
@@ -183,6 +186,13 @@ type Props = {
   onAbChange?: (a: number | null, b: number | null) => void
   /** Fires with the 0-based carousel slide whenever it changes (init included). */
   onSlideChange?: (index: number) => void
+  /**
+   * Vertical position of the carousel slide chevrons within the media
+   * (0.5 = centered, the default). A fullscreen host with its own centered
+   * prev/next video arrows passes a lower value so the two nav systems
+   * sit in separate rows and never fight over the same tap.
+   */
+  edgeNavYRatio?: number
   /** Begin playback at the loop start instead of 0 (collages). */
   startAtLoop?: boolean
   compact?: boolean
@@ -236,6 +246,7 @@ export function InstagramEmbed({
   loopB,
   onAbChange,
   onSlideChange,
+  edgeNavYRatio,
   startAtLoop = false,
   compact = false,
   quiet = false,
@@ -749,6 +760,7 @@ export function InstagramEmbed({
       count={slideCount}
       onPrev={() => go(safeSlide - 1)}
       onNext={() => go(safeSlide + 1)}
+      yRatio={edgeNavYRatio}
     />
   ) : null
 

@@ -1218,6 +1218,7 @@ export function ProofFullscreenPlayer({
                 fit="contain"
                 markup
                 markupSwipeSafe
+                edgeNavYRatio={0.72}
                 loopA={curLoopA}
                 loopB={curLoopB}
                 postedBy={video.creator}
