@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
 import { parseAcuityNotes } from '../../lib/acuityNotes'
@@ -10,6 +10,7 @@ import {
   removePlanTask,
   reorderPlanTask,
   copyChecklistForAthlete,
+  stampPlanAthlete,
   type ClassPlan,
 } from '../../lib/classPlans'
 import { ReuseChecklist } from './ReuseChecklist'
@@ -66,6 +67,12 @@ export function LessonPlanCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dateKey, planId, coachId, plansTick],
   )
+  // Stamp the plan with the athlete it belongs to, so this lesson's
+  // checklist can be found as hers later even if its tasks were written
+  // before the lesson was linked to her.
+  useEffect(() => {
+    if (athlete) stampPlanAthlete(plan.id, athlete.id)
+  }, [plan.id, athlete?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [repsInput, setRepsInput] = useState('')
 
   const { handleProps, rowStyle } = useDragList((from, to) => {

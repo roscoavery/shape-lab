@@ -1,7 +1,42 @@
 import { createId, loadAthletes } from './storage'
-import { classMemberIds } from './coachClasses'
+import { classMemberIds, loadMeetings } from './coachClasses'
+import { loadLessonSessions } from './lessonStore'
 import { markedFetch } from './authSession'
 import type { Athlete } from '../types'
+
+/**
+ * Athletes a lesson plan belongs to, from every signal available: the
+ * stamp left by surfaces that opened it knowing the athlete, the
+ * athletes tagged on its tasks, and the live session that ran this
+ * lesson (matched by the calendar event id in the offering id).
+ */
+export function lessonPlanAthleteIds(plan: ClassPlan): Set<string> {
+  const out = new Set<string>(plan.athleteIds ?? [])
+  for (const t of plan.tasks) {
+    for (const id of t.athleteIds) if (id !== 'all') out.add(id)
+  }
+  if (plan.offeringId.startsWith('lesson:')) {
+    const eventId = plan.offeringId.slice('lesson:'.length)
+    const session = loadLessonSessions().find((s) => s.calendarEventId === eventId)
+    if (session) {
+      for (const id of session.athleteIds ?? [session.athleteId]) {
+        if (id) out.add(id)
+      }
+    }
+  }
+  return out
+}
+
+/** Record that a plan was made for this athlete, so its checklist can be
+ * found as hers later even when its tasks carry no athlete tags. */
+export function stampPlanAthlete(planId: string, athleteId: string) {
+  const plans = loadClassPlans()
+  const plan = plans.find((p) => p.id === planId)
+  if (!plan || (plan.athleteIds ?? []).includes(athleteId)) return
+  plan.athleteIds = [...(plan.athleteIds ?? []), athleteId]
+  plan.updatedAt = new Date().toISOString()
+  savePlans(plans)
+}
 
 /**
  * Class plans: the coach's morning prep for each class.
@@ -38,6 +73,10 @@ export type ClassPlan = {
   coachId: string
   notes: string
   tasks: ClassPlanTask[]
+  /** Athletes this plan was made for, stamped when a surface that knows
+   * the athlete opens it. Lesson plans rely on this when their tasks were
+   * written before the lesson was linked to an athlete. */
+  athleteIds?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -460,11 +499,35 @@ export function effectiveChecklistTasks(
   athleteId: string,
   roster?: Athlete[],
 ): ClassPlanTask[] {
-  const isLesson = plan.offeringId.startsWith('lesson:')
-  const hasOwn = plan.tasks.some((t) => t.athleteIds.includes(athleteId))
-  const everyoneApplies = isLesson
-    ? hasOwn
-    : classMemberIds(plan.offeringId, roster ?? loadAthletes()).has(athleteId)
+  if (plan.offeringId.startsWith('lesson:')) {
+    // A lesson plan's tasks all showed under its athletes' names (the
+    // lesson card renders the whole list). When tasks carry athlete
+    // tags, her checklist is her tagged tasks plus the everyone tasks.
+    // When no task is tagged (written before the lesson was linked to
+    // her), the whole list is hers as long as the lesson itself was.
+    if (!lessonPlanAthleteIds(plan).has(athleteId)) return []
+    const anyTagged = plan.tasks.some((t) => t.athleteIds.some((id) => id !== 'all'))
+    if (!anyTagged) return [...plan.tasks]
+    return plan.tasks.filter(
+      (t) => t.athleteIds.includes(athleteId) || t.athleteIds.includes('all'),
+    )
+  }
+  const members = classMemberIds(plan.offeringId, roster ?? loadAthletes())
+  if (!members.has(athleteId)) {
+    // One-time drop-ins sit in no roster or regulars list; that day's
+    // meeting attendance is the record that she was in this class.
+    for (const m of loadMeetings()) {
+      if (m.offeringId !== plan.offeringId) continue
+      const started = new Date(m.startedAt)
+      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}-${String(started.getDate()).padStart(2, '0')}`
+      if (key !== plan.date) continue
+      if (m.attendees.some((a) => a.athleteId === athleteId)) {
+        members.add(athleteId)
+        break
+      }
+    }
+  }
+  const everyoneApplies = members.has(athleteId)
   return plan.tasks.filter(
     (t) =>
       t.athleteIds.includes(athleteId) ||
