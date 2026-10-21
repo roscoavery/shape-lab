@@ -13,6 +13,7 @@
     "test:v4-family": "node --experimental-strip-types scripts/v4-family-check.mjs",
     "test:v4-skill-goal": "node --experimental-strip-types scripts/v4-skill-goal-check.mjs",
     "test:v4-desk": "node --experimental-strip-types scripts/v4-desk-check.mjs",
+    "test:v4-access": "node --experimental-strip-types scripts/v4-access-check.mjs",
     "preview": "vite preview --host --port 43127",
     "share": "node scripts/share.mjs",
     "share:quick": "node scripts/share.mjs --quick",
@@ -33,7 +34,8 @@
     "gym:shapes": "node scripts/delete-gym-shape.mjs",
     "gym:stills": "node scripts/restore-stills-from-blobs.mjs",
     "gym:audit": "node scripts/audit-stills.mjs",
-    "test:calendar": "tsx --test server/calendar/*.test.ts"
+    "test:calendar": "tsx --test server/calendar/*.test.ts",
+    "test:family-units": "node --experimental-test-module-mocks --import tsx --test src/lib/familyView.test.ts src/lib/parentPin.test.ts"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.0.1",
