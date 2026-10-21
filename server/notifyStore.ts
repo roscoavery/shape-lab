@@ -15,6 +15,12 @@ export type DiskNotice = {
   homeworkLogId?: string
   fromId?: string
   athleteId?: string
+  /**
+   * Standing-slot marker. A notice with a slot is the ONE live alert of
+   * that kind for its athlete and is updated in place, never stacked.
+   * 'recharge' is the homework recharge alert.
+   */
+  slot?: string
 }
 
 type DiskFile = {
@@ -39,6 +45,13 @@ export async function noticesForClient(): Promise<DiskNotice[]> {
   const list = Array.isArray(data.notices) ? data.notices : []
   return list
     .filter((n) => n && typeof n.id === 'string' && typeof n.toId === 'string')
+    // Legacy daily nudge alerts ("Progress is waiting" / "Homework is
+    // waiting") are gone: they stacked one per day and are replaced by a
+    // single standing recharge alert (slot 'recharge') that updates in
+    // place. Filtering here removes them from every client at once, and
+    // because writes serialize this filtered list, the stored file
+    // cleans itself on the next write.
+    .filter((n) => n.kind !== 'nudge' || n.slot === 'recharge')
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, MAX)
 }
@@ -64,13 +77,20 @@ export async function addNotice(raw: unknown): Promise<DiskNotice | null> {
     homeworkLogId: safeId(r.homeworkLogId) || undefined,
     fromId: safeId(r.fromId) || undefined,
     athleteId: safeId(r.athleteId) || undefined,
+    slot: typeof r.slot === 'string' ? r.slot.trim().slice(0, 24) || undefined : undefined,
   }
   const existing = await noticesForClient()
+  // A standing (slotted) notice replaces every other notice in its slot
+  // for that athlete, so the slot can never stack even if ids drift.
+  const slotPeers =
+    notice.slot != null
+      ? existing.filter((n) => !(n.toId === notice.toId && n.slot === notice.slot))
+      : existing
   await writeJson(FILE, {
     kind: 'shape-lab-notices',
     version: 1,
     exportedAt: new Date().toISOString(),
-    notices: [notice, ...existing.filter((n) => n.id !== id)].slice(0, MAX),
+    notices: [notice, ...slotPeers.filter((n) => n.id !== id)].slice(0, MAX),
   } satisfies DiskFile)
   return notice
 }
@@ -81,6 +101,21 @@ export async function markNoticesRead(ids: unknown): Promise<DiskNotice[]> {
   )
   const existing = await noticesForClient()
   const next = existing.map((n) => (want.has(n.id) ? { ...n, read: true } : n))
+  await writeJson(FILE, {
+    kind: 'shape-lab-notices',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    notices: next,
+  } satisfies DiskFile)
+  return next
+}
+
+export async function removeNotices(ids: unknown): Promise<DiskNotice[]> {
+  const want = new Set(
+    (Array.isArray(ids) ? ids : []).map((x) => safeId(x)).filter((x): x is string => Boolean(x)),
+  )
+  const existing = await noticesForClient()
+  const next = existing.filter((n) => !want.has(n.id))
   await writeJson(FILE, {
     kind: 'shape-lab-notices',
     version: 1,

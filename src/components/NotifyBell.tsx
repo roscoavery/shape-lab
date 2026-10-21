@@ -8,9 +8,10 @@ import {
   markNoticesRead,
   noticesFor,
   pushNotice,
+  removeNotice,
   type GymNotice,
 } from '../lib/notify'
-import { daysSinceHomework, homeworkNudgeCopy } from '../lib/homeworkRecs'
+import { rechargeCopy, rechargeTargetFor } from '../lib/homeworkRecs'
 import { HOMEWORK_REACTIONS, reactToHomeworkLog, reactionOnLog } from '../lib/homeworkReactions'
 import { playGestureBurst } from '../lib/gestureBurst'
 import { loadHomeworkLogs } from '../lib/storage'
@@ -24,8 +25,6 @@ type Props = {
   /** Instagram-style heart outline on mobile header */
   variant?: 'default' | 'ig'
 }
-
-const NUDGE_KEY = 'shape-lab.hw-nudge.v1'
 
 export function NotifyBell({ athlete, settings, onOpen, variant = 'default' }: Props) {
   const [open, setOpen] = useState(false)
@@ -61,25 +60,43 @@ export function NotifyBell({ athlete, settings, onOpen, variant = 'default' }: P
     }
   }, [athlete?.id])
 
+  /**
+   * The recharge alert is ONE standing notice per athlete that updates
+   * in place: it names the stalest exercise, says when it was last
+   * logged, and clears itself once everything is fresh. It is only
+   * re-pushed when its text actually changes, so it never stacks and
+   * never re-alerts for the same information.
+   */
   useEffect(() => {
-    if (!athlete || !settings.notificationsEnabled) return
-    const days = daysSinceHomework(athlete.id)
-    if (days === null || days < 3) return
-    const key = `${athlete.id}:${new Date().toISOString().slice(0, 10)}`
-    try {
-      if (localStorage.getItem(NUDGE_KEY) === key) return
-      localStorage.setItem(NUDGE_KEY, key)
-    } catch {
+    if (!athlete) return
+    const standing = list.find((n) => n.toId === athlete.id && n.slot === 'recharge')
+    if (!settings.notificationsEnabled) {
+      if (standing) {
+        void removeNotice(standing.id)
+        setList((prev) => prev.filter((n) => n.id !== standing.id))
+      }
       return
     }
+    const target = rechargeTargetFor(athlete.id)
+    if (!target) {
+      if (standing) {
+        void removeNotice(standing.id)
+        setList((prev) => prev.filter((n) => n.id !== standing.id))
+      }
+      return
+    }
+    const copy = rechargeCopy(target)
+    if (standing && standing.title === copy.title && standing.body === copy.body) return
     void pushNotice({
+      id: `recharge-${athlete.id}`,
+      slot: 'recharge',
       toId: athlete.id,
       kind: 'nudge',
-      title: 'Progress is waiting',
-      body: homeworkNudgeCopy(athlete),
+      title: copy.title,
+      body: copy.body,
       href: 'homework',
-    }).then((row) => setList((prev) => [row, ...prev]))
-  }, [athlete?.id, settings.notificationsEnabled])
+    }).then((row) => setList((prev) => [row, ...prev.filter((n) => n.id !== row.id)]))
+  }, [athlete?.id, settings.notificationsEnabled, list])
 
   if (!athlete) return null
   const unread = list.filter((n) => !n.read).length

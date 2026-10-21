@@ -114,7 +114,7 @@ import { readTrainingEventsFile, writeTrainingEventsFile } from './trainingEvent
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { readImproveNotesFile, writeImproveNotesFile } from './improveNotesStore.ts'
 import { readDeskMessagesFile, writeDeskMessagesFile } from './deskMessagesStore.ts'
-import { addNotice, markNoticesRead, noticesForClient } from './notifyStore.ts'
+import { addNotice, markNoticesRead, noticesForClient, removeNotices } from './notifyStore.ts'
 import { keyHelpersForClient, saveKeyHelperOverride } from './keyHelperStore.ts'
 import { listCustomMapSkills, addCustomMapSkill, deleteCustomMapSkill } from './customMapSkillsStore.ts'
 import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
@@ -2114,7 +2114,22 @@ export async function handleShapeLabApi(
       sendJson(res, 200, { notices: await markNoticesRead(body.ids) })
       return true
     }
-    sendJson(res, 405, { error: 'Use GET, POST, or PUT' })
+    if (req.method === 'DELETE') {
+      const id = url.searchParams.get('id') ?? ''
+      const target = (await noticesForClient()).find((n) => n.id === id)
+      const mine =
+        target != null &&
+        (canWriteCoachTools(viewer) ||
+          target.toId === viewer.rosterProfileId ||
+          viewer.linkedAthleteIds.includes(target.toId))
+      if (!target || !mine) {
+        sendJson(res, 403, { error: 'That alert is not yours to remove.' })
+        return true
+      }
+      sendJson(res, 200, { notices: await removeNotices([id]) })
+      return true
+    }
+    sendJson(res, 405, { error: 'Use GET, POST, PUT, or DELETE' })
     return true
   }
   if (path === '/api/key-helpers') {

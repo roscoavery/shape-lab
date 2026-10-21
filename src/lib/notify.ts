@@ -30,6 +30,12 @@ export type GymNotice = {
   homeworkLogId?: string
   fromId?: string
   athleteId?: string
+  /**
+   * Standing-slot marker: the ONE live alert of its kind for this
+   * athlete, updated in place instead of stacking. 'recharge' is the
+   * homework recharge alert.
+   */
+  slot?: string
 }
 
 type NotifyFile = {
@@ -64,6 +70,7 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
     homeworkLogId: notice.homeworkLogId,
     fromId: notice.fromId,
     athleteId: notice.athleteId,
+    slot: notice.slot,
   }
   try {
     await markedFetch('/api/notices', {
@@ -79,12 +86,23 @@ export async function pushNotice(notice: Omit<GymNotice, 'id' | 'createdAt' | 'r
   }
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     try {
-      new Notification(row.title, { body: row.body })
+      // Tagged with the notice id, so an updated standing alert replaces
+      // the one already in the notification center instead of stacking.
+      new Notification(row.title, { body: row.body, tag: row.id })
     } catch {
       /* ignore */
     }
   }
   return row
+}
+
+/** Remove one notice (used when a standing alert no longer applies). */
+export async function removeNotice(id: string): Promise<void> {
+  try {
+    await markedFetch(`/api/notices?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function markNoticesRead(ids: string[]): Promise<void> {

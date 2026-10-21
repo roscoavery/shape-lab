@@ -1,6 +1,7 @@
 import type { Athlete, HomeworkItem } from '../types'
 import { addHomeworkItem, createId, loadAllHomework, loadHomeworkLogs } from './storage'
 import { FOUNDATION_FACTS_DRAFT } from '../config/foundationFacts'
+import { homeworkTitle } from './homeworkLabel'
 
 export type PracticeRec = {
   id: string
@@ -106,6 +107,64 @@ export function daysSinceHomework(athleteId: string): number | null {
   const t = Date.parse(last.date || '')
   if (!Number.isFinite(t)) return null
   return Math.floor((Date.now() - t) / 86400000)
+}
+
+export type RechargeTarget = {
+  label: string
+  /** Days since this exercise was last logged; null when never logged. */
+  days: number | null
+  /** ISO date of the last log; null when never logged. */
+  lastDate: string | null
+  /** How long the exercise has been idle (last log, or creation when never logged). */
+  idleDays: number
+}
+
+/**
+ * The one exercise the standing recharge alert points at: the athlete's
+ * stalest homework item, once it has been idle 3+ days. A never-logged
+ * item counts from the day it was assigned. Null when everything is
+ * fresh (or the athlete has no homework), which clears the alert.
+ */
+export function rechargeTargetFor(athleteId: string): RechargeTarget | null {
+  const items = loadAllHomework().filter((h) => h.athleteId === athleteId)
+  if (items.length === 0) return null
+  const logs = loadHomeworkLogs().filter((l) => l.athleteId === athleteId)
+  const now = Date.now()
+  let best: RechargeTarget | null = null
+  for (const item of items) {
+    const mine = logs.filter((l) => l.homeworkId === item.id)
+    const last = mine.length > 0 ? mine.reduce((a, b) => ((a.date || '') >= (b.date || '') ? a : b)) : null
+    const lastT = last ? Date.parse(last.date || '') : NaN
+    const days = Number.isFinite(lastT) ? Math.floor((now - lastT) / 86400000) : null
+    const createdT = Date.parse(item.createdAt || '')
+    const idleDays = days ?? (Number.isFinite(createdT) ? Math.floor((now - createdT) / 86400000) : 9999)
+    if (idleDays < 3) continue
+    if (!best || idleDays > best.idleDays) {
+      best = { label: homeworkTitle(item), days, lastDate: last?.date ?? null, idleDays }
+    }
+  }
+  return best
+}
+
+/** Title and body for the standing recharge alert. */
+export function rechargeCopy(target: RechargeTarget): { title: string; body: string } {
+  const title = `Recharge: ${target.label}`
+  if (target.days === null || !target.lastDate) {
+    return {
+      title,
+      body: `You have not logged ${target.label} yet. Do it today and log what you did to get it started.`,
+    }
+  }
+  const when = new Date(target.lastDate).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  const ago = target.days === 1 ? '1 day ago' : `${target.days} days ago`
+  return {
+    title,
+    body: `You last logged ${target.label} on ${when}, ${ago}. Do it today and log what you did to recharge it.`,
+  }
 }
 
 /**
