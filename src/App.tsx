@@ -38,6 +38,14 @@ import { CoachInterviewPanel } from './components/coach/CoachInterviewPanel'
 import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { SpottingPanel } from './components/learn/SpottingPanel'
+import { ProofFullscreenPlayer } from './components/learn/ProofFullscreenPlayer'
+import {
+  extractSharedUrl,
+  sharedWhoLabel,
+  stashSharedUrl,
+  takeSharedUrl,
+} from './lib/shareLink'
+import { saveSharedUrlToLibrary } from './lib/shareIntake'
 import { ChatPanel } from './components/chat/ChatPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { LogForPicker } from './components/homework/LogForPicker'
@@ -319,6 +327,29 @@ export default function App() {
   // When the compare tool goes fullscreen (a mode was picked), the bottom
   // sheet chrome hides so the fullscreen tool has the whole screen.
   const [compareOverlayFullscreen, setCompareOverlayFullscreen] = useState(false)
+  // A video shared into ShapeLab (share sheet via the iOS shortcut, or
+  // the web share target on Chrome) opens straight in the fullscreen
+  // player, with a one-tap save into the reference library.
+  const [sharedClip, setSharedClip] = useState<{ url: string } | null>(null)
+  const [shareSaveState, setShareSaveState] = useState<
+    | { state: 'idle' }
+    | { state: 'saving' }
+    | { state: 'saved' | 'duplicate'; collectionName?: string }
+    | { state: 'error' }
+  >({ state: 'idle' })
+  // Share intake: a shared video link in the page URL is stashed and the
+  // URL is cleaned; the clip itself opens once signed in (effect below,
+  // after the session state exists).
+  useEffect(() => {
+    const url = extractSharedUrl(window.location.search)
+    if (!url) return
+    stashSharedUrl(url)
+    try {
+      window.history.replaceState(null, '', window.location.pathname)
+    } catch {
+      /* ignore */
+    }
+  }, [])
   const [hwStudio, setHwStudio] = useState(false)
   const [assignedFlowId, setAssignedFlowId] = useState<string | null>(null)
   const consumeAssignedFlow = useCallback(() => setAssignedFlowId(null), [])
@@ -415,6 +446,15 @@ export default function App() {
   const [gymPersist, setGymPersist] = useState<PersistInfo | null>(null)
   const [gymBootTick, setGymBootTick] = useState(0)
   const [authUser, setAuthUser] = useState<AuthSessionUser | null>(null)
+  // Open a stashed shared video as soon as there is a signed-in session.
+  useEffect(() => {
+    if (!authUser || sharedClip) return
+    const url = takeSharedUrl()
+    if (url) {
+      setShareSaveState({ state: 'idle' })
+      setSharedClip({ url })
+    }
+  }, [authUser, sharedClip])
   const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
   const [authBootstrap, setAuthBootstrap] = useState(false)
   const [ownerGym, setOwnerGym] = useState<Gym | null>(null)
@@ -1035,6 +1075,20 @@ export default function App() {
     setShowChecklist(false)
     setTab(id)
     if (id === 'compare') setCompareOpened(true)
+  }
+
+  const saveSharedClip = async () => {
+    if (!sharedClip || shareSaveState.state === 'saving') return
+    setShareSaveState({ state: 'saving' })
+    const res = await saveSharedUrlToLibrary(sharedClip.url, {
+      canEditGym: sessionIsAdmin(authUser),
+      profileId: authUser?.rosterProfileId ?? null,
+    })
+    setShareSaveState(
+      res.status === 'error'
+        ? { state: 'error' }
+        : { state: res.status, collectionName: res.collectionName },
+    )
   }
 
   const openCompareWithReference = (payload?: {
@@ -2345,6 +2399,40 @@ export default function App() {
             </CompareErrorBoundary>
           </div>
         </div>
+      )}
+
+      {/* A video shared into ShapeLab opens straight here, in the same
+          fullscreen player as everywhere else, with a one-tap save into
+          the reference library for coaches and admins. */}
+      {sharedClip && (
+        <>
+          <ProofFullscreenPlayer
+            videos={[{ url: sharedClip.url, who: sharedWhoLabel(sharedClip.url) }]}
+            index={0}
+            onIndex={() => {}}
+            onClose={() => setSharedClip(null)}
+          />
+          {(sessionIsAdmin(authUser) || authUser?.role === 'coach') && (
+            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
+              <button
+                type="button"
+                onClick={() => void saveSharedClip()}
+                disabled={shareSaveState.state === 'saving' || shareSaveState.state === 'saved'}
+                className="pointer-events-auto rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-80"
+              >
+                {shareSaveState.state === 'saving'
+                  ? 'Saving…'
+                  : shareSaveState.state === 'saved'
+                    ? `Saved to ${shareSaveState.collectionName ?? 'reference library'}`
+                    : shareSaveState.state === 'duplicate'
+                      ? `Already in ${shareSaveState.collectionName ?? 'the library'}`
+                      : shareSaveState.state === 'error'
+                        ? 'Save failed, tap to retry'
+                        : 'Save to reference library'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {tab === 'classes' && (

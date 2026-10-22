@@ -1,0 +1,1 @@
+{"background_color":"#080d11","display":"standalone","icons":[{"sizes":"any","src":"/favicon.svg","type":"image/svg+xml"}],"name":"ShapeLab","scope":"/","share_target":{"action":"/","enctype":"application/x-www-form-urlencoded","method":"GET","params":{"text":"text","title":"title","url":"watch"}},"short_name":"ShapeLab","start_url":"/","theme_color":"#080d11"}
