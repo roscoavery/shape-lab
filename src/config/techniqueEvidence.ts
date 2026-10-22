@@ -266,6 +266,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ryan-standing-full-ring-challenge.mp4',
       watchFor: 'Fun standing full stay in the ring challenge.',
     },
+    {
+      who: 'MJ Elite Gymnastics',
+      url: 'https://www.instagram.com/reel/DexW0WQAVIY/',
+      watchFor: 'Standing tuck up to a knee-high surface.',
+    },
   ],
   'back-extension-roll': [
     {
@@ -847,6 +852,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
     {
       who: 'TumbleSmart athlete',
       url: '/videos/standing-tuck-knee-high-surface.mp4',
+      watchFor: 'Standing tuck up to a knee-high surface.',
+    },
+    {
+      who: 'MJ Elite Gymnastics',
+      url: 'https://www.instagram.com/reel/DexW0WQAVIY/',
       watchFor: 'Standing tuck up to a knee-high surface.',
     },
   ],
