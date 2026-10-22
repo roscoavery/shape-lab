@@ -6,6 +6,7 @@ import type { DeskPreview } from '../../lib/deskPreview'
 import type { Athlete } from '../../types'
 import { AthleteAvatar } from '../AthleteAvatar'
 import { NotifyBell } from '../NotifyBell'
+import { PasteLinkButton } from '../PasteLinkButton'
 import type { AppSettings } from '../../types'
 import { AppNav } from '../AppNav'
 import { MobileCreateSheet } from './MobileCreateSheet'
@@ -59,6 +60,8 @@ type Props = {
   deskPreview?: DeskPreview
   /** profileRole(activeProfile) === 'gym_owner' — gates the Owner section. */
   isOwner?: boolean
+  /** Coaches/admins: open the video link on the clipboard in the share player. */
+  onOpenCopiedLink?: () => void
   children: ReactNode
 }
 
@@ -83,6 +86,7 @@ export function IgMobileShell({
   navRole,
   deskPreview = 'home',
   isOwner = false,
+  onOpenCopiedLink,
   children,
 }: Props) {
   const [mobileSearch, setMobileSearch] = useState(false)
@@ -263,7 +267,10 @@ export function IgMobileShell({
               <p className="truncate text-sm font-semibold tracking-tight">shapelab</p>
             )}
           </div>
-          <NotifyBell athlete={athlete} settings={settings} onOpen={go} variant="ig" />
+          <div className="flex shrink-0 items-center">
+            {onOpenCopiedLink && <PasteLinkButton onOpen={onOpenCopiedLink} variant="ig" />}
+            <NotifyBell athlete={athlete} settings={settings} onOpen={go} variant="ig" />
+          </div>
         </header>
         {previewing && (
           <button

@@ -39,6 +39,7 @@ import { VersionCheck } from './components/VersionCheck'
 import { DrillLibraryPanel } from './components/DrillLibraryPanel'
 import { SpottingPanel } from './components/learn/SpottingPanel'
 import { ProofFullscreenPlayer } from './components/learn/ProofFullscreenPlayer'
+import { PasteLinkButton } from './components/PasteLinkButton'
 import {
   extractSharedUrl,
   sharedWhoLabel,
@@ -337,6 +338,7 @@ export default function App() {
     | { state: 'saved' | 'duplicate'; collectionName?: string }
     | { state: 'error' }
   >({ state: 'idle' })
+  const [pasteNote, setPasteNote] = useState<string | null>(null)
   // Share intake: a shared video link in the page URL is stashed and the
   // URL is cleaned; the clip itself opens once signed in (effect below,
   // after the session state exists).
@@ -1091,6 +1093,29 @@ export default function App() {
     )
   }
 
+  /**
+   * The clipboard bridge into the share player: copy a reel link in
+   * Instagram, open ShapeLab, tap Open link. iOS cannot route a shared
+   * link into the home screen web app, so this is the one-tap way in.
+   */
+  const openCopiedLink = async () => {
+    let text = ''
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      text = ''
+    }
+    const url = text ? extractSharedUrl(text) : null
+    if (url) {
+      setShareSaveState({ state: 'idle' })
+      setSharedClip({ url })
+      return
+    }
+    setPasteNote('No video link on the clipboard. Copy a link in Instagram first.')
+    window.setTimeout(() => setPasteNote(null), 3600)
+  }
+  const canFileClips = sessionIsAdmin(authUser) || authUser?.role === 'coach'
+
   const openCompareWithReference = (payload?: {
     src: string | null
     name: string
@@ -1427,6 +1452,7 @@ export default function App() {
       <IgMobileShell
         tab={tab}
         onGo={goTab}
+        onOpenCopiedLink={canFileClips ? () => void openCopiedLink() : undefined}
         authUser={authUser}
         athlete={athleteViewAthlete ?? activeProfile}
         athletes={athletes}
@@ -1497,10 +1523,19 @@ export default function App() {
             onGo={goTab}
           />
         </div>
-        <div className="ml-auto shrink-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {canFileClips && <PasteLinkButton onOpen={() => void openCopiedLink()} />}
           <NotifyBell athlete={activeProfile} settings={settings} onOpen={goTab} />
         </div>
       </header>
+
+      {pasteNote && (
+        <div className="pointer-events-none fixed inset-x-0 top-16 z-[700] flex justify-center px-4">
+          <p className="rounded-full bg-black/85 px-4 py-2 text-sm font-medium text-white shadow-lg">
+            {pasteNote}
+          </p>
+        </div>
+      )}
 
       {floorKiosk && <FloorKioskBar user={authUser} onUser={setAuthUser} />}
       {athleteViewAthlete && activeProfile && (
