@@ -1083,7 +1083,10 @@ export default function App() {
     if (!sharedClip || shareSaveState.state === 'saving') return
     setShareSaveState({ state: 'saving' })
     const res = await saveSharedUrlToLibrary(sharedClip.url, {
-      canEditGym: sessionIsAdmin(authUser),
+      // Only Ryan's own profile saves into the main (gym) reference
+      // library, the same rule the reference pane uses. Everyone else
+      // who can file clips lands in their own library only.
+      canEditGym: isRyanAthlete(activeProfile) && !sessionIsKiosk(authUser),
       profileId: authUser?.rosterProfileId ?? null,
     })
     setShareSaveState(
@@ -2447,7 +2450,7 @@ export default function App() {
             onIndex={() => {}}
             onClose={() => setSharedClip(null)}
           />
-          {(sessionIsAdmin(authUser) || authUser?.role === 'coach') && (
+          {canFileClips && (
             <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
               <button
                 type="button"
