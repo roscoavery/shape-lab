@@ -26,6 +26,7 @@ Components (`src/components/coachEd/`)
 
 Content and data (`src/content/coachEd/`)
 - Typed model with stable ids (`types.ts`), 66 sources (`sources.ts`), conditions by region (lazy), 30 lessons across six modules, 5 comparison tables, 5 scenarios, 3 flashcard decks, 2 matching sets, 26 movement terms, 6 stretch methods, a media library with 6 slots and 9 asset records, 13 assessments with mastery levels.
+- After the expansion (see "Expansion" at the end): 113 sources, 37 lessons across seven modules, 27 complete condition cards, 12 comparison tables, 10 scenarios, 4 matching sets, 35 movement terms, 11 exercise records, 12 media slots and 12 asset records, 14 assessments.
 
 Server (`server/coachEd/`)
 - `model.ts` (review overlay, media workflow rules, attempts, progress), `grading.ts`, `routes.ts`, `store.ts`, generated answers and manifest.
@@ -55,7 +56,7 @@ Flexibility and stretching lessons: why athletes stretch, methods (static, dynam
 
 ## 5. Tests and progress
 
-- 98 questions across 21 topics (22 safety-critical), each with difficulty tag, at least one verified source, and an explanation. 13 assessments. Pass mark 85 percent, configurable by admin between 50 and 100 (default 85). Every critical question in an assessment is always drawn and must be right regardless of score.
+- 98 questions across 21 topics (22 safety-critical) at first release; 144 across 28 topics (27 safety-critical) after the expansion, each with difficulty tag, at least one verified source, and an explanation. 13 assessments. Pass mark 85 percent, configurable by admin between 50 and 100 (default 85). Every critical question in an assessment is always drawn and must be right regardless of score.
 - Server-side grading. The browser bundle holds questions and choices only. Answer keys and explanations live in `server/coachEd/answers.generated.ts`, are returned only after a submission closes, and a test fails if anything under `src/` imports them. A built bundle search for explanation text found nothing.
 - Attempts expire after 3 hours, can be submitted once, and are per account.
 - Mastery levels: Foundations, Working knowledge, Proficient, Advanced. Always labeled as internal ShapeLab achievements, not credentials or certifications. Coach progress sits in its own server file, separate from athlete records and medical history. Admin sees a coach dashboard.
@@ -87,7 +88,7 @@ Before the Draft label can come off, a qualified clinician (sports medicine phys
 - 36 library entries are not written. Module 2 library lessons exist for the spondylo family, ganglion cysts, ankle sprains, and growth plate and overuse injuries only.
 - Search: the injury library searches names, aliases, tags, and body region. It does not yet match free-text symptoms ("hurts when landing") beyond the tags authored.
 - Mobile layout was tested at phone width in a browser. No native app, no offline mode.
-- Pushing: this VM has no credentials for the GitHub remote, so commits were pushed to the Cursor remote on branch `cursor/coach-education-847e`. `git push github shape-lab-v4` still needs to be run from a machine with GitHub access (4 commits ahead plus this report).
+- Pushing: see "Integration notes" in the Expansion section for where the branch was pushed.
 
 ## 9. Visuals
 
@@ -129,3 +130,73 @@ Browser pass on a phone-sized viewport: see "Mobile QA" below.
 ## Mobile QA
 
 Pending at the time this report was committed. Results are appended below when the browser pass finishes.
+
+## Expansion: impingement, kinetic chain, RICE, knees over toes, vulnerable positions
+
+Everything added here is also **Draft, not yet medically reviewed**.
+
+### What was added
+
+- Impingement (library module): lesson `lib-impingement` explains what "impingement" does and does not mean. It comes with 7 complete 21-field cards: subacromial pain syndrome, internal shoulder impingement, FAI syndrome, anterior ankle impingement, posterior ankle impingement, dorsal wrist impingement, and posterior elbow impingement. Also added: 3 comparison tables (shoulder pain labels, hip shape versus FAI syndrome, back-of-wrist pain) and a matching set.
+- Kinetic chain (movement module): lesson `mov-foot-chain`, "Foot pronation and the lower-limb kinetic chain". It adds 9 foot-to-pelvis terms (new term group "Foot to pelvis"), a foot-terms comparison, and a matching set. It states that pronation is normal motion, and that foot posture is only weakly and inconsistently linked to injury.
+- RICE evolution (recovery module): lesson `rec-rice-evolution` has a dated timeline (Mirkin 1978, the 2004 ice review, POLICE by 2012, Mirkin's 2014 revision, PEACE and LOVE 2020, the 2024 cryotherapy review). It also has sections on inflammation and ice, a red circulation callout (signs of compartment syndrome, call emergency services), and an emergency scenario. No claim says ice definitely speeds or slows healing.
+- New Training module (`training`), 4 lessons: knees over toes (`trn-knees-over-toes`), strengthening vulnerable positions (`trn-vulnerable-positions`, which says "No exercise makes athletes injury-proof"), when to progress, hold, or modify (`trn-progression`, 11 factors, and ShapeLab does not prescribe rehabilitation or override clinicians), and what each exercise can and cannot claim (`trn-exercise-evidence`).
+- Exercise education: 11 records in `exercises.ts`. Each has one of four evidence labels: direct injury reduction evidence, evidence for an associated capacity, biomechanical rationale only, or insufficient or conflicting evidence. Only the Nordic hamstring curl carries the direct injury reduction label. The Jefferson curl is education only, carries the "advanced" caution, and lists 8 readiness checks and 5 contraindications. It is not in the homework catalog.
+- Homework catalog additions (audience class, reps): sissy squat, sled push, sled pull (backward and forward), backward walk.
+- New source kinds "practitioner" and "historical". Practitioner sources (Poliquin 1997, ATG) show a note that they are coaching opinion and not research. Historical sources (Mirkin 1978) are labeled as history, not current guidance.
+- 46 new questions (144 total, 27 safety-critical) across 7 new topics: impingement, kinetic chain, RICE history, cryotherapy, knee travel, progression, and exercise evidence. The new `training_science` assessment takes 12 questions. New topics were also mapped into the injury response, ankle and foot, upper limb, return to tumbling, movement science, and comprehensive assessments.
+- 47 new sources, 113 in total. Each one was checked against PubMed esummary, an Open Library ISBN record, or the publisher page on 2026-10-23. Authors, volumes, and pages were corrected wherever my first draft differed from the record.
+
+### Unverified or uncertain claims
+
+- **The "Duke" knees-behind-toes account is unverified.** Popular articles credit a 1978 Duke University study with the rule. Bibliographic records for McLaughlin, Lardner, and Dillman 1978 list Auburn University and the University of Illinois, and I found no primary source tying the rule to Duke. The lesson includes a callout saying so. The claim that the rule traces to that era of squat research is labeled as reasoned history, not a documented fact.
+- The **Poliquin step-up** name comes from coaching tradition. I did not find a published primary description by Charles Poliquin, and the exercise sheet says so.
+- **Gymnastics-specific rates and transfer are mostly unknown.** The Nordic injury reduction comes from soccer and running sports. Sled work, backward walking, back extensions, and slant-board squats have capacity evidence but no gymnastics injury outcomes. The exercise sheets mark these as "Not well established" (27 such claims in `exercises.ts`).
+- **No recovery ranges** are given on the 7 impingement cards. All 14 range fields are marked "Not given" because no reviewed source publishes a range that is safe to quote for young gymnasts.
+- **Mirkin's 2014 page** is a personal website (drmirkin.com/?p=421, verified as an author page), not a peer-reviewed retraction. It is cited only as the author's own revised view.
+- **The ATG ("Knees Over Toes Guy") material** is practitioner opinion. It is cited only to describe the method, never as evidence that it works.
+
+### Visuals still pending
+
+New figures from Gray's Anatomy 1918 (Wikimedia Commons, public domain). Each hosted copy's SHA-1 matched the Commons file, and the checks are logged in `media-verification-log.json`:
+- Foot skeleton, inner side (plate 290), in `mov-foot-chain`.
+- Hip joint with the labrum (plate 342), in `lib-impingement`.
+- Shoulder joint with the acromion and coracoacromial ligament (plate 326), in `lib-impingement`.
+
+As with the two ankle plates, "approved" means the build agent compared each plate to its printed labels. That is not a clinician review. These plates show normal anatomy only.
+
+Still showing "Verified visual pending":
+- `media-foot-pronation`: a three-plane pronation and supination diagram.
+- `media-hip-cam-pincer`: cam and pincer hip shapes.
+- `media-squat-knee-travel`: knee travel past the toes in a squat.
+- The anterior and posterior ankle impingement sites in `lib-impingement`.
+
+No suitable open-license image was found for any of these.
+
+### Needs qualified medical review
+
+- All 7 impingement cards. Especially: how coaches should talk about FAI on imaging versus FAI syndrome, which ankle impingement symptoms to refer, and the elbow lockout and wrist extension "what a coach can change" wording.
+- The RICE lesson's circulation and compartment syndrome callout and scenario `sc-compartment`, checked against the gym's emergency action plan.
+- The 5 new safety-critical questions: `cr-5` (circulation after icing or wrapping), `kt-6`, `pg-2`, `pg-5`, and `ee-4` (Jefferson curl contraindications).
+- The Jefferson curl readiness and contraindication lists, and whether the gym wants it taught at all.
+- The progression framework (`trn-progression`) and scenarios `sc-progress-step`, `sc-jefferson-request`, and `sc-growth-spurt`, especially the advice to hold load during growth spurts.
+- The evidence label on each of the 11 exercises.
+
+### Integration notes
+
+- The "Learn the science (coach education)" button appears only on homework items that map to an exercise record (`exerciseLinks.ts`). It shows only when the active profile is a coach or admin, because `App.tsx` passes the handler only for `isCoachProfile`. Athletes and parents never get the button, and the Coach Ed routes still refuse them on the server.
+- The Foundation drill deck has none of the 11 exercises, so there is no science link from Foundation drills. Adding one needs a matching Foundation drill first.
+- The Advanced mastery level now also requires passing `training_science`. Mastery is computed from passed assessments each time it is read, so a coach who was at Advanced shows Proficient until they pass `training_science`. Their earlier attempts are kept.
+- The coach-ed search jump (`mobileSearchNav`) can now carry an optional `lessonId`, which `CoachEdPanel` opens directly.
+- Repo hygiene: the first expansion commit accidentally included local QA data from `data/`. That included `data/.accounts-merge-snapshot.json`, which the account store merges into live accounts on every read, so it would have added throwaway `@test.dev` logins to the gym. The next commit put every `data/` file back to its pre-expansion state, and `.gitignore` now excludes the snapshot, `data/history/`, and `data/skill-card-videos.json`. The net diff of this work under `data/` is empty, so a pull on the gym computer leaves its local data alone.
+
+### Tests run (expansion)
+
+- `npx tsc -b` and `npm run build`: clean.
+- `npm run test:coach-ed`: 27 of 27 pass. 7 new expansion tests cover: evidence labels, limits, and contraindications on every exercise; the Jefferson curl being education only, caution-labeled, and not assignable; new catalog ids; safety callouts and the circulation emergency; no "ice definitely speeds or delays healing" claim; practitioner labels and the unverified Duke account; and the training_science assessment with the Advanced requirement.
+- `npm run test:family-units`: passes.
+- `npx oxlint`: the same 9 errors as before this work, in `server/persist.ts` and `DrillLibraryPanel.tsx`. No warnings on lines changed here.
+- The v4 integration checks need their own server: set `SHAPE_LAB_TEST_URL` (this VM uses `http://127.0.0.1:43128`), use a fresh `data/` with `roster.example.json` copied to `roster.json`, and set the bootstrap admin env vars. Run them in order: access, then security, then family. Against a clean worktree at this commit, `test:v4-access`, `test:v4-security`, `test:v4-family`, and `test:v4-desk` all pass. Two caveats:
+  - `test:v4-security` must run with `npx tsx scripts/v4-security-check.mjs`. `npm run test:v4-security` uses Node's type stripping, which fails on an extensionless import in `authSession.ts`.
+  - Running the security check twice in a row trips the server's account-change rate limit.
+  `test:v4-skill-goal` still points at a script that does not exist.
