@@ -1,7 +1,7 @@
 {
   "kind": "shape-lab-lessons",
   "version": 1,
-  "exportedAt": "2026-10-23T17:49:00.454Z",
+  "exportedAt": "2026-09-24T09:41:28.258Z",
   "plans": [
     {
       "id": "lpn_mtesjtgt_8k7xgp",
@@ -275,7 +275,5 @@
       "notes": [],
       "holds": []
     }
-  ],
-  "removedSessionIds": [],
-  "removedPlanIds": []
+  ]
 }

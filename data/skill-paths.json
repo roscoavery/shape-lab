@@ -1,15 +1,9 @@
 {
   "kind": "shape-lab-skill-paths",
   "version": 1,
-  "exportedAt": "2026-10-23T17:43:03.612Z",
+  "exportedAt": "2026-09-24T08:42:57.068Z",
   "skills": [],
   "needs": [],
   "conditioning": [],
-  "drills": [],
-  "versions": [],
-  "removedSkillIds": [],
-  "removedNeedIds": [],
-  "removedConditioningIds": [],
-  "removedDrillIds": [],
-  "removedVersionIds": []
+  "removedSkillIds": []
 }
