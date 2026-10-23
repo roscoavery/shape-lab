@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
+import { buildAuditSource } from '../coach-ed-gen-audit.ts'
 import { buildManifestSource } from '../coach-ed-gen-manifest.ts'
 import { MEDIA_ASSETS } from '../../src/content/coachEd/media.ts'
 import { MOVEMENT_TERMS } from '../../src/content/coachEd/movementTerms.ts'
@@ -18,6 +19,11 @@ test('content references, sources, cards, and generated files are all consistent
 test('server manifest is fresh', async () => {
   const disk = readFileSync(join(root, 'server/coachEd/manifest.generated.ts'), 'utf8')
   assert.equal(await buildManifestSource(), disk, 'run npm run coach-ed:gen')
+})
+
+test('image audit report is fresh', async () => {
+  const disk = readFileSync(join(root, 'docs/coach-ed/image-audit.md'), 'utf8')
+  assert.equal(await buildAuditSource(), disk, 'run npm run coach-ed:gen')
 })
 
 test('injury library search finds the spondylo family and aliases', () => {
