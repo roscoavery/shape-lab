@@ -265,11 +265,105 @@ export const MOVEMENT_TERMS: MovementTerm[] = [
   },
 ]
 
+const FOOT_CHAIN: MovementTerm[] = [
+  {
+    id: 'mt-foot-pronation',
+    term: 'Foot pronation',
+    kind: 'foot_chain',
+    definition:
+      'A normal three-plane motion of the foot: eversion, abduction, and dorsiflexion happening together, mostly at the joint below the ankle (subtalar joint). The arch lowers as it happens. It helps absorb shock and lets the foot adapt to the surface.',
+    gymExample: 'On landing from a jump the foot pronates briefly to soak up load, then supinates to become a stiffer lever for the next takeoff.',
+    sourceIds: NM,
+    isJointAction: true,
+  },
+  {
+    id: 'mt-foot-supination',
+    term: 'Foot supination',
+    kind: 'foot_chain',
+    definition: 'The opposite three-plane motion: inversion, adduction, and plantarflexion together. The arch rises and the foot becomes a more rigid lever for push-off.',
+    gymExample: 'The push-off for a punch or a back handspring takeoff happens on a more supinated, stiffer foot.',
+    sourceIds: NM,
+    isJointAction: true,
+  },
+  {
+    id: 'mt-subtalar-eversion',
+    term: 'Subtalar eversion and inversion',
+    kind: 'foot_chain',
+    definition:
+      'The frontal-plane tilt of the heel and sole: eversion tilts the sole outward, inversion tilts it inward. Eversion is one part of pronation, but pronation also includes motion in the other two planes, so the words are related, not interchangeable.',
+    gymExample: 'Rolling an ankle on a short landing is a sudden, excessive inversion.',
+    sourceIds: NM,
+    isJointAction: true,
+  },
+  {
+    id: 'mt-calcaneus',
+    term: 'Calcaneal (heel bone) motion',
+    kind: 'foot_chain',
+    definition: 'Viewed from behind, the heel tilts slightly outward (eversion) early in stance and back inward as the foot prepares to push off.',
+    gymExample: 'Watching the heel from behind during slow single-leg squats shows this tilt.',
+    sourceIds: N,
+    isJointAction: true,
+  },
+  {
+    id: 'mt-medial-arch',
+    term: 'Longitudinal arch and medial arch lowering',
+    kind: 'foot_chain',
+    definition:
+      'The inner arch of the foot lowers as the foot takes weight and pronates, and rises as it supinates. Foot intrinsic muscles and the plantar fascia help control this.',
+    gymExample: 'Standing on one foot on the beam, the arch lowers and rises slightly as the athlete balances.',
+    sourceIds: ['neumann-kinesiology', 'foot-core-2015'],
+    isJointAction: false,
+  },
+  {
+    id: 'mt-tibial-rotation',
+    term: 'Tibial internal and external rotation',
+    kind: 'foot_chain',
+    definition:
+      'The shin bone rotates around its long axis. In running studies, rearfoot eversion early in stance is coupled with tibial internal rotation, and the coupling pattern varies between people.',
+    gymExample: 'As the foot pronates on landing, the shin tends to rotate inward slightly.',
+    sourceIds: ['joint-coupling-2004', 'neumann-kinesiology'],
+    isJointAction: true,
+  },
+  {
+    id: 'mt-knee-valgus',
+    term: 'Knee valgus and varus',
+    kind: 'foot_chain',
+    definition:
+      'Valgus describes the knee moving or sitting inward relative to the hip and foot ("knock-knee" direction). Varus is the outward direction ("bow-leg"). They describe alignment and motion, not a diagnosis.',
+    gymExample: 'Knees caving inward on a stuck landing is a valgus motion coaches commonly cue.',
+    sourceIds: NM,
+    isJointAction: false,
+  },
+  {
+    id: 'mt-femoral-rotation',
+    term: 'Femoral internal and external rotation, and hip adduction',
+    kind: 'foot_chain',
+    definition:
+      'The thigh bone rotates at the hip, and adduction brings the thigh toward the midline. Femoral internal rotation and hip adduction often appear together with knee valgus during landing.',
+    gymExample: 'On a one-foot landing the thigh can rotate inward and drift toward the midline as the knee caves.',
+    sourceIds: NM,
+    isJointAction: true,
+  },
+  {
+    id: 'mt-pelvic-chain',
+    term: 'Pelvic motion in the chain',
+    kind: 'foot_chain',
+    definition:
+      'The pelvis can drop on one side, rotate, or tilt forward and back. Lower-limb rotation and hip position can be linked to these pelvic motions, which in turn change the position of the lumbar spine.',
+    gymExample: 'On single-leg balance the pelvis may drop on the free-leg side if the standing-side hip muscles do not hold it level.',
+    sourceIds: NM,
+    isJointAction: true,
+  },
+]
+
+MOVEMENT_TERMS.push(...FOOT_CHAIN)
+
 export const MOVEMENT_KIND_LABELS: Record<MovementTermKind, string> = {
   plane_axis: 'Planes and axes',
   joint_action: 'Joint actions',
   scapular: 'Scapular motions',
   pelvic: 'Pelvic motions',
+  foot_chain: 'Foot to pelvis',
   chain: 'Kinetic chain',
   contraction: 'Muscle contractions',
   loading: 'Loading concepts (not joint actions)',

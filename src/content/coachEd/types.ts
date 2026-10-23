@@ -20,6 +20,12 @@ export type SourceKind =
   | 'primary_study'
   | 'textbook'
   | 'agency'
+  /** A coach's or practitioner's own book or site. Never experimental evidence. */
+  | 'practitioner'
+  /** Historical primary text, cited for what it said, not for being current. */
+  | 'historical'
+
+export const PRACTITIONER_NOTE = 'Coaching approach, not experimental evidence'
 
 export type Source = {
   id: string
@@ -38,7 +44,7 @@ export type Source = {
   /** ISO date the bibliographic record was checked against its public record. */
   verifiedOn: string
   /** How it was checked. Kept so a reviewer can repeat it. */
-  verifiedBy: 'pubmed' | 'publisher_page' | 'agency_page' | 'openlibrary_isbn'
+  verifiedBy: 'pubmed' | 'publisher_page' | 'agency_page' | 'openlibrary_isbn' | 'author_page'
 }
 
 /** A single statement with the evidence behind it. */
@@ -233,6 +239,25 @@ export type LessonBlock =
   | { kind: 'matching'; matchingId: string }
   | { kind: 'terms'; termKinds: MovementTermKind[] }
   | { kind: 'methods' }
+  | { kind: 'exercises'; exerciseIds: string[] }
+  | { kind: 'evidenceLinks'; exerciseIds: string[] }
+  | { kind: 'timeline'; items: TimelineItem[] }
+
+export type TimelineItem = {
+  year: string
+  label: string
+  text: string
+  /** What kind of statement this was when it was made. */
+  status: 'framework' | 'clinical_guidance' | 'expert_opinion' | 'review'
+  sourceIds: string[]
+}
+
+export const TIMELINE_STATUS_LABELS: Record<TimelineItem['status'], string> = {
+  framework: 'Proposed framework',
+  clinical_guidance: 'Clinical guidance',
+  expert_opinion: 'Expert opinion',
+  review: 'Evidence review',
+}
 
 export type ModuleId =
   | 'fundamentals'
@@ -241,6 +266,7 @@ export type ModuleId =
   | 'recovery'
   | 'movement'
   | 'stretching'
+  | 'training'
   | 'testing'
 
 export type Lesson = {
@@ -307,9 +333,79 @@ export type MovementTermKind =
   | 'joint_action'
   | 'scapular'
   | 'pelvic'
+  | 'foot_chain'
   | 'chain'
   | 'contraction'
   | 'loading'
+
+/**
+ * How strongly an exercise is tied to fewer injuries. Improving a strength
+ * number is `capacity`, never `direct_reduction`.
+ */
+export type PreventionEvidence = 'direct_reduction' | 'capacity' | 'rationale_only' | 'insufficient'
+
+export const PREVENTION_EVIDENCE_LABELS: Record<PreventionEvidence, string> = {
+  direct_reduction: 'Direct injury reduction evidence',
+  capacity: 'Evidence for improving an associated physical capacity',
+  rationale_only: 'Biomechanical rationale without proven injury reduction',
+  insufficient: 'Insufficient or conflicting evidence',
+}
+
+export type ContractionDemand = { concentric: string; eccentric: string; isometric: string }
+
+/**
+ * Coach education layer over an existing exercise. `catalogId` is the
+ * homework catalog id, so the exercise itself is never duplicated. Records
+ * with `educationOnly` have no catalog entry and cannot be assigned.
+ */
+export type ExerciseEducation = {
+  id: string
+  name: string
+  catalogId?: string
+  educationOnly?: boolean
+  caution?: 'advanced'
+  summary: string
+  primaryMuscles: string[]
+  supportingMuscles: string[]
+  joints: string[]
+  planes: string[]
+  contraction: ContractionDemand
+  loadingEmphasis: string
+  qualities: string[]
+  mobility: string[]
+  control: string[]
+  gymApplication: Claim[]
+  errors: string[]
+  beginner: string[]
+  advanced: string[]
+  progressWhen: string[]
+  stopOrModify: string[]
+  injuryConsiderations: Claim[]
+  researchSupports: Claim[]
+  stillTheoretical: Claim[]
+  /** Topic-specific sections, for example step height or heel elevation. */
+  focus?: { title: string; points: Claim[] }[]
+  /** Coaching prerequisites before introducing it. Not a validated screen. */
+  readiness?: Claim[]
+  contraindications?: Claim[]
+  conditionIds: string[]
+  lessonIds: string[]
+  /** Existing ShapeLab coaching standard shown as such. */
+  shapeLabStandard?: string
+  review: ReviewStatus
+}
+
+export type ExerciseLink = {
+  exerciseId: string
+  capacity: string
+  tissueDemand: string
+  mayHelp: string
+  evidence: PreventionEvidence
+  limits: string
+  contraindications: string
+  sourceIds: string[]
+  conditionIds: string[]
+}
 
 export type MovementTerm = {
   id: string
@@ -432,6 +528,7 @@ export type AssessmentCategoryId =
   | 'return_to_tumbling'
   | 'movement_science'
   | 'flexibility_stretching'
+  | 'training_science'
   | 'comprehensive'
 
 export type Assessment = {

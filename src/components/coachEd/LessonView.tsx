@@ -9,6 +9,7 @@ import { coachEdApi } from './api'
 import { useCoachEd } from './CoachEdContext'
 import { FlashcardDeckView } from './FlashcardDeckView'
 import { MatchingExercise } from './MatchingExercise'
+import { EvidenceLinksView, ExerciseList, TimelineView } from './ExerciseViews'
 import { DraftBanner, ReviewBadge } from './SafetyBanner'
 import { ScenarioRunner } from './ScenarioRunner'
 import { SourceList } from './SourceList'
@@ -162,6 +163,12 @@ function Block({ b, onOpenCondition }: { b: LessonBlock; onOpenCondition: (id: s
       return <Terms kinds={b.termKinds} />
     case 'methods':
       return <Methods />
+    case 'exercises':
+      return <ExerciseList ids={b.exerciseIds} onOpenCondition={onOpenCondition} />
+    case 'evidenceLinks':
+      return <EvidenceLinksView ids={b.exerciseIds} />
+    case 'timeline':
+      return <TimelineView items={b.items} />
   }
 }
 
@@ -178,7 +185,9 @@ export function LessonView({
   const [busy, setBusy] = useState(false)
   const review = ctx.reviewOf('lesson', lesson.id, lesson.review)
   const done = Boolean(ctx.state?.mine.lessons[lesson.id])
-  const sources = lesson.blocks.flatMap((b) => ('sourceIds' in b && b.sourceIds ? b.sourceIds : []))
+  const sources = lesson.blocks.flatMap((b) =>
+    b.kind === 'timeline' ? b.items.flatMap((it) => it.sourceIds) : 'sourceIds' in b && b.sourceIds ? b.sourceIds : [],
+  )
   const toggle = async () => {
     setBusy(true)
     try {

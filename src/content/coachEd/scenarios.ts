@@ -164,4 +164,162 @@ export const SCENARIOS: Scenario[] = [
     takeaway: 'Back pain in a young gymnast with arching is a reason for a clinician visit, not for waiting.',
     sourceIds: ['orthoinfo-spondy', 'spondylolysis-review-2000', 'gym-spine-2009'],
   },
+  {
+    id: 'sc-compartment',
+    title: 'Shin pain that keeps getting worse',
+    setup:
+      'A 15-year-old took a hard knock to the shin on the beam an hour ago. The lower leg is now very tight and swollen, the pain is much worse than you would expect, and she says her foot feels tingly. A teammate has brought an ice pack. What do you do?',
+    emergency: true,
+    choices: [
+      {
+        id: 'a',
+        label: 'Ice and elevate the leg for 20 minutes, then check again.',
+        feedback: 'Ice is not treatment for suspected compartment syndrome and waiting delays the care that protects the leg.',
+      },
+      {
+        id: 'b',
+        label: 'Call 911 (or your local emergency number) now. Keep her still, do not wrap the leg tightly, and stay with her.',
+        safest: true,
+        feedback:
+          'Severe, worsening pain out of proportion to the injury, a tight swollen limb, and tingling can mean compartment syndrome, where pressure cuts off blood flow. It is a surgical emergency.',
+      },
+      {
+        id: 'c',
+        label: 'Wrap it firmly with compression to bring the swelling down.',
+        feedback: 'Tight compression can raise pressure further. This needs emergency care, not a wrap.',
+      },
+      {
+        id: 'd',
+        label: 'Have her walk it off and see a doctor next week if it is still sore.',
+        feedback: 'Delay can cause permanent muscle and nerve damage.',
+      },
+    ],
+    takeaway: 'When circulation might be compromised, emergency care comes first. Ice never replaces or delays it.',
+    sourceIds: ['medlineplus-compartment', 'compartment-2015'],
+  },
+  {
+    id: 'sc-ice-question',
+    title: '"Should she ice it?"',
+    setup:
+      'An athlete rolled her ankle slightly on a warm-up jump. She can walk normally, there is no deformity, and the pain is mild. Her parent asks whether to ice it every hour for the next three days. What is the most evidence-informed answer?',
+    choices: [
+      {
+        id: 'a',
+        label: '"Short periods of cooling can help with pain in the first hours. There is no good evidence that icing for days speeds healing. If it is still painful, swollen, or she cannot walk normally, have it checked."',
+        safest: true,
+        feedback:
+          'This matches current reviews: cooling can reduce pain early, human evidence that it improves healing is lacking, and prolonged icing is not supported.',
+      },
+      {
+        id: 'b',
+        label: '"Ice is proven to speed healing, so the more the better."',
+        feedback: 'No human evidence shows ice speeds tissue healing, and long cold exposure can harm skin and nerves.',
+      },
+      {
+        id: 'c',
+        label: '"Never use ice, it always delays healing."',
+        feedback: 'That overstates the evidence. Concerns about delayed healing come mainly from animal studies, and short-term cooling for pain is reasonable.',
+      },
+      {
+        id: 'd',
+        label: '"Keep her completely still for two weeks."',
+        feedback: 'Prolonged complete rest is usually not needed for a mild soft tissue injury and can slow recovery. A clinician decides if protection is needed.',
+      },
+    ],
+    takeaway: 'Separate short-term pain relief from long-term healing, and do not overstate either side.',
+    sourceIds: ['cryo-critical-2024', 'ice-sr-2004', 'peace-love-2020'],
+  },
+  {
+    id: 'sc-progress-step',
+    title: 'Ready for a higher step?',
+    setup:
+      'A 12-year-old has done Poliquin steps at the lowest height for three weeks. Her left knee tracks well. On the right, the knee drifts inward on the last two reps of each set, and she says the front of that knee is "a little achy" the next morning. Her teammates have moved up a height. What is the best call?',
+    choices: [
+      {
+        id: 'a',
+        label: 'Move her up with the group so she does not fall behind.',
+        feedback: 'Progressing while control fades and next-day symptoms appear adds load before the knee is ready.',
+      },
+      {
+        id: 'b',
+        label: 'Keep the current height, cut the set so every rep is clean, note the next-morning ache, and tell the parent if it continues.',
+        safest: true,
+        feedback: 'Control fading at the end of a set plus next-day symptoms are reasons to hold or step back, not to progress. Persisting pain needs a clinician.',
+      },
+      {
+        id: 'c',
+        label: 'Add a weight so the right leg gets stronger faster.',
+        feedback: 'Adding load raises knee joint stress further. Change one dial at a time, and only when the current level is consistent.',
+      },
+      {
+        id: 'd',
+        label: 'Stop all leg training for a month.',
+        feedback: 'Complete rest is not needed for mild, settling symptoms, but persistent pain needs a clinician.',
+      },
+    ],
+    takeaway: 'Progress when the current level is consistent, controlled, and symptom-settled. Not because a calendar or a teammate says so.',
+    sourceIds: ['pf-squat-load-2002', 'trampoline-growth-2021'],
+  },
+  {
+    id: 'sc-jefferson-request',
+    title: 'Can she do Jefferson curls?',
+    setup:
+      'A 14-year-old with low back pain on back walkovers saw an online video of Jefferson curls "fixing" back pain and wants to start them. She has not seen a clinician about the pain. What do you do?',
+    choices: [
+      {
+        id: 'a',
+        label: 'Start her with a light dumbbell so her back gets used to flexion.',
+        feedback: 'Loaded flexion is not appropriate for back pain that has not been evaluated, especially in a young tumbler where a pars stress injury is possible.',
+      },
+      {
+        id: 'b',
+        label: 'Explain that Jefferson curls are not used for unevaluated back pain, pause the provoking skills, and ask the parent to arrange a clinician visit.',
+        safest: true,
+        feedback: 'Back pain with arching in a young gymnast needs a clinician first. Jefferson curls are an advanced exercise that needs medical clearance where back symptoms exist.',
+      },
+      {
+        id: 'c',
+        label: 'Let her do bodyweight Jefferson curls because they have no weight.',
+        feedback: 'The issue is the unevaluated symptom, not only the load.',
+      },
+      {
+        id: 'd',
+        label: 'Tell her the curls will prevent a disc injury.',
+        feedback: 'No evidence shows Jefferson curls prevent disc injuries or spinal fractures.',
+      },
+    ],
+    takeaway: 'An exercise is never a substitute for evaluating pain, and ShapeLab does not prescribe rehabilitation.',
+    sourceIds: ['orthoinfo-spondy', 'spondylolysis-review-2011'],
+  },
+  {
+    id: 'sc-growth-spurt',
+    title: 'Growth spurt and a new program',
+    setup:
+      'A 13-year-old has grown quickly this season and has new heel and knee soreness after practice. You want to add Nordic curls, sled pushes, and slant board squats all in the same week to "build her up". What is the best plan?',
+    choices: [
+      {
+        id: 'a',
+        label: 'Add all three now at full volume, since stronger is safer.',
+        feedback: 'Adding several new loads at once during rapid growth with new symptoms stacks risk. Strength gains do not guarantee fewer injuries.',
+      },
+      {
+        id: 'b',
+        label: 'Tell the parent about the new soreness, keep total load steady, and introduce one new exercise at low volume only if the soreness is settling and the clinician has no concerns.',
+        safest: true,
+        feedback: 'Injury risk in trampoline gymnasts peaked around the growth spurt and rose with higher weekly load. One change at a time lets you see the response.',
+      },
+      {
+        id: 'c',
+        label: 'Ignore the soreness, growing pains are normal.',
+        feedback: 'Heel and knee pain during growth can be Sever or Osgood-Schlatter, which need a clinician.',
+      },
+      {
+        id: 'd',
+        label: 'Replace tumbling with Jefferson curls.',
+        feedback: 'Not relevant to heel and knee symptoms, and an advanced exercise.',
+      },
+    ],
+    takeaway: 'Growth, recent symptoms, and total load all shape whether to add anything new.',
+    sourceIds: ['trampoline-growth-2021', 'sever-peds-2011', 'osgood-2007'],
+  },
 ]

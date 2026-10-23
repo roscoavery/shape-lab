@@ -11,6 +11,7 @@ const LESSON_LOADERS: Record<Exclude<ModuleId, 'testing'>, () => Promise<Lesson[
   recovery: () => import('./lessons/recovery').then((m) => m.RECOVERY),
   movement: () => import('./lessons/movement').then((m) => m.MOVEMENT),
   stretching: () => import('./lessons/stretching').then((m) => m.STRETCHING),
+  training: () => import('./lessons/training').then((m) => m.TRAINING),
 }
 
 /** Existing Learn lessons that are not already wrapped by a new lesson. */

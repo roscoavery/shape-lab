@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { buildQuestionSources } from '../coach-ed-gen-questions.ts'
 import { buildIndexSource } from '../coach-ed-gen-index.ts'
 import { MEDIA_ASSETS, MEDIA_SLOTS } from '../../src/content/coachEd/media.ts'
+import { EXERCISES, EXERCISE_LINKS } from '../../src/content/coachEd/exercises.ts'
+import { HOMEWORK_CATALOG } from '../../src/config/homeworkCatalog.ts'
 import { MOVEMENT_TERMS } from '../../src/content/coachEd/movementTerms.ts'
 import { DECKS, MATCHING } from '../../src/content/coachEd/practice.ts'
 import { QUESTION_BANK } from '../../src/content/coachEd/questions/bank.generated.ts'
@@ -93,6 +95,32 @@ export async function validateContent(): Promise<string[]> {
   const scIds = new Set(SCENARIOS.map((s) => s.id))
   const deckIds = new Set(DECKS.map((d) => d.id))
   const matchIds = new Set(MATCHING.map((m) => m.id))
+  const exerciseIds = new Set(EXERCISES.map((e) => e.id))
+  if (exerciseIds.size !== EXERCISES.length) bad.push('duplicate exercise ids')
+  const linkIds = new Set(EXERCISE_LINKS.map((l) => l.exerciseId))
+  const catalogIds = new Set(HOMEWORK_CATALOG.map((h) => h.id))
+  for (const e of EXERCISES) {
+    const where = `exercise ${e.id}`
+    if (e.catalogId && !catalogIds.has(e.catalogId)) bad.push(`${where}: unknown catalog id "${e.catalogId}"`)
+    if (!e.catalogId && !e.educationOnly) bad.push(`${where}: needs a catalog id or educationOnly`)
+    if (e.educationOnly && e.catalogId) bad.push(`${where}: educationOnly cannot have a catalog id`)
+    for (const cl of [...e.gymApplication, ...e.injuryConsiderations, ...e.researchSupports, ...e.stillTheoretical, ...(e.readiness ?? []), ...(e.contraindications ?? []), ...(e.focus ?? []).flatMap((f) => f.points)])
+      claimOk(where, cl)
+    if (e.researchSupports.length === 0 || e.stillTheoretical.length === 0) bad.push(`${where}: needs research and still-theoretical sections`)
+    if (e.stopOrModify.length === 0 || e.progressWhen.length === 0) bad.push(`${where}: needs progression and stop rules`)
+    for (const id of e.conditionIds) if (!conditionIds.has(id)) bad.push(`${where}: unknown condition "${id}"`)
+    if (e.caution === 'advanced' && (!e.readiness?.length || !e.contraindications?.length))
+      bad.push(`${where}: advanced exercise needs readiness and contraindications`)
+    if (!linkIds.has(e.id)) bad.push(`${where}: no evidence link`)
+  }
+  for (const l of EXERCISE_LINKS) {
+    const where = `exercise link ${l.exerciseId}`
+    if (!exerciseIds.has(l.exerciseId)) bad.push(`${where}: unknown exercise`)
+    needSources(where, l.sourceIds)
+    if (!l.limits.trim() || !l.contraindications.trim()) bad.push(`${where}: needs limits and contraindications`)
+    if (l.evidence === 'direct_reduction' && l.sourceIds.length === 0) bad.push(`${where}: direct evidence claim without a source`)
+    for (const id of l.conditionIds) if (!conditionIds.has(id)) bad.push(`${where}: unknown condition "${id}"`)
+  }
   const blockOk = (where: string, b: LessonBlock) => {
     switch (b.kind) {
       case 'p':
@@ -117,6 +145,18 @@ export async function validateContent(): Promise<string[]> {
         break
       case 'matching':
         if (!matchIds.has(b.matchingId)) bad.push(`${where}: unknown matching "${b.matchingId}"`)
+        break
+      case 'exercises':
+        for (const id of b.exerciseIds) if (!exerciseIds.has(id)) bad.push(`${where}: unknown exercise "${id}"`)
+        break
+      case 'evidenceLinks':
+        for (const id of b.exerciseIds) if (!linkIds.has(id)) bad.push(`${where}: no evidence link for "${id}"`)
+        break
+      case 'timeline':
+        for (const it of b.items) {
+          needSources(where, it.sourceIds)
+          if (it.sourceIds.length === 0) bad.push(`${where}: timeline item "${it.label}" has no source`)
+        }
         break
       default:
         break
@@ -176,7 +216,7 @@ export async function validateContent(): Promise<string[]> {
     const avail = QUESTION_BANK.filter((q) => a.topicIds.includes(q.topicId)).length
     if (avail < 4) bad.push(`assessment ${a.id}: fewer than 4 questions`)
   }
-  if (ASSESSMENTS.length !== 13) bad.push('expected 13 assessments')
+  if (ASSESSMENTS.length !== 14) bad.push('expected 14 assessments')
   if (ASSESSMENT_PASS_PERCENT !== 85) bad.push('pass threshold must default to 85')
   return bad
 }

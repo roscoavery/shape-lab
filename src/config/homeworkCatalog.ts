@@ -265,6 +265,60 @@ export const HOMEWORK_CATALOG: HomeworkCatalogItem[] = [
       'Log the front-foot height so the next set can match it.',
     ],
   },
+  {
+    id: 'sissy_squat',
+    name: 'Sissy squats',
+    trackMode: 'reps',
+    audience: 'class',
+    targetReps: 6,
+    notes:
+      'Hold a rack or wall for support. Knees travel forward while the hips stay open. Start with a short range and keep the support hand on.',
+    cues: [
+      'Hips stay long, body leans back as one piece.',
+      'Only go as deep as you can rise from with control.',
+      'Sharp knee pain means stop and tell your coach.',
+    ],
+  },
+  {
+    id: 'sled_push',
+    name: 'Sled pushes',
+    trackMode: 'reps',
+    audience: 'class',
+    targetReps: 4,
+    notes: 'One rep is one length. Pick a load you can drive at a steady pace without stopping.',
+    cues: [
+      'Lean into the handles with a long body.',
+      'Drive through the whole foot, step after step.',
+    ],
+  },
+  {
+    id: 'sled_pull',
+    name: 'Sled pulls and backward drags',
+    trackMode: 'reps',
+    audience: 'class',
+    targetReps: 4,
+    variants: [
+      { id: 'backward', label: 'Backward drag' },
+      { id: 'forward', label: 'Forward pull' },
+    ],
+    notes: 'One rep is one length. Backward drags: walk backward, reaching back with the toes and pushing through the front of the foot.',
+    cues: [
+      'Small steps, steady pace.',
+      'Stay tall. Do not yank the strap.',
+    ],
+  },
+  {
+    id: 'backward_walk',
+    name: 'Backward walking',
+    trackMode: 'reps',
+    audience: 'class',
+    targetReps: 4,
+    notes: 'One rep is one length of the floor. Slow and controlled. Look over a shoulder now and then and keep the path clear.',
+    cues: [
+      'Reach back with the toes, then roll through the foot.',
+      'Slow is the point. Do not rush.',
+    ],
+  },
 ]
 
 export function catalogShapeId(id: string): string {

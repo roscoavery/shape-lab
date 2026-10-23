@@ -194,7 +194,7 @@
     "uploader": "Rasbak",
     "checkedAt": "2026-10-23",
     "extmetadata": {
-      "ImageDescription": "Figure 2. Schematic overview of a synovial joint structure. (A) Macroscopic view on the compartments of synovial joint. (B) The synovial membrane (upper part) in a healthy state. Composition of a healthy \u201costeochondral\u201d unit (lower part), tidemark (red asterisk), and calcified cartilage (yellow asterisk).",
+      "ImageDescription": "Figure 2. Schematic overview of a synovial joint structure. (A) Macroscopic view on the compartments of synovial joint. (B) The synovial membrane (upper part) in a healthy state. Composition of a healthy “osteochondral” unit (lower part), tidemark (red asterisk), and calcified cartilage (yellow asterisk).",
       "DateTimeOriginal": "2023-02-18",
       "Credit": "https://www.mdpi.com/1422-0067/24/4/4120  Semenistaja, S.; Skuja, S.; Kadisa, A.; Groma, V. Healthy and Osteoarthritis-Affected Joints Facing the Cellular Crosstalk. Int. J. Mol. Sci. 2023, 24, 4120. https://doi.org/10.3390/ijms24044120",
       "Artist": "Semenistaja, S.; Skuja, S.; Kadisa, A.; Groma, V.",
@@ -228,6 +228,78 @@
       "LicenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
       "Copyrighted": "True",
       "Restrictions": ""
+    }
+  },
+  "foot-medial-gray290": {
+    "assetId": "foot-medial-gray290",
+    "title": "File:Gray290.png",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Gray290.png",
+    "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/8/81/Gray290.png",
+    "mime": "image/png",
+    "width": 500,
+    "height": 189,
+    "sha1": "35234708c68b75dd04ac0866ab1732a9db47429e",
+    "uploader": "File Upload Bot (Magnus Manske)",
+    "checkedAt": "2026-10-23",
+    "extmetadata": {
+      "ImageDescription": "FIG. 290– Skeleton of foot. Medial aspect.",
+      "DateTimeOriginal": "before 1858date QS:P,+1858-00-00T00:00:00Z/7,P1326,+1858-00-00T00:00:00Z/9",
+      "Credit": "Henry Gray (1918)       Anatomy of the Human Body   (See \"Book\" section below)\nBartleby.com: Gray's Anatomy, Plate 290",
+      "Artist": "Henry Vandyke Carter",
+      "LicenseShortName": "Public domain",
+      "UsageTerms": "Public domain",
+      "AttributionRequired": "false",
+      "Copyrighted": "False",
+      "Restrictions": "",
+      "License": "pd"
+    }
+  },
+  "hip-joint-gray342": {
+    "assetId": "hip-joint-gray342",
+    "title": "File:Gray342.png",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Gray342.png",
+    "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c4/Gray342.png",
+    "mime": "image/png",
+    "width": 420,
+    "height": 450,
+    "sha1": "de1c14707a4976f56012bfbf13c061ef2d2b73c6",
+    "uploader": "Pngbot",
+    "checkedAt": "2026-10-23",
+    "extmetadata": {
+      "ImageDescription": "Hip-joint, front view. The capsular ligament has been largely removed.",
+      "DateTimeOriginal": "before 1858date QS:P,+1858-00-00T00:00:00Z/7,P1326,+1858-00-00T00:00:00Z/9",
+      "Credit": "Henry Gray (1918)       Anatomy of the Human Body   (See \"Book\" section below)\nBartleby.com: Gray's Anatomy, Plate 342",
+      "Artist": "Henry Vandyke Carter",
+      "LicenseShortName": "Public domain",
+      "UsageTerms": "Public domain",
+      "AttributionRequired": "false",
+      "Copyrighted": "False",
+      "Restrictions": "",
+      "License": "pd"
+    }
+  },
+  "shoulder-gray326": {
+    "assetId": "shoulder-gray326",
+    "title": "File:Gray326.png",
+    "pageUrl": "https://commons.wikimedia.org/wiki/File:Gray326.png",
+    "fileUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3b/Gray326.png",
+    "mime": "image/png",
+    "width": 452,
+    "height": 500,
+    "sha1": "22365693db2a5aecbed41f5673cfb67debb76b3d",
+    "uploader": "Pngbot",
+    "checkedAt": "2026-10-23",
+    "extmetadata": {
+      "ImageDescription": "The left shoulder and acromioclavicular joints, and the proper ligaments of the scapula.",
+      "DateTimeOriginal": "before 1858date QS:P,+1858-00-00T00:00:00Z/7,P1326,+1858-00-00T00:00:00Z/9",
+      "Credit": "Henry Gray (1918)       Anatomy of the Human Body   (See \"Book\" section below)\nBartleby.com: Gray's Anatomy, Plate 326",
+      "Artist": "Henry Vandyke Carter",
+      "LicenseShortName": "Public domain",
+      "UsageTerms": "Public domain",
+      "AttributionRequired": "false",
+      "Copyrighted": "False",
+      "Restrictions": "",
+      "License": "pd"
     }
   }
 }

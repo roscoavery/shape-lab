@@ -8,6 +8,7 @@ export type ConditionFile =
   | 'upper'
   | 'bone'
   | 'neuro'
+  | 'impingement'
   | 'inPreparation'
 
 export const CONDITION_FILES: ConditionFile[] = [
@@ -18,6 +19,7 @@ export const CONDITION_FILES: ConditionFile[] = [
   'upper',
   'bone',
   'neuro',
+  'impingement',
   'inPreparation',
 ]
 
@@ -30,5 +32,6 @@ export const CONDITION_LOADERS: Record<ConditionFile, () => Promise<Condition[]>
   upper: () => import('./upper').then((m) => m.UPPER),
   bone: () => import('./bone').then((m) => m.BONE),
   neuro: () => import('./neuro').then((m) => m.NEURO),
+  impingement: () => import('./impingement').then((m) => m.IMPINGEMENT),
   inPreparation: () => import('./inPreparation').then((m) => m.IN_PREPARATION),
 }

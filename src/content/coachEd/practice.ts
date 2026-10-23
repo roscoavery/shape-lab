@@ -59,4 +59,28 @@ export const MATCHING: MatchingSet[] = [
       { id: 'l5', left: 'Dorsiflexion', right: 'Joint action' },
     ],
   },
+  {
+    id: 'match-impingement',
+    title: 'Which impingement fits the position?',
+    prompt: 'Match each painful position to the impingement it is linked with.',
+    pairs: [
+      { id: 'i1', left: 'Deep pike with the knee pulled across the body', right: 'FAI syndrome (hip)' },
+      { id: 'i2', left: 'Shin driving forward over the foot in a deep landing', right: 'Anterior ankle impingement' },
+      { id: 'i3', left: 'Hard pointed foot in relevé', right: 'Posterior ankle impingement' },
+      { id: 'i4', left: 'Loaded wrist extension in a handstand', right: 'Dorsal wrist impingement' },
+      { id: 'i5', left: 'Forced elbow lockout', right: 'Posterior elbow impingement' },
+    ],
+  },
+  {
+    id: 'match-foot-chain',
+    title: 'Foot to pelvis',
+    prompt: 'Match each foot or leg motion to what usually goes with it in the chain.',
+    pairs: [
+      { id: 'f1', left: 'Rearfoot eversion during early stance', right: 'Tibial internal rotation' },
+      { id: 'f2', left: 'Pronation', right: 'Eversion, abduction, and dorsiflexion together' },
+      { id: 'f3', left: 'Supination', right: 'Inversion, adduction, and plantarflexion together' },
+      { id: 'f4', left: 'Knee moving inward over the foot', right: 'Knee valgus position' },
+      { id: 'f5', left: 'Arch reappears on tiptoe', right: 'Flexible flatfoot' },
+    ],
+  },
 ]

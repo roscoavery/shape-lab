@@ -7,7 +7,8 @@ export const MODULES: ModuleInfo[] = [
   { id: 'recovery', title: 'Recovery and return to tumbling', blurb: 'Ranges, return ladders, and talking with families. Educational, not medical.' },
   { id: 'movement', title: 'Movement science', blurb: 'Planes, joint actions, scapula and pelvis, chains, and loading concepts.' },
   { id: 'stretching', title: 'Flexibility and stretching', blurb: 'Why athletes stretch, which methods exist, splits, hypermobility, and warm-up.' },
-  { id: 'testing', title: 'Practice and testing', blurb: 'Flashcards, matching, and 13 assessments.' },
+  { id: 'training', title: 'Training science and exercise library', blurb: 'Knee travel, strengthening sport positions, progression decisions, and what each exercise can and cannot claim.' },
+  { id: 'testing', title: 'Practice and testing', blurb: 'Flashcards, matching, and 14 assessments.' },
 ]
 
 const byId = new Map(MODULES.map((m) => [m.id, m]))

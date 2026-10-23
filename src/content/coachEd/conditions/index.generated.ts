@@ -542,6 +542,206 @@ export const CONDITION_INDEX: ConditionIndexRow[] = [
     "file": "neuro"
   },
   {
+    "id": "subacromial-pain",
+    "name": "Subacromial pain syndrome (historically \"shoulder impingement\")",
+    "aliases": [
+      "shoulder impingement",
+      "subacromial impingement",
+      "rotator cuff related shoulder pain",
+      "RCRSP",
+      "impingement"
+    ],
+    "regions": [
+      "upper_limb"
+    ],
+    "tissues": [
+      "tendon",
+      "bursa_cyst"
+    ],
+    "tags": [
+      "shoulder",
+      "overhead",
+      "impingement",
+      "handstand",
+      "bars",
+      "arm raise"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "internal-impingement",
+    "name": "Internal shoulder impingement (overhead athletes)",
+    "aliases": [
+      "internal impingement",
+      "posterosuperior impingement"
+    ],
+    "regions": [
+      "upper_limb"
+    ],
+    "tissues": [
+      "tendon",
+      "cartilage"
+    ],
+    "tags": [
+      "shoulder",
+      "overhead",
+      "impingement",
+      "throwing",
+      "end range"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "fai-syndrome",
+    "name": "Femoroacetabular impingement (FAI) syndrome",
+    "aliases": [
+      "FAI",
+      "hip impingement",
+      "cam",
+      "pincer",
+      "cam morphology",
+      "pincer morphology"
+    ],
+    "regions": [
+      "spine_pelvis"
+    ],
+    "tissues": [
+      "cartilage",
+      "bone",
+      "joint_capsule"
+    ],
+    "tags": [
+      "hip",
+      "groin",
+      "impingement",
+      "pike",
+      "split",
+      "labrum",
+      "flexion",
+      "internal rotation"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "anterior-ankle-impingement",
+    "name": "Anterior ankle impingement",
+    "aliases": [
+      "footballer ankle",
+      "front of ankle pinching",
+      "anterior impingement"
+    ],
+    "regions": [
+      "ankle_foot"
+    ],
+    "tissues": [
+      "bone",
+      "joint_capsule"
+    ],
+    "tags": [
+      "ankle",
+      "impingement",
+      "dorsiflexion",
+      "landing",
+      "punch",
+      "squat"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "posterior-ankle-impingement",
+    "name": "Posterior ankle impingement",
+    "aliases": [
+      "os trigonum syndrome",
+      "back of ankle pinching",
+      "posterior impingement"
+    ],
+    "regions": [
+      "ankle_foot"
+    ],
+    "tissues": [
+      "bone",
+      "joint_capsule"
+    ],
+    "tags": [
+      "ankle",
+      "impingement",
+      "plantarflexion",
+      "pointed toes",
+      "releve",
+      "os trigonum"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "dorsal-wrist-impingement",
+    "name": "Dorsal wrist impingement",
+    "aliases": [
+      "dorsal wrist capsular impingement",
+      "wrist extension pain",
+      "back of wrist pinching"
+    ],
+    "regions": [
+      "upper_limb"
+    ],
+    "tissues": [
+      "joint_capsule",
+      "bone"
+    ],
+    "tags": [
+      "wrist",
+      "impingement",
+      "extension",
+      "handstand",
+      "weight bearing",
+      "back handspring"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
+    "id": "posterior-elbow-impingement",
+    "name": "Posterior elbow impingement",
+    "aliases": [
+      "valgus extension overload",
+      "back of elbow pinching"
+    ],
+    "regions": [
+      "upper_limb"
+    ],
+    "tissues": [
+      "bone",
+      "cartilage"
+    ],
+    "tags": [
+      "elbow",
+      "impingement",
+      "hyperextension",
+      "locking out",
+      "handstand"
+    ],
+    "urgency": "soon",
+    "completeness": "complete",
+    "review": "draft",
+    "file": "impingement"
+  },
+  {
     "id": "muscle-contusion",
     "name": "Muscle contusion (deep bruise)",
     "aliases": [],
