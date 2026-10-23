@@ -34,6 +34,8 @@
     "gym:shapes": "node scripts/delete-gym-shape.mjs",
     "gym:stills": "node scripts/restore-stills-from-blobs.mjs",
     "gym:audit": "node scripts/audit-stills.mjs",
+    "coach-ed:gen": "tsx scripts/coach-ed-gen-index.ts && tsx scripts/coach-ed-gen-questions.ts",
+    "test:coach-ed": "tsx --test scripts/coach-ed/*.test.ts server/coachEd/*.test.ts",
     "test:calendar": "tsx --test server/calendar/*.test.ts",
     "test:family-units": "node --experimental-test-module-mocks --import tsx --test src/lib/familyView.test.ts src/lib/parentPin.test.ts"
   },

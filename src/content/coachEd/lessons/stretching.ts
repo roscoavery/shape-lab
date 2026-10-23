@@ -1,0 +1,200 @@
+import type { Lesson } from '../types'
+
+export const STRETCHING: Lesson[] = [
+  {
+    id: 'str-purposes',
+    moduleId: 'stretching',
+    title: 'Why we stretch: three purposes, three different plans',
+    kicker: 'Warm-up, building range, and recovery are not the same job. The method should fit the job.',
+    minutes: 5,
+    review: 'draft',
+    blocks: [
+      {
+        kind: 'list',
+        items: [
+          'Warm-up: prepare the body for the work it is about to do. Dynamic movement, building amplitude, then skill-specific drills.',
+          'Building range of motion: a longer-term goal, done in a planned flexibility session with controlled holds and active range work.',
+          'Recovery or comfort: gentle movement after practice. The evidence that it reduces soreness or injury is weak.',
+        ],
+        evidence: 'review',
+        sourceIds: ['behm-2016', 'thacker-2004'],
+      },
+      {
+        kind: 'p',
+        text: 'A systematic review of stretching and sports injury risk found stretching was not significantly associated with a reduction in total injuries, and concluded there was not sufficient evidence to endorse or discontinue routine stretching before or after exercise to prevent injury. A later review concluded that stretching within a warm-up that includes additional dynamic activity is recommended for reducing muscle injuries and increasing joint range of motion.',
+        sourceIds: ['thacker-2004', 'behm-2016'],
+        evidence: 'review',
+      },
+      {
+        kind: 'callout',
+        tone: 'uncertain',
+        text: 'Uncertain: evidence on stretching and injury prevention is mixed, and most studies are not in young gymnasts. This module will not claim that stretching prevents injuries.',
+      },
+      {
+        kind: 'p',
+        text: 'Gymnastics asks for range that most sports do not. That is a good reason to plan flexibility work on purpose. It is not a reason to force range.',
+        evidence: 'policy',
+      },
+    ],
+    gym: 'Write the purpose of each stretching block in your plan: warm-up, range, or recovery.',
+  },
+  {
+    id: 'str-methods',
+    moduleId: 'stretching',
+    title: 'Methods: static, dynamic, ballistic, PNF, and what the science says',
+    kicker: 'What each method is, what the evidence supports, and where the cautions are.',
+    minutes: 8,
+    review: 'draft',
+    blocks: [
+      { kind: 'methods' },
+      {
+        kind: 'p',
+        text: 'A review of how muscle extensibility increases concluded that changes after a single stretching session and after short programs (about 3 to 8 weeks) are mostly due to modified sensation, meaning stretch tolerance increases. The length gain from stretching is transient. This helps explain why a stretch can feel easier after a session without the tissue being structurally "longer".',
+        sourceIds: ['weppler-2010'],
+        evidence: 'review',
+      },
+      {
+        kind: 'callout',
+        tone: 'safety',
+        text: 'Stretch tolerance can rise faster than the strength to control the new range. A big new range with weak control is a setup for injury. Pair range work with strength at end range.',
+        evidence: 'policy',
+      },
+      { kind: 'flashcards', deckId: 'deck-stretch' },
+    ],
+    gym: 'Do not describe PNF with a reflex explanation, and keep contractions light.',
+  },
+  {
+    id: 'str-power',
+    moduleId: 'stretching',
+    title: 'Stretching before power and tumbling',
+    kicker: 'Long static stretches right before explosive work can blunt performance. Short holds and dynamic work are fine.',
+    minutes: 5,
+    review: 'draft',
+    blocks: [
+      {
+        kind: 'p',
+        text: 'A systematic review of acute static stretching found that short static stretches (under 30 seconds) did not harm maximal muscle performance, and that significant reductions became likely with stretches of about 60 seconds or longer. Another systematic review found small to moderate average changes after stretching, with greater deficits for 60 seconds or longer than for under 60 seconds, and no clear performance effect once dynamic activity followed.',
+        sourceIds: ['kay-2012', 'behm-2016'],
+        evidence: 'review',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Keep pre-practice static holds short, and follow them with dynamic work and skill-specific drills.',
+          'Save long static holds for the end of practice or a separate flexibility session.',
+          'Dynamic stretching and graded jumping drills are a good fit for tumbling warm-ups.',
+        ],
+        evidence: 'review',
+        sourceIds: ['kay-2012', 'behm-2016'],
+      },
+      {
+        kind: 'callout',
+        tone: 'uncertain',
+        text: 'Uncertain: these studies are mostly in adults. How far they apply to young gymnasts is not settled.',
+      },
+    ],
+    gym: 'Short holds, then move. Long holds go after practice.',
+  },
+  {
+    id: 'str-splits',
+    moduleId: 'stretching',
+    title: 'Split progression and over-splits',
+    kicker: 'A build-up plan that respects tolerance, strength, and pain. Never force range.',
+    minutes: 6,
+    review: 'draft',
+    blocks: [
+      {
+        kind: 'callout',
+        tone: 'safety',
+        text: 'Hamstring strain reviews describe high-speed and extreme-range movements, such as forced stretching to the end of range, as a common set-up for injury. Never push an athlete into a split, and never let a partner force it.',
+        sourceIds: ['hamstring-cpg-2010'],
+      },
+      { kind: 'h', text: 'A teaching progression (ShapeLab framework)' },
+      {
+        kind: 'list',
+        items: [
+          'Warm up first: easy movement and dynamic leg swings with controlled amplitude.',
+          'Staged positions: lunge-based holds, half split, then split with hands supporting, each held only to mild stretch.',
+          'Add active strength: lift the front leg slightly from a split or a pike with control.',
+          'Raise the surface only when the athlete can control the position and shows no pain. Over-splits are a late stage.',
+          'Stop for sharp pain, pain at the sit bone, numbness, or tingling. Tell the parent.',
+        ],
+        evidence: 'policy',
+      },
+      {
+        kind: 'p',
+        text: 'Sit-bone pain in a growing athlete after a forceful stretch can be an avulsion injury and needs a clinician. A hamstring strain also has a typical pattern of sudden pain in the back of the thigh.',
+        sourceIds: ['hamstring-cpg-2010', 'orthoinfo-hamstring'],
+        evidence: 'consensus',
+      },
+      { kind: 'conditions', conditionIds: ['hamstring-strain', 'spondylolysis'] },
+    ],
+    gym: 'The athlete controls how deep the stretch goes. The coach controls the plan.',
+  },
+  {
+    id: 'str-hypermobility',
+    moduleId: 'stretching',
+    title: 'Flexible is not the same as healthy: hypermobility',
+    kicker: 'Some athletes are born with more motion at their joints. They need strength, not more stretch.',
+    minutes: 4,
+    review: 'draft',
+    blocks: [
+      {
+        kind: 'p',
+        text: 'Joint hypermobility means joints move beyond the usual range. The Beighton score is a simple clinical tool for screening for generalized joint hypermobility, and hypermobility can be part of conditions that a clinician diagnoses, including some forms of Ehlers-Danlos syndrome. A coach does not diagnose hypermobility.',
+        sourceIds: ['beighton-1973', 'eds-2017'],
+        evidence: 'consensus',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Hypermobile athletes often reach big ranges easily, so more stretching adds little. Control and strength at the end of range matter more.',
+          'Watch for hyperextended elbows and knees that "lock back", and for a lower back that dumps into extension.',
+          'Joint pain, frequent sprains, or joints that slip out of place deserve a clinician visit.',
+        ],
+        evidence: 'policy',
+      },
+      {
+        kind: 'callout',
+        tone: 'note',
+        text: 'The existing Coach study lesson "Limited range and extra range" stays available and is not changed. This lesson adds the safety context.',
+      },
+    ],
+    gym: 'For a very flexible athlete, ask "Where is the strength?" before "How much deeper?".',
+  },
+  {
+    id: 'str-prep',
+    moduleId: 'stretching',
+    title: 'Wrist and ankle preparation',
+    kicker: 'Two joints that take gymnastics loading every day: graded exposure beats forcing range.',
+    minutes: 5,
+    review: 'draft',
+    visualNeeded: ['Wrist extension and ankle dorsiflexion range diagrams from a verified open-license source'],
+    blocks: [
+      {
+        kind: 'p',
+        text: 'Wrists carry body weight in handstands, handsprings, and vault. Reviews of wrist overuse injury in young athletes identify gymnastics among the sports with a high rate. Ankle sprains are among the most common sport injuries, and guidelines support balance and neuromuscular training for prevention.',
+        sourceIds: ['wrist-overuse-sr-2015', 'gymnast-wrist-webb-2008', 'ankle-guideline-2018'],
+        evidence: 'review',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Wrist: build tolerance to weight bearing in small steps, from floor-level loading to hand-supported skills. Stop for wrist pain that is sharp, swelling, or tenderness over the end of the forearm bone.',
+          'Wrist: wraps and braces are not a plan. Ask the clinician before using them for a painful wrist.',
+          'Ankle: warm up with calf and ankle mobility, balance work, and small controlled jumps and landings before full-height tumbling.',
+          'Ankle: a limited ankle dorsiflexion range can change how an athlete lands. Pass on a persistent stiff ankle to the clinician.',
+        ],
+        evidence: 'consensus',
+        sourceIds: ['gymnast-wrist-webb-2008', 'ankle-cpg-2021'],
+      },
+      {
+        kind: 'callout',
+        tone: 'uncertain',
+        text: 'Uncertain: no source reviewed here shows that a particular wrist or ankle stretching routine prevents injuries in young gymnasts.',
+      },
+      { kind: 'conditions', conditionIds: ['gymnast-wrist', 'ankle-sprain-lateral'] },
+    ],
+    gym: 'Warm the wrist and ankle on purpose before every session.',
+  },
+]

@@ -1,0 +1,735 @@
+/**
+ * Authoring source for the Coach education question bank.
+ *
+ * This file lives OUTSIDE src/ on purpose. It holds the answer keys, and
+ * nothing the browser bundles may import it. `npm run coach-ed:gen` splits it
+ * into a public bank (no answers) under src/content/coachEd/questions/ and a
+ * server-only answer file under server/coachEd/.
+ *
+ * Format: the first entry of `c` is always the correct choice. The generator
+ * places choices in a deterministic, id-seeded order.
+ *   d: f = foundation, a = applied, x = advanced
+ *   crit: true marks a critical-safety question (must be answered correctly to pass)
+ */
+export type RawQuestion = {
+  id: string
+  topic: string
+  d: 'f' | 'a' | 'x'
+  crit?: true
+  scenario?: true
+  q: string
+  c: [string, string, string, string]
+  why: string
+  src: string[]
+}
+
+export const RAW_QUESTIONS: RawQuestion[] = [
+  // ---- scope ----
+  {
+    id: 'scope-1', topic: 'scope', d: 'f', crit: true,
+    q: 'After an athlete hurts their knee, who decides whether it is safe for them to return to tumbling?',
+    c: ['A qualified clinician, using written clearance steps', 'The head coach, if the athlete says it feels fine', 'A parent, after one day of rest', 'The athlete, as soon as the pain is gone'],
+    why: 'Return to activity is a medical decision. Coaches follow the clinician plan and do not clear athletes.',
+    src: ['cdc-response', 'bern-2016'],
+  },
+  {
+    id: 'scope-2', topic: 'scope', d: 'f', crit: true,
+    q: 'Which of these is within a coach role when an athlete reports a possible injury?',
+    c: ['Stop the activity, note what happened, and contact the parent', 'Test the joint by moving it to find the problem', 'Tell the athlete the exact name of the injury', 'Grade the injury as mild, moderate, or severe'],
+    why: 'Coaches notice, protect, and report. Naming, testing, and grading belong to a clinician.',
+    src: ['cdc-coach-sheet', 'cdc-response'],
+  },
+  {
+    id: 'scope-3', topic: 'scope', d: 'a',
+    q: 'A parent asks, "How long until she can tumble?" What is the best answer?',
+    c: ['"That depends on what the clinician says. Let us follow their plan and build back step by step."', '"Probably two weeks, it is just a sprain."', '"As soon as she stops complaining of pain."', '"Most kids are fine in a few days."'],
+    why: 'Coaches do not promise time frames. Recovery depends on the injury and the athlete, and a clinician sets the plan.',
+    src: ['bern-2016'],
+  },
+  {
+    id: 'scope-4', topic: 'scope', d: 'a',
+    q: 'What belongs in a coach injury note?',
+    c: ['What you saw, when it happened, the skill, the surface, and what the athlete said', 'Your best guess at the diagnosis', 'A prediction of when the athlete will return', 'Your opinion about whether the athlete is exaggerating'],
+    why: 'Facts help the clinician. Guesses and opinions do not.',
+    src: ['cdc-action-plan'],
+  },
+  // ---- load ----
+  {
+    id: 'load-1', topic: 'load', d: 'f',
+    q: 'Which is the best example of an overuse injury?',
+    c: ['Heel pain that builds over weeks of repeated landings', 'A rolled ankle on a short landing', 'A broken wrist after a fall from beam', 'A cut on a hand from a bar grip'],
+    why: 'Overuse injuries build gradually from repeated load with too little recovery. The others are single events.',
+    src: ['orthoinfo-sprains', 'physeal-2006'],
+  },
+  {
+    id: 'load-2', topic: 'load', d: 'f',
+    q: 'Why are growing athletes at extra risk of overuse pain around growth areas?',
+    c: ['Growth areas at the ends of bones and where tendons attach are softer than nearby tissue', 'Their bones are stronger than adult bones', 'Their tendons never feel stress', 'Growth areas cannot be injured'],
+    why: 'Growth plates and apophyses are weaker than the nearby tendon and bone, so repeated load can irritate or injure them.',
+    src: ['physeal-2006', 'orthoinfo-growth-plate'],
+  },
+  {
+    id: 'load-3', topic: 'load', d: 'a',
+    q: 'Which pain pattern should be reported to a parent so a clinician can look at it?',
+    c: ['Pain at rest or at night, in one spot, that is getting worse across weeks', 'General muscle soreness that is gone the next day', 'Mild tiredness after a very hard session', 'A brief stiff feeling that disappears in the warm-up'],
+    why: 'Pain at rest, at night, in one spot, or getting worse is a red flag for a bone or growth area injury.',
+    src: ['orthoinfo-stress-fx', 'gymnast-wrist-webb-2008'],
+  },
+  {
+    id: 'load-4', topic: 'load', d: 'x',
+    q: 'What does this module say about the safe weekly volume for young gymnasts?',
+    c: ['No widely accepted number exists, so the module does not quote one', 'A 10 percent weekly increase is always safe', 'Twenty hours is the cap for every child', 'Volume does not affect injury risk'],
+    why: 'The module labels this as uncertain and does not invent a number.',
+    src: ['physeal-2006'],
+  },
+  // ---- tissues ----
+  {
+    id: 'tis-1', topic: 'tissues', d: 'f',
+    q: 'Which tissue connects bone to bone and helps stabilize a joint?',
+    c: ['Ligament', 'Tendon', 'Muscle', 'Cartilage'],
+    why: 'Ligaments connect bone to bone. Tendons connect muscle to bone.',
+    src: ['moore-anatomy', 'orthoinfo-sprains'],
+  },
+  {
+    id: 'tis-2', topic: 'tissues', d: 'f',
+    q: 'A sprain involves which tissue?',
+    c: ['A ligament', 'A muscle or tendon', 'A bone', 'The skin'],
+    why: 'A sprain is a ligament injury. A strain is a muscle or tendon injury.',
+    src: ['orthoinfo-sprains'],
+  },
+  {
+    id: 'tis-3', topic: 'tissues', d: 'f',
+    q: 'Which tissue is the last part of a child bone to harden, making it vulnerable?',
+    c: ['The growth plate', 'The ligament', 'The skin', 'The muscle belly'],
+    why: 'Growth plates are made of cartilage near the ends of long bones and are the last portion to harden.',
+    src: ['orthoinfo-growth-plate'],
+  },
+  {
+    id: 'tis-4', topic: 'tissues', d: 'a', crit: true,
+    q: 'A coach wants to check whether an injured ankle is "loose" by pulling and twisting the joint. What should they do?',
+    c: ['Not test it. A clinician examines joint stability', 'Do it gently so it does not hurt', 'Do it only once to compare with the other ankle', 'Have another athlete do the test'],
+    why: 'Coaches must not test or stress an injured joint. Only a clinician examines stability and grades a sprain.',
+    src: ['ankle-cpg-2021', 'nata-ankle-2013'],
+  },
+  {
+    id: 'tis-5', topic: 'tissues', d: 'a',
+    q: 'Which statement about tendons is most accurate?',
+    c: ['They adapt slowly, so overuse can build up over weeks', 'They heal fully within a day', 'They never get injured in gymnasts', 'They stretch indefinitely without damage'],
+    why: 'Tendons adapt slowly to load, which is why tendinopathy builds gradually and is rehabilitated with graded loading.',
+    src: ['achilles-cpg-2024'],
+  },
+  // ---- fractures ----
+  {
+    id: 'fx-1', topic: 'fractures', d: 'f',
+    q: 'What is a growth plate fracture?',
+    c: ['A break involving the cartilage growth area near the end of a child bone', 'A break in the middle of an adult bone', 'A torn ligament in the knee', 'A bruise on the muscle'],
+    why: 'Growth plates are cartilage near the ends of long bones in children. Fractures there need prompt attention.',
+    src: ['orthoinfo-growth-plate'],
+  },
+  {
+    id: 'fx-2', topic: 'fractures', d: 'a',
+    q: 'A child falls on her wrist and it hurts at the joint, but she can still move it. What is the safest assumption?',
+    c: ['It might be a fracture, so stop activity and arrange medical evaluation', 'It is a sprain because she can move it', 'It is bruised and will heal on its own', 'It is fine if the swelling is small'],
+    why: 'Being able to move a joint does not rule out a fracture. Some non-displaced growth plate fractures cannot be seen on X-ray, so the clinical exam matters.',
+    src: ['orthoinfo-growth-plate', 'orthoinfo-fractures'],
+  },
+  {
+    id: 'fx-3', topic: 'fractures', d: 'a', crit: true,
+    q: 'Which finding means call 911?',
+    c: ['A hand that looks deformed and is pale and cold', 'Mild bruising on a shin', 'A sore wrist that is stiff in the morning', 'A small lump that has been there for a month'],
+    why: 'Deformity with loss of circulation is an emergency. Keep the athlete still and call 911.',
+    src: ['orthoinfo-fractures'],
+  },
+  {
+    id: 'fx-4', topic: 'fractures', d: 'x',
+    q: 'In the AAOS summary of the Salter-Harris system, which type is described as the most common?',
+    c: ['Type II', 'Type I', 'Type III', 'Type V'],
+    why: 'AAOS OrthoInfo says Type II fractures are the most common type of growth plate fracture.',
+    src: ['orthoinfo-growth-plate'],
+  },
+  {
+    id: 'fx-5', topic: 'fractures', d: 'x',
+    q: 'Which description matches a Salter-Harris Type V fracture?',
+    c: ['A crushing injury to the growth plate from compression', 'A break that crosses part of the plate and breaks off a piece of the bone end', 'A break through the shaft, plate, and bone end', 'A break that separates the bone end from the shaft along the plate'],
+    why: 'Type V is a compression crush of the growth plate and is rare.',
+    src: ['orthoinfo-growth-plate'],
+  },
+  // ---- healing ----
+  {
+    id: 'heal-1', topic: 'healing', d: 'f',
+    q: 'If an athlete says "it does not hurt anymore", what does that tell you?',
+    c: ['Pain has settled, but it does not prove the tissue is healed or ready for load', 'The injury is fully healed', 'The athlete can return to full tumbling', 'No clinician visit is needed'],
+    why: 'Pain often settles before tissue is strong again. Clearance comes from the clinician.',
+    src: ['bern-2016', 'ankle-cpg-2021'],
+  },
+  {
+    id: 'heal-2', topic: 'healing', d: 'a',
+    q: 'Why does this module keep tissue healing and return to impact as two separate fields?',
+    c: ['A tissue can be mostly healed and still not be ready for repeated landings', 'They are always the same number of weeks', 'Impact is never an issue after healing', 'Healing time is the same for every tissue'],
+    why: 'Return to impact depends on strength, control, and clearance as well as tissue healing.',
+    src: ['bern-2016'],
+  },
+  {
+    id: 'heal-3', topic: 'healing', d: 'a',
+    q: 'What does this module do when a source gives no safe recovery number?',
+    c: ['Says "not given" or marks the estimate as uncertain', 'Invents an average based on experience', 'Copies a number from a social media post', 'Uses the number from a different injury'],
+    why: 'The module does not fabricate recovery estimates.',
+    src: ['bern-2016'],
+  },
+  {
+    id: 'heal-4', topic: 'healing', d: 'x',
+    q: 'Which description best fits the 2016 return-to-sport consensus approach?',
+    c: ['A continuum from return to participation to return to sport to return to performance, decided by criteria', 'A single date counted from the injury', 'Return as soon as pain is gone', 'Return decided by the coach'],
+    why: 'The Bern consensus describes a continuum with decisions based on criteria rather than only time.',
+    src: ['bern-2016'],
+  },
+  // ---- emergency ----
+  {
+    id: 'em-1', topic: 'emergency', d: 'f', crit: true,
+    q: 'An athlete is unresponsive and not breathing normally. What is the right first move?',
+    c: ['Call 911, start chest compressions, and get an AED', 'Give water and let her rest', 'Wait to see if she wakes up in a few minutes', 'Call the parent first and ask what to do'],
+    why: 'Unresponsive and not breathing normally is a cardiac emergency. Call 911, start compressions, and use an AED as soon as it is available.',
+    src: ['aha-2020-bls'],
+  },
+  {
+    id: 'em-2', topic: 'emergency', d: 'f', crit: true,
+    q: 'After a fall, an athlete has a limb that looks crooked with numbness in the hand. What level of response is needed?',
+    c: ['Call 911', 'Same-day visit next week', 'Monitor at practice', 'Ice it and continue'],
+    why: 'Deformity with numbness is an emergency.',
+    src: ['orthoinfo-fractures'],
+  },
+  {
+    id: 'em-3', topic: 'emergency', d: 'a', crit: true,
+    q: 'When two response levels seem possible, which should a coach choose?',
+    c: ['The higher level of response', 'The lower level of response', 'Whichever is less disruptive to practice', 'Wait to see what the athlete says'],
+    why: 'When in doubt, choose the safer, higher level.',
+    src: ['cdc-response'],
+  },
+  {
+    id: 'em-4', topic: 'emergency', d: 'a',
+    q: 'Which should be set up before an injury happens?',
+    c: ['A posted emergency action plan with roles, the gym address, and the AED location', 'A list of exercises to test injuries', 'A plan for diagnosing injuries on the floor', 'A promise to parents about return dates'],
+    why: 'An emergency action plan assigns roles and speeds the response.',
+    src: ['aha-2020-bls', 'nata-cspine'],
+  },
+  {
+    id: 'em-5', topic: 'emergency', d: 'x',
+    scenario: true,
+    q: 'A 10-year-old lands on her ankle, cannot take steps, and says it hurts at the bone behind the outside ankle bump. Her parent is on the way. What is the best step?',
+    c: ['Keep her off the foot, support the leg, and arrange same-day medical evaluation', 'Ask her to walk to the bench to see if it is okay', 'Wrap it and return her to beam', 'Wait for tomorrow to see if it swells'],
+    why: 'Inability to bear weight and bone tenderness are the types of findings the Ottawa rules use to prompt an X-ray decision by a clinician.',
+    src: ['ottawa-1994', 'ottawa-sr-2003'],
+  },
+  // ---- concussion ----
+  {
+    id: 'con-1', topic: 'concussion', d: 'f', crit: true,
+    q: 'What does the CDC HEADS UP guidance say a coach should do if a concussion is suspected?',
+    c: ['Remove the athlete from play, notify the parents, and document; the athlete returns only when cleared by a healthcare provider', 'Let the athlete play if symptoms seem mild', 'Test memory and clear the athlete if they pass', 'Wait until the end of practice before acting'],
+    why: 'CDC steps: stop play, remove the athlete, notify parents, document. Return is a medical decision.',
+    src: ['cdc-action-plan', 'cdc-response'],
+  },
+  {
+    id: 'con-2', topic: 'concussion', d: 'f', crit: true,
+    q: 'Does an athlete need to lose consciousness to have a concussion?',
+    c: ['No. A concussion can happen without loss of consciousness', 'Yes, always', 'Only if they hit the floor', 'Only if they vomit'],
+    why: 'Loss of consciousness is not required. A bump, blow, or jolt to the head or body can cause a concussion.',
+    src: ['cdc-basics', 'cdc-signs'],
+  },
+  {
+    id: 'con-3', topic: 'concussion', d: 'a', crit: true,
+    q: 'Which of these is a concussion danger sign that means call 911 or go to the emergency department?',
+    c: ['One pupil larger than the other', 'A mild headache that eases in a few minutes', 'Feeling tired after practice', 'Being a little quiet'],
+    why: 'Unequal pupils are on the CDC list of concussion danger signs.',
+    src: ['cdc-signs'],
+  },
+  {
+    id: 'con-4', topic: 'concussion', d: 'a', crit: true,
+    q: 'Which of these is also a CDC danger sign?',
+    c: ['A headache that gets worse and does not go away', 'A slightly stuffy nose', 'A sore shoulder', 'Feeling hungry'],
+    why: 'A worsening headache that does not go away is a danger sign.',
+    src: ['cdc-signs'],
+  },
+  {
+    id: 'con-5', topic: 'concussion', d: 'a',
+    q: 'When do concussion signs and symptoms appear?',
+    c: ['They may not show up right away and can take hours or days to be noticed', 'Always immediately', 'Only in the first minute', 'Never later than the same practice'],
+    why: 'CDC notes that signs may be delayed, which is why the athlete is monitored and kept out the day of the injury.',
+    src: ['cdc-signs'],
+  },
+  {
+    id: 'con-6', topic: 'concussion', d: 'x',
+    q: 'CDC reports most children with a concussion feel better within 2 to 4 weeks. How should that be used?',
+    c: ['As the usual time for symptoms to settle, not as a return-to-play date', 'As a date after which the athlete may return', 'As a rule that every child recovers in 3 weeks', 'As a reason to skip the clinician'],
+    why: 'The figure describes symptom recovery in general. Each athlete is cleared by a healthcare provider and returns in steps.',
+    src: ['cdc-basics', 'cdc-coach-sheet'],
+  },
+  // ---- spine emergency ----
+  {
+    id: 'sp-1', topic: 'spine-emergency', d: 'f', crit: true,
+    q: 'An athlete falls from beam and reports neck pain and tingling in her fingers. What is the right response?',
+    c: ['Tell her not to move, call 911, and wait for trained responders', 'Help her sit up slowly', 'Have her walk to the bench', 'Wait to see whether the tingling stops'],
+    why: 'Neck pain with tingling after a fall is treated as a possible spine injury. Keep still and call 911.',
+    src: ['nata-cspine'],
+  },
+  {
+    id: 'sp-2', topic: 'spine-emergency', d: 'a', crit: true,
+    q: 'An athlete lands on her head and says she can wiggle her toes, so she is fine. What should you do?',
+    c: ['Still treat it as a possible neck injury and call 911 if there is any suspicion', 'Let her stand up since her toes move', 'Test her grip strength', 'Wait for 10 minutes'],
+    why: 'A coach cannot rule out a spine injury by checking movement.',
+    src: ['nata-cspine'],
+  },
+  {
+    id: 'sp-3', topic: 'spine-emergency', d: 'a', crit: true,
+    q: 'When is it appropriate to move an athlete with a suspected neck injury?',
+    c: ['Only if the scene is unsafe or CPR is needed', 'Whenever they ask to sit up', 'When they say they feel fine', 'To get them off the floor for the next class'],
+    why: 'Unnecessary movement can cause harm. Wait for trained responders unless life-saving action or scene safety requires moving.',
+    src: ['nata-cspine', 'aha-2020-bls'],
+  },
+  {
+    id: 'sp-4', topic: 'spine-emergency', d: 'x',
+    q: 'Which pairing is correct?',
+    c: ['Head injury and neck injury can occur together, so treat a head injury with loss of consciousness as a possible neck injury', 'A concussion rules out a neck injury', 'A neck injury rules out a concussion', 'Neither can happen from a fall'],
+    why: 'They can occur together and a fall that causes one should make you consider the other.',
+    src: ['nata-cspine', 'cdc-signs'],
+  },
+  // ---- ankle ----
+  {
+    id: 'an-1', topic: 'ankle', d: 'f',
+    q: 'Which ligaments are most often involved in a lateral ankle sprain?',
+    c: ['Anterior talofibular ligament (ATFL) and sometimes the calcaneofibular ligament', 'The deltoid ligament', 'The ACL', 'The Achilles tendon'],
+    why: 'Lateral ankle sprains most often involve the ATFL, and the CFL in more severe cases.',
+    src: ['ankle-cpg-2021'],
+  },
+  {
+    id: 'an-2', topic: 'ankle', d: 'f',
+    q: 'What is the typical mechanism of a lateral ankle sprain?',
+    c: ['The foot rolls inward', 'The foot rolls outward', 'The knee straightens too far', 'The heel is struck from behind'],
+    why: 'Lateral sprains follow a sudden inward roll of the foot.',
+    src: ['ankle-guideline-2018', 'nata-ankle-2013'],
+  },
+  {
+    id: 'an-3', topic: 'ankle', d: 'a',
+    q: 'What are the Ottawa ankle rules used for?',
+    c: ['Helping clinicians decide whether an X-ray is needed to look for a fracture', 'Grading ankle ligament injuries on the gym floor', 'Deciding when a coach can clear an athlete', 'Predicting recovery time'],
+    why: 'The rules were built to help exclude fractures. They are a clinician tool.',
+    src: ['ottawa-1994', 'ottawa-sr-2003'],
+  },
+  {
+    id: 'an-4', topic: 'ankle', d: 'a',
+    q: 'Pain above the ankle joint after a twist could point to which injury?',
+    c: ['A high ankle (syndesmosis) sprain', 'A hamstring strain', 'Sever disease', 'A wrist ganglion'],
+    why: 'The syndesmosis is the set of ligaments binding the tibia and fibula just above the ankle.',
+    src: ['syndesmosis-2007'],
+  },
+  {
+    id: 'an-5', topic: 'ankle', d: 'x',
+    q: 'Why is "it is just a sprain" risky to say about a child with pain at the ankle?',
+    c: ['A fracture, including a growth plate fracture, can look the same as a sprain', 'Sprains are always more serious than fractures', 'Children cannot sprain ankles', 'It makes the athlete nervous'],
+    why: 'In a growing child a growth plate fracture can be mistaken for a sprain.',
+    src: ['orthoinfo-growth-plate', 'ottawa-sr-2003'],
+  },
+  // ---- knee ----
+  {
+    id: 'kn-1', topic: 'knee', d: 'f',
+    q: 'What does the ACL do?',
+    c: ['It is a ligament inside the knee that helps keep the shin from sliding forward under the thigh bone', 'It is the tendon that attaches the kneecap', 'It is the cushion pad of the knee', 'It is the growth plate of the knee'],
+    why: 'The anterior cruciate ligament is a stabilizing ligament in the knee.',
+    src: ['knee-ligament-cpg-2017', 'orthoinfo-acl'],
+  },
+  {
+    id: 'kn-2', topic: 'knee', d: 'a', crit: true,
+    q: 'An athlete lands, hears a pop, and the knee swells within an hour. What is the right plan?',
+    c: ['Stop, keep weight off the leg, and arrange same-day evaluation', 'Walk it off', 'Test the knee by pulling the shin forward', 'Wait for a week'],
+    why: 'A pop and rapid swelling suggest a significant internal injury. Do not test the knee.',
+    src: ['knee-ligament-cpg-2017', 'orthoinfo-acl'],
+  },
+  {
+    id: 'kn-3', topic: 'knee', d: 'a',
+    q: 'Which symptom suggests a meniscus problem?',
+    c: ['Catching or locking and difficulty fully straightening the knee', 'Swelling in the wrist', 'Pain at the heel only', 'A lump on the back of the hand'],
+    why: 'Mechanical symptoms such as catching or locking are typical of meniscal injury.',
+    src: ['meniscus-cpg-2018', 'orthoinfo-meniscus'],
+  },
+  {
+    id: 'kn-4', topic: 'knee', d: 'a',
+    q: 'What is Osgood-Schlatter disease?',
+    c: ['Pain and a bump just below the kneecap in a growing athlete from pulling of the patellar tendon on its growth area', 'A torn ACL', 'A fracture of the thigh bone', 'A meniscus tear'],
+    why: 'It is a growth-related overuse condition at the tibial tubercle.',
+    src: ['osgood-2007'],
+  },
+  {
+    id: 'kn-5', topic: 'knee', d: 'x', crit: true,
+    q: 'A child with known Osgood-Schlatter feels a sudden sharp pain below the kneecap after a jump and cannot straighten the knee. What is the right step?',
+    c: ['Treat it as possible fracture of the tubercle and arrange urgent evaluation', 'It is the usual pain, continue practice', 'Stretch the front of the thigh', 'Apply tape and keep jumping'],
+    why: 'A sudden injury with inability to straighten the knee may be a fracture and needs urgent evaluation.',
+    src: ['osgood-2007', 'physeal-2006'],
+  },
+  // ---- spondylo ----
+  {
+    id: 'spo-1', topic: 'spondylo', d: 'f',
+    q: 'What is spondylolysis?',
+    c: ['A crack or stress fracture in the pars interarticularis of a vertebra', 'A vertebra slipped forward', 'Wear-and-tear arthritis of the spine', 'Inflammation of the spine'],
+    why: 'Spondylolysis is a defect or stress fracture of the pars.',
+    src: ['orthoinfo-spondy'],
+  },
+  {
+    id: 'spo-2', topic: 'spondylo', d: 'f',
+    q: 'What is spondylolisthesis?',
+    c: ['A vertebra that has slipped forward over the one below', 'A stress fracture with no slip', 'Spinal arthritis from age', 'A pulled back muscle'],
+    why: '-listhesis means a slip.',
+    src: ['orthoinfo-spondy'],
+  },
+  {
+    id: 'spo-3', topic: 'spondylo', d: 'a',
+    q: 'Which word describes degenerative wear of the spine?',
+    c: ['Spondylosis', 'Spondylolysis', 'Spondylolisthesis', 'Spondylitis'],
+    why: 'Spondylosis is spinal osteoarthritis.',
+    src: ['hss-spondylosis'],
+  },
+  {
+    id: 'spo-4', topic: 'spondylo', d: 'a',
+    q: 'Ankylosing spondylitis is best described as:',
+    c: ['An inflammatory arthritis of the spine', 'A growth plate fracture', 'A stress fracture of the pars', 'A torn disc'],
+    why: 'Ankylosing spondylitis is an inflammatory disease that can fuse vertebrae over time.',
+    src: ['medlineplus-as'],
+  },
+  {
+    id: 'spo-5', topic: 'spondylo', d: 'a',
+    q: 'Which skills are most associated with pars stress injury risk in gymnasts?',
+    c: ['Repeated arching (hyperextension) and landing loads on the lower back', 'Wrist weight-bearing only', 'Leg flexibility only', 'Dismounts on the flat of the foot only'],
+    why: 'AAOS names gymnastics among sports with repeated stress and hyperextension of the lumbar spine.',
+    src: ['orthoinfo-spondy', 'gym-spine-2009'],
+  },
+  {
+    id: 'spo-6', topic: 'spondylo', d: 'x', crit: true,
+    q: 'A 13-year-old has had low back pain for three weeks that is worse with arching. What should a coach do?',
+    c: ['Pause the provoking arching and landing work and ask the parent to arrange a medical evaluation', 'Have her do more bridges to test it', 'Tell her it is a muscle strain and to stretch more', 'Wait until it gets worse'],
+    why: 'Persistent back pain with arching in a young gymnast needs a clinician, and testing by arching can worsen a stress injury.',
+    src: ['orthoinfo-spondy', 'spondylolysis-review-2000'],
+  },
+  {
+    id: 'spo-7', topic: 'spondylo', d: 'x',
+    q: 'Which finding makes back pain an emergency?',
+    c: ['New numbness or weakness in the legs, or loss of bladder or bowel control', 'Pain that eases with a warm-up', 'Mild stiffness the morning after training', 'Tight hamstrings that stretch out'],
+    why: 'Neurologic changes can signal nerve compression and need emergency care.',
+    src: ['orthoinfo-spondy', 'nata-cspine'],
+  },
+  // ---- wrist ----
+  {
+    id: 'wr-1', topic: 'wrist', d: 'f',
+    q: 'What is a ganglion cyst?',
+    c: ['A fluid-filled lump that arises from a joint or tendon sheath, often on the back of the wrist', 'A cancerous tumor of the wrist', 'A broken wrist bone', 'A torn ligament'],
+    why: 'Ganglions are fluid-filled cysts. AAOS says they are not cancerous and most are harmless.',
+    src: ['orthoinfo-ganglion'],
+  },
+  {
+    id: 'wr-2', topic: 'wrist', d: 'f', crit: true,
+    q: 'What should a coach do about a ganglion cyst on a gymnast wrist?',
+    c: ['Not press or pop it, and arrange a clinician to confirm what it is', 'Hit it with a heavy book', 'Drain it with a needle', 'Tell her it is definitely harmless'],
+    why: 'Do not press, pop, drain, or hit a wrist lump. A clinician confirms what it is.',
+    src: ['orthoinfo-ganglion'],
+  },
+  {
+    id: 'wr-3', topic: 'wrist', d: 'a',
+    q: 'According to AAOS, what happens to many ganglion cysts without treatment?',
+    c: ['More than half go away on their own', 'All grow larger', 'All require surgery', 'All become cancerous'],
+    why: 'AAOS says more than half go away on their own.',
+    src: ['orthoinfo-ganglion'],
+  },
+  {
+    id: 'wr-4', topic: 'wrist', d: 'a',
+    q: 'Which wrist problem can look like a sprain after a fall but needs a clinician because it may not show on early X-rays?',
+    c: ['Scaphoid fracture', 'Ganglion cyst', 'Sever disease', 'Hamstring strain'],
+    why: 'Scaphoid fractures can be missed on early X-rays and can heal poorly if untreated.',
+    src: ['scaphoid-predictors-2012', 'orthoinfo-scaphoid'],
+  },
+  {
+    id: 'wr-5', topic: 'wrist', d: 'a',
+    q: 'Wrist pain in a growing gymnast that persists with weight bearing may involve:',
+    c: ['A growth plate stress injury of the distal radius', 'The hamstring', 'The Achilles tendon', 'The meniscus'],
+    why: 'Gymnast wrist is associated with distal radial growth plate stress injury.',
+    src: ['gymnast-wrist-2006', 'gymnast-wrist-webb-2008'],
+  },
+  {
+    id: 'wr-6', topic: 'wrist', d: 'x',
+    q: 'AAOS says most people return to normal activities 2 to 6 weeks after ganglion surgery. How should a coach use this?',
+    c: ['As normal daily activity timing only; the clinician decides about weight bearing and tumbling', 'As the date for handsprings', 'As proof every gymnast will be fine at 2 weeks', 'It does not apply to anyone'],
+    why: 'The range is for normal daily activity, not weight-bearing gymnastics.',
+    src: ['orthoinfo-ganglion'],
+  },
+  // ---- growth ----
+  {
+    id: 'gr-1', topic: 'growth', d: 'f',
+    q: "Sever's disease causes pain where?",
+    c: ['At the back of the heel in a growing child', 'In the wrist', 'In the lower back', 'In the shoulder'],
+    why: 'It is irritation of the growth area at the back of the heel bone.',
+    src: ['sever-lit-2008', 'orthoinfo-sever'],
+  },
+  {
+    id: 'gr-2', topic: 'growth', d: 'a', crit: true,
+    q: 'A child with heel pain has pain at night and a swollen, warm heel after a hard fall. What should a coach do?',
+    c: ['Arrange a clinician visit soon because it may not be Sever disease', 'Assume it is Sever disease and continue', 'Ignore it', 'Add more jumping to strengthen it'],
+    why: 'Night pain, warmth, swelling, or a fall are red flags for other causes such as fracture or infection.',
+    src: ['sever-peds-2011', 'orthoinfo-sever'],
+  },
+  {
+    id: 'gr-3', topic: 'growth', d: 'a',
+    q: 'Which statement about growth-related overuse pain is the best?',
+    c: ['Reduce the loads that cause pain, tell the parent, and let a clinician guide the plan', 'Push through to build strength', 'It always means a fracture', 'It cannot happen in gymnasts'],
+    why: 'Growth-related overuse is managed by load management and clinician guidance.',
+    src: ['osgood-2007', 'sever-lit-2008', 'physeal-2006'],
+  },
+  {
+    id: 'gr-4', topic: 'growth', d: 'x',
+    q: 'Which is a reason that growth areas are vulnerable to overuse?',
+    c: ['Tendons attach there and the growth area is softer than the tendon', 'They are stronger than adult bone', 'They do not receive load', 'They are not found in children'],
+    why: 'Repeated pull or impact at a softer growth area causes pain without a clear single injury.',
+    src: ['physeal-2006'],
+  },
+  // ---- muscle-tendon ----
+  {
+    id: 'mt-1', topic: 'muscle-tendon', d: 'f',
+    q: 'A hamstring strain usually happens in which type of movement?',
+    c: ['High-speed or extreme-range movement', 'Slow walking', 'Sleeping', 'Typing'],
+    why: 'Reviews describe sprinting and extreme hip flexion with the knee straight as common set-ups.',
+    src: ['hamstring-cpg-2010'],
+  },
+  {
+    id: 'mt-2', topic: 'muscle-tendon', d: 'a',
+    q: 'A freshly strained hamstring: what is the right coach decision?',
+    c: ['Stop the activity and do not push a stretch to test it', 'Push the athlete into a split to see the range', 'Add ballistic stretching', 'Continue with leaps'],
+    why: 'Forced stretching of a freshly injured muscle can make it worse.',
+    src: ['hamstring-cpg-2010'],
+  },
+  {
+    id: 'mt-3', topic: 'muscle-tendon', d: 'a', crit: true,
+    q: 'A sudden snap at the back of the ankle with inability to push off or stand on tiptoe suggests:',
+    c: ['Possible Achilles tendon rupture, needs same-day evaluation', 'A routine overuse ache', 'A ganglion cyst', 'A growth spurt'],
+    why: 'A sudden pop and loss of push-off needs urgent evaluation.',
+    src: ['orthoinfo-achilles'],
+  },
+  {
+    id: 'mt-4', topic: 'muscle-tendon', d: 'x',
+    q: 'What is a core principle of rehabilitating tendinopathy in the guideline?',
+    c: ['Exercise-based progressive loading', 'Complete long-term rest', 'Aggressive stretching as the only plan', 'Ice only'],
+    why: 'The guideline emphasizes well-dosed, exercise-based loading.',
+    src: ['achilles-cpg-2024'],
+  },
+  // ---- recovery ----
+  {
+    id: 'rc-1', topic: 'recovery', d: 'f', crit: true,
+    q: 'Who clears an athlete to return to practice after a significant injury?',
+    c: ['A qualified clinician', 'The coach', 'A teammate', 'A phone app'],
+    why: 'Clearance is a clinician decision.',
+    src: ['cdc-response', 'bern-2016'],
+  },
+  {
+    id: 'rc-2', topic: 'recovery', d: 'a',
+    q: 'What does a published recovery range mean?',
+    c: ['An estimate for a group, not a promise for one athlete', 'A guaranteed date', 'A coach-set deadline', 'A safe time for every athlete'],
+    why: 'Ranges describe groups and vary with the person.',
+    src: ['bern-2016'],
+  },
+  {
+    id: 'rc-3', topic: 'recovery', d: 'a',
+    q: 'The stage after "cleared to start" in the teaching ladder is:',
+    c: ['Strength and mobility away from the floor', 'Full competition routine', 'Maximum height tumbling', 'Unspotted new skills'],
+    why: 'The ladder moves from clearance to conditioning, low-impact skills, controlled landings, then basic tumbling.',
+    src: ['bern-2016'],
+  },
+  {
+    id: 'rc-4', topic: 'recovery', d: 'a',
+    q: 'If pain returns at a ladder stage, what should happen?',
+    c: ['Step back one stage and tell the parent and clinician', 'Move up to prove toughness', 'Ignore it if it is mild', 'Skip the stage'],
+    why: 'New symptoms are a stop rule.',
+    src: ['cdc-coach-sheet', 'bern-2016'],
+  },
+  {
+    id: 'rc-5', topic: 'recovery', d: 'x',
+    q: 'Why is the return-to-tumbling ladder labeled a teaching framework?',
+    c: ['The sources support staged, criteria-based return but do not define an identical ladder for every injury', 'It was copied from an official federation rule', 'It is a legal standard', 'It guarantees safe return'],
+    why: 'The module is explicit that the stages are teaching labels.',
+    src: ['bern-2016'],
+  },
+  // ---- movement planes ----
+  {
+    id: 'pl-1', topic: 'planes', d: 'f',
+    q: 'Which plane splits the body into left and right halves?',
+    c: ['Sagittal plane', 'Frontal plane', 'Transverse plane', 'Oblique plane'],
+    why: 'The sagittal plane divides left and right.',
+    src: ['neumann-kinesiology', 'moore-anatomy'],
+  },
+  {
+    id: 'pl-2', topic: 'planes', d: 'f',
+    q: 'A cartwheel is mainly in which plane?',
+    c: ['Frontal', 'Sagittal', 'Transverse', 'None'],
+    why: 'A cartwheel travels side to side in the frontal plane.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'pl-3', topic: 'planes', d: 'a',
+    q: 'The twist in a full-twisting layout rotates around which axis?',
+    c: ['The body long (vertical) axis, in the transverse plane', 'The side-to-side axis', 'The front-to-back axis', 'No axis'],
+    why: 'Twisting is transverse-plane rotation around the long axis.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'pl-4', topic: 'planes', d: 'a',
+    q: 'Hip flexion and extension happen mostly in which plane?',
+    c: ['Sagittal', 'Frontal', 'Transverse', 'Coronal'],
+    why: 'Flexion and extension are sagittal-plane actions.',
+    src: ['neumann-kinesiology'],
+  },
+  // ---- joint actions ----
+  {
+    id: 'ja-1', topic: 'joint-actions', d: 'f',
+    q: 'Which pair is correct for the ankle?',
+    c: ['Pointing the foot is plantarflexion and drawing the toes toward the shin is dorsiflexion', 'Pointing the foot is dorsiflexion', 'Both are the same action', 'Neither happens at the ankle'],
+    why: 'Plantarflexion points the foot. Dorsiflexion brings the top of the foot toward the shin.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ja-2', topic: 'joint-actions', d: 'f',
+    q: 'Moving a leg out to the side away from the midline is:',
+    c: ['Hip abduction', 'Hip adduction', 'Hip flexion', 'Hip extension'],
+    why: 'Abduction moves a limb away from the midline.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ja-3', topic: 'joint-actions', d: 'f',
+    q: 'Arching the lower back is:',
+    c: ['Lumbar extension', 'Lumbar flexion', 'Lumbar rotation', 'Lumbar abduction'],
+    why: 'Extension of the spine is arching.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ja-4', topic: 'joint-actions', d: 'a',
+    q: 'The wrist in a handstand is mainly in:',
+    c: ['Extension (also called dorsiflexion)', 'Flexion', 'Radial deviation only', 'Pronation only'],
+    why: 'A handstand puts the wrist in loaded extension.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ja-5', topic: 'joint-actions', d: 'x',
+    q: 'Which scapular motion is needed to reach the arms fully overhead?',
+    c: ['Upward rotation', 'Downward rotation', 'Depression only', 'Retraction only'],
+    why: 'Overhead reach needs scapular upward rotation as well as shoulder movement.',
+    src: ['neumann-kinesiology'],
+  },
+  // ---- loading ----
+  {
+    id: 'ld-1', topic: 'loading', d: 'f',
+    q: 'Which of these is a loading concept, not a joint action?',
+    c: ['Compression', 'Flexion', 'Abduction', 'Dorsiflexion'],
+    why: 'Compression is a force on tissue. Flexion, abduction, and dorsiflexion are joint actions.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ld-2', topic: 'loading', d: 'a',
+    q: 'Landing from a flip mostly loads the legs with which type of contraction?',
+    c: ['Eccentric', 'Concentric', 'Isometric only', 'None'],
+    why: 'Absorbing a landing is largely eccentric work.',
+    src: ['neumann-kinesiology'],
+  },
+  {
+    id: 'ld-3', topic: 'loading', d: 'a',
+    q: 'A fall onto the head loads the neck mainly by:',
+    c: ['Axial load', 'Torsion only', 'No load', 'Traction only'],
+    why: 'Head-first landings load the spine along its long axis.',
+    src: ['nata-cspine', 'neumann-kinesiology'],
+  },
+  {
+    id: 'ld-4', topic: 'loading', d: 'x',
+    q: 'Which describes a hold of a hollow body?',
+    c: ['Mainly isometric work', 'Mainly eccentric work', 'Mainly concentric work', 'No muscle work'],
+    why: 'Holding a position is largely isometric.',
+    src: ['neumann-kinesiology'],
+  },
+  // ---- stretch methods ----
+  {
+    id: 'sm-1', topic: 'stretch-methods', d: 'f',
+    q: 'What is dynamic stretching?',
+    c: ['Controlled active movements that take joints through range, like leg swings', 'Holding a stretch for two minutes', 'Bouncing at end range', 'Having a partner push the limb'],
+    why: 'Dynamic stretching is controlled active movement.',
+    src: ['behm-2016'],
+  },
+  {
+    id: 'sm-2', topic: 'stretch-methods', d: 'a',
+    q: 'What does the PNF review say about reciprocal inhibition as the explanation for PNF gains?',
+    c: ['The literature does not support it; a better view is that stretch tolerance changes', 'It is proven', 'It is the only explanation', 'It explains why contractions should be maximal'],
+    why: 'The review states the literature does not support autogenic or reciprocal inhibition and favors changes in stretch perception.',
+    src: ['pnf-2006'],
+  },
+  {
+    id: 'sm-3', topic: 'stretch-methods', d: 'a',
+    q: 'A review of how muscle extensibility increases found short-term gains are mostly due to:',
+    c: ['Modified sensation (higher stretch tolerance)', 'Permanent muscle lengthening', 'New muscle growth', 'Tendon length change'],
+    why: 'The review concluded changes after single sessions and 3 to 8 week programs are mostly due to modified sensation.',
+    src: ['weppler-2010'],
+  },
+  {
+    id: 'sm-4', topic: 'stretch-methods', d: 'x',
+    q: 'Which method does this module not recommend for young gymnasts?',
+    c: ['Ballistic bouncing into end range', 'Dynamic stretching in warm-up', 'Short static holds', 'Active range work'],
+    why: 'Bouncing with momentum into end range is not supported and is linked with strain set-ups.',
+    src: ['hamstring-cpg-2010'],
+  },
+  // ---- stretch power ----
+  {
+    id: 'sp-p1', topic: 'stretch-power', d: 'f',
+    q: 'Before tumbling, which is the better warm-up approach?',
+    c: ['Short static holds followed by dynamic and skill-specific work', 'A long static stretch session right before the first pass', 'Skip warm-up', 'Only ballistic stretching'],
+    why: 'Short holds are fine and dynamic work follows; long static holds can reduce force output.',
+    src: ['kay-2012', 'behm-2016'],
+  },
+  {
+    id: 'sp-p2', topic: 'stretch-power', d: 'a',
+    q: 'At about what hold duration do reductions in maximal performance become likely?',
+    c: ['About 60 seconds or longer', 'About 5 seconds', 'About 10 seconds', 'Never'],
+    why: 'The systematic review found significant reductions are likely with stretches of about 60 seconds or longer.',
+    src: ['kay-2012'],
+  },
+  {
+    id: 'sp-p3', topic: 'stretch-power', d: 'a',
+    q: 'What did the review on stretching and injury risk conclude?',
+    c: ['Not enough evidence to endorse or discontinue routine stretching for injury prevention', 'Stretching always prevents injury', 'Stretching always causes injury', 'It has been proven for gymnasts'],
+    why: 'Thacker et al. found no significant association with total injuries.',
+    src: ['thacker-2004'],
+  },
+  {
+    id: 'sp-p4', topic: 'stretch-power', d: 'x',
+    q: 'Why should these stretching findings be applied to young gymnasts cautiously?',
+    c: ['Most studies were in adults, so the fit for children is not settled', 'Children cannot stretch', 'The studies were done only in gymnasts', 'They proved the opposite'],
+    why: 'The module labels this as uncertain.',
+    src: ['behm-2016', 'kay-2012'],
+  },
+  // ---- splits and hypermobility ----
+  {
+    id: 'hy-1', topic: 'splits-hyper', d: 'f', crit: true,
+    q: 'What should a coach never do when an athlete is working on splits?',
+    c: ['Push or let a partner force the athlete into the split', 'Let the athlete choose how deep to go', 'Warm up first', 'Add active strength at the end range'],
+    why: 'Forced end-range stretching is a set-up for strain and for sit-bone injury.',
+    src: ['hamstring-cpg-2010'],
+  },
+  {
+    id: 'hy-2', topic: 'splits-hyper', d: 'a',
+    q: 'A very flexible athlete with hyperextended elbows needs mainly:',
+    c: ['Strength and control at the end of range', 'More stretching of the elbows', 'A deeper split', 'Less strength'],
+    why: 'Hypermobile athletes need control, not more range.',
+    src: ['beighton-1973', 'eds-2017'],
+  },
+  {
+    id: 'hy-3', topic: 'splits-hyper', d: 'a',
+    q: 'Who diagnoses joint hypermobility conditions?',
+    c: ['A clinician', 'The coach by pulling on fingers', 'The athlete', 'A teammate'],
+    why: 'The Beighton score is a clinical screening tool and conditions are diagnosed by a clinician.',
+    src: ['beighton-1973', 'eds-2017'],
+  },
+  {
+    id: 'hy-4', topic: 'splits-hyper', d: 'x',
+    q: 'Sit-bone pain after a forceful stretch in a growing athlete should be:',
+    c: ['Reported for clinician evaluation because it may be an avulsion injury', 'Ignored', 'Stretched harder', 'Treated as a normal feeling'],
+    why: 'A bony pull at the sit bone in a growing athlete needs evaluation.',
+    src: ['hamstring-cpg-2010', 'orthoinfo-hamstring'],
+  },
+]
