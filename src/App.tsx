@@ -1453,7 +1453,7 @@ export default function App() {
     <ProfilePeekProvider onView={openProfile}>
     <GestureBurstHost />
     <VersionCheck />
-    <div className="mx-auto min-h-screen min-w-0 max-w-[90rem] overflow-x-hidden px-3 py-4 sm:px-6">
+    <div className="mx-auto min-h-screen min-w-0 max-w-[90rem] overflow-x-clip px-3 py-4 sm:px-6">
       <IgMobileShell
         tab={tab}
         onGo={goTab}

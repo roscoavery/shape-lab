@@ -35,6 +35,12 @@ body,
   overflow-x: hidden;
 }
 
+/* clip, unlike hidden, does not make body and #root scroll containers, so position: sticky still pins to the viewport. */
+body,
+#root {
+  overflow-x: clip;
+}
+
 /* Wide tables and week grids scroll inside the phone; they must not stretch the page. */
 .phone-h-scroll {
   min-width: 0;
