@@ -983,6 +983,7 @@ export const APP_TABS = [
   'coachlib',
   'drills',
   'spotting',
+  'coached',
   'chat',
   'compare',
   'scroll',

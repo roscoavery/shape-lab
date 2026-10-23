@@ -9,7 +9,7 @@
  * Sequences: src/config/sequences.ts
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { GymRecords } from './components/GymRecords'
 import { AccountsDesk } from './components/AccountsDesk'
@@ -31,6 +31,8 @@ import { CoachInbox } from './components/CoachInbox'
 import { CoachShapeLibrary } from './components/coach/CoachShapeLibrary'
 import { CompareErrorBoundary } from './components/compare/CompareErrorBoundary'
 import { PanelErrorBoundary } from './components/PanelErrorBoundary'
+
+const CoachEdPanel = lazy(() => import('./components/coachEd/CoachEdPanel'))
 import { ComparePanel } from './components/compare/ComparePanel'
 import { EducationPanel } from './components/EducationPanel'
 import type { PhoneReelClip } from './components/PhoneReelViewer'
@@ -2209,6 +2211,9 @@ export default function App() {
               ? () => setSkillPathsOpen(true)
               : undefined
           }
+          onOpenCoachEd={
+            previewProfile && isCoachProfile(previewProfile) ? () => goTab('coached') : undefined
+          }
           surface="learn"
           presetQuizTaker={quizPreset}
           preferredQuizIds={[
@@ -2320,6 +2325,13 @@ export default function App() {
       {tab === 'drills' && <DrillLibraryPanel signedIn={activeProfile} />}
 
       {tab === 'spotting' && <SpottingPanel />}
+      {tab === 'coached' && (
+        <PanelErrorBoundary label="Coach education">
+          <Suspense fallback={<p className="py-10 text-center text-sm text-[var(--muted)]">Loading Coach education</p>}>
+            <CoachEdPanel />
+          </Suspense>
+        </PanelErrorBoundary>
+      )}
       {tab === 'chat' && <ChatPanel onOpenTab={goTab} canEditFaq={ryanEdit} viewerRole={previewRole} />}
 
       {(compareOpened || tab === 'compare') && (

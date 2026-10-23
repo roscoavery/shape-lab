@@ -41,6 +41,7 @@ const FEATURE_WORDS: Record<AppTab, string> = {
   coachlib: 'coach library references',
   drills: 'drill library exercises',
   spotting: 'spotting spot coach safety spotting methods',
+  coached: 'coach education injury injuries emergency concussion stretching flexibility movement anatomy assessment quiz certification study',
   chat: 'ask chat questions coach help builder',
   compare: 'compare video delay side by side ab',
   scroll: 'reels scroll reference videos passes',
@@ -74,13 +75,15 @@ function tokenScore(hay: string, needle: string): number {
   return 0
 }
 
-function featureHits(needle: string, ryan: boolean, coach: boolean): AppSearchHit[] {
+function featureHits(needle: string, ryan: boolean, coach: boolean, role: NavRole): AppSearchHit[] {
   const out: AppSearchHit[] = []
+  const coachEd = role === 'coach' || role === 'admin'
   const seen = new Set<AppTab>()
   for (const rows of Object.values(SECTION_SUBNAV)) {
     for (const row of rows) {
       if (seen.has(row.id)) continue
       seen.add(row.id)
+      if (row.id === 'coached' && !coachEd) continue
       const extra = FEATURE_WORDS[row.id] ?? ''
       const blob = `${row.label} ${extra}`
       const score = Math.max(tokenScore(row.label, needle), tokenScore(blob, needle))
@@ -97,6 +100,22 @@ function featureHits(needle: string, ryan: boolean, coach: boolean): AppSearchHi
         subtitle: 'Open in app',
         tab: row.id,
         score,
+      })
+    }
+  }
+  if (coachEd) {
+    const responseScore = Math.max(
+      tokenScore('Injury response', needle),
+      tokenScore('injury response emergency 911 concussion head neck spine injured hurt red flags', needle),
+    )
+    if (responseScore > 0) {
+      out.push({
+        id: 'feature:coached-response',
+        kind: 'feature',
+        title: 'Injury response',
+        subtitle: 'Emergencies, concussion, suspected spine injury',
+        tab: 'coached',
+        score: responseScore + 5,
       })
     }
   }
@@ -297,7 +316,7 @@ export function searchAppIndex(
   if (!needle) return popularSearchHits(opts.role, opts.ryan, opts.coach)
 
   const merged = [
-    ...featureHits(needle, opts.ryan, opts.coach),
+    ...featureHits(needle, opts.ryan, opts.coach, opts.role),
     ...shapeHits(needle),
     ...homeworkHits(needle),
     ...clipHits(needle, opts.clips),

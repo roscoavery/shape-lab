@@ -124,6 +124,7 @@ type Props = {
   onFinishQuizAnother?: () => void
   onOpenNamesTest?: (groupId?: string) => void
   onOpenSkillPaths?: () => void
+  onOpenCoachEd?: () => void
   /** Videos tab only needs the reference scroll. */
   surface?: 'learn' | 'videos'
   onOpenTour?: (steps: TourStep[]) => void
@@ -154,6 +155,7 @@ export function EducationPanel({
   onFinishQuizAnother,
   onOpenNamesTest,
   onOpenSkillPaths,
+  onOpenCoachEd,
   surface = 'learn',
   onOpenTour,
   onCompareWithReference,
@@ -537,6 +539,7 @@ export function EducationPanel({
             onAnatomyQuiz={(track) => setView({ kind: 'anatomyQuiz', track })}
             onProgressionQuiz={(track) => setView({ kind: 'progressionQuiz', track })}
             onMovements={() => setView({ kind: 'movementsQuiz' })}
+            onCoachEd={onOpenCoachEd}
           />
         </PanelErrorBoundary>
       )}
@@ -751,6 +754,7 @@ function CoachStudyRoom({
   onAnatomyQuiz,
   onProgressionQuiz,
   onMovements,
+  onCoachEd,
 }: {
   onPhysics: () => void
   onAnatomy: () => void
@@ -759,6 +763,7 @@ function CoachStudyRoom({
   onAnatomyQuiz: (track?: AnatomyTrack) => void
   onProgressionQuiz: (track?: ProgressionTrack) => void
   onMovements: () => void
+  onCoachEd?: () => void
 }) {
   return (
     <div className="space-y-5">
@@ -773,6 +778,19 @@ function CoachStudyRoom({
           so the same Q&A does not come back every time.
         </p>
       </section>
+      {onCoachEd && (
+        <button
+          type="button"
+          onClick={onCoachEd}
+          className="w-full rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4 text-left active:opacity-80"
+        >
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">New</span>
+          <span className="learn-serif mt-1 block text-xl font-semibold">Coach education</span>
+          <span className="mt-1 block text-sm text-[var(--muted)]">
+            Injury science, an injury library, injury response, movement, stretching, and assessments.
+          </span>
+        </button>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         <StudyCard
           title="Tumbling physics"

@@ -13,6 +13,7 @@ export type MobileSearchJump =
   | { kind: 'skill'; skillId: string; section?: string }
   | { kind: 'skillPath' }
   | { kind: 'shapes' }
+  | { kind: 'coachEd'; segment: 'study' | 'reference' | 'response' | 'progress' }
 
 export function stashMobileSearchJump(jump: MobileSearchJump): void {
   try {

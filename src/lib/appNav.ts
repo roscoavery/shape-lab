@@ -91,6 +91,7 @@ export const SECTION_SUBNAV: Record<AppSection, { id: AppTab; label: string }[]>
     { id: 'coachlib', label: 'Coach library' },
     { id: 'drills', label: 'Drill library' },
     { id: 'spotting', label: 'Spotting' },
+    { id: 'coached', label: 'Coach education' },
     { id: 'chat', label: 'Ask' },
   ],
   team: [
@@ -159,6 +160,7 @@ export function sectionForTab(tab: AppTab, role: NavRole = 'coach'): AppSection 
     case 'coachlib':
     case 'drills':
     case 'spotting':
+    case 'coached':
     case 'chat':
       return 'learn'
     case 'classes':
@@ -248,6 +250,7 @@ export function subnavForSection(
       if (section === 'more') return false
     }
     if (role === 'coach' && (item.id === 'watch' || item.id === 'stills')) return false
+    if (item.id === 'coached' && role !== 'coach' && role !== 'admin') return false
     if (item.id === 'classclock' && role !== 'athlete') return false
     return true
   }).map((item) =>

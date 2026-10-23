@@ -70,7 +70,11 @@ export function MobileSearchPage({
 
 
   const activate = (hit: AppSearchHit) => {
-    if (hit.id === 'feature:skill-path-guide') {
+    if (hit.id === 'feature:coached-response') {
+      stashMobileSearchJump({ kind: 'coachEd', segment: 'response' })
+      saveTab('coached')
+      onGo('coached')
+    } else if (hit.id === 'feature:skill-path-guide') {
       stashMobileSearchJump({ kind: 'skillPath' })
       saveTab('learn')
       onGo('learn')
