@@ -8,6 +8,7 @@ import { buildQuestionSources } from '../coach-ed-gen-questions.ts'
 import { buildIndexSource } from '../coach-ed-gen-index.ts'
 import { MEDIA_ASSETS, MEDIA_SLOTS } from '../../src/content/coachEd/media.ts'
 import { EXERCISES, EXERCISE_LINKS } from '../../src/content/coachEd/exercises.ts'
+import { CATALOG_SCIENCE_LESSON } from '../../src/content/coachEd/exerciseLinks.ts'
 import { HOMEWORK_CATALOG } from '../../src/config/homeworkCatalog.ts'
 import { MOVEMENT_TERMS } from '../../src/content/coachEd/movementTerms.ts'
 import { DECKS, MATCHING } from '../../src/content/coachEd/practice.ts'
@@ -113,6 +114,14 @@ export async function validateContent(): Promise<string[]> {
       bad.push(`${where}: advanced exercise needs readiness and contraindications`)
     if (!linkIds.has(e.id)) bad.push(`${where}: no evidence link`)
   }
+  for (const e of EXERCISES) {
+    if (!e.catalogId) continue
+    const lid = CATALOG_SCIENCE_LESSON[e.catalogId]
+    if (!lid) bad.push(`exercise ${e.id}: catalog id "${e.catalogId}" has no science lesson link`)
+    else if (!e.lessonIds.includes(lid)) bad.push(`exercise ${e.id}: science link "${lid}" not among its lessons`)
+  }
+  for (const id of Object.keys(CATALOG_SCIENCE_LESSON))
+    if (!EXERCISES.some((e) => e.catalogId === id)) bad.push(`science link for "${id}" has no exercise record`)
   for (const l of EXERCISE_LINKS) {
     const where = `exercise link ${l.exerciseId}`
     if (!exerciseIds.has(l.exerciseId)) bad.push(`${where}: unknown exercise`)

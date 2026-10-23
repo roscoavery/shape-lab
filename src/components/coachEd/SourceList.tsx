@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { sourceById } from '../../content/coachEd/sources'
+import { PRACTITIONER_NOTE } from '../../content/coachEd/types'
 
 export function SourceList({ ids, label = 'Sources' }: { ids: string[]; label?: string }) {
   const [open, setOpen] = useState(false)
@@ -28,6 +29,8 @@ export function SourceList({ ids, label = 'Sources' }: { ids: string[]; label?: 
                 {s.year ? ` (${s.year})` : ''}. {s.venue}.
                 {s.pmid ? ` PMID ${s.pmid}.` : ''}
               </div>
+              {s.kind === 'practitioner' && <div className="font-semibold text-amber-200/90">{PRACTITIONER_NOTE}</div>}
+              {s.kind === 'historical' && <div className="font-semibold">Historical source, cited for what it said at the time</div>}
               <div className="text-[10px] uppercase tracking-wide opacity-70">Record checked {s.verifiedOn}</div>
             </li>
           ))}

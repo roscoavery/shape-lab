@@ -690,5 +690,327 @@ export const QUESTION_ANSWERS: ServerQuestion[] = [
     "critical": false,
     "answerId": "b",
     "explain": "A bony pull at the sit bone in a growing athlete needs evaluation."
+  },
+  {
+    "id": "imp-1",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Impingement is compression of tissue at certain positions. Some contact at end range is normal; it becomes a problem when it causes symptoms."
+  },
+  {
+    "id": "imp-2",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "b",
+    "explain": "The Warwick Agreement defines FAI syndrome as symptoms plus signs plus imaging. Asymptomatic cam morphology is common."
+  },
+  {
+    "id": "imp-3",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Flexion, adduction, and internal rotation is the classic impingement position."
+  },
+  {
+    "id": "imp-4",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Coaches remove the provoking load and refer. They do not test or name the condition."
+  },
+  {
+    "id": "imp-5",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Forced plantarflexion compresses tissue or an os trigonum at the back of the ankle."
+  },
+  {
+    "id": "imp-6",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "b",
+    "explain": "The term reflects that tendon capacity, load, and other factors matter, not only a bony pinch."
+  },
+  {
+    "id": "imp-7",
+    "topicId": "impingement",
+    "critical": false,
+    "answerId": "a",
+    "explain": "Wrist pain look-alikes include growth plate stress, ganglion cysts, TFCC injuries, and dorsal impingement. A clinician sorts them out."
+  },
+  {
+    "id": "kc-1",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "a",
+    "explain": "Pronation is normal and multiplanar. Eversion is only one component."
+  },
+  {
+    "id": "kc-2",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Static foot posture is a weak predictor and \"overpronation\" has no agreed threshold."
+  },
+  {
+    "id": "kc-3",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Rearfoot eversion and tibial internal rotation are coupled, with variation between people."
+  },
+  {
+    "id": "kc-4",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "a",
+    "explain": "Strong evidence for MTSS, very limited for patellofemoral pain, and no relationship with the other injuries studied."
+  },
+  {
+    "id": "kc-5",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Most included studies were cross-sectional, and the authors said a firm conclusion was not possible."
+  },
+  {
+    "id": "kc-6",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Flexible flatfoot is common in children and usually painless."
+  },
+  {
+    "id": "kc-7",
+    "topicId": "kinetic-chain",
+    "critical": false,
+    "answerId": "c",
+    "explain": "A rigid, painful flatfoot is a reason to refer."
+  },
+  {
+    "id": "rh-1",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Mirkin coined RICE in 1978."
+  },
+  {
+    "id": "rh-2",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "d",
+    "explain": "POLICE: Protection, Optimal Loading, Ice, Compression, Elevation."
+  },
+  {
+    "id": "rh-3",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "a",
+    "explain": "It was his published opinion piece, not new trial data."
+  },
+  {
+    "id": "rh-4",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "a",
+    "explain": "It is a proposed framework (BJSM 2020), not a guideline."
+  },
+  {
+    "id": "rh-5",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "a",
+    "explain": "PEACE includes educating the patient about the condition and load management."
+  },
+  {
+    "id": "rh-6",
+    "topicId": "rice-history",
+    "critical": false,
+    "answerId": "d",
+    "explain": "RICE, POLICE, and PEACE & LOVE are frameworks; reviews summarize evidence."
+  },
+  {
+    "id": "cr-1",
+    "topicId": "cryotherapy",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Reviews support analgesia. Human evidence for improved healing is lacking."
+  },
+  {
+    "id": "cr-2",
+    "topicId": "cryotherapy",
+    "critical": false,
+    "answerId": "d",
+    "explain": "The 2024 critical review notes the evidence about impaired regeneration comes mainly from animals."
+  },
+  {
+    "id": "cr-3",
+    "topicId": "cryotherapy",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Both overclaims go beyond the human evidence."
+  },
+  {
+    "id": "cr-4",
+    "topicId": "cryotherapy",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Inflammation is part of repair; the goal is a well-regulated response."
+  },
+  {
+    "id": "cr-5",
+    "topicId": "cryotherapy",
+    "critical": true,
+    "answerId": "a",
+    "explain": "These can be signs of acute compartment syndrome, a surgical emergency. Ice never replaces or delays emergency care."
+  },
+  {
+    "id": "cr-6",
+    "topicId": "cryotherapy",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Long cold exposure can injure skin and nerves."
+  },
+  {
+    "id": "kt-1",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Knee torque fell about 22 percent while hip torque rose roughly tenfold."
+  },
+  {
+    "id": "kt-2",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "a",
+    "explain": "The authors concluded forces shift to the hips and low back."
+  },
+  {
+    "id": "kt-3",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "b",
+    "explain": "ShapeLab could not confirm a Duke primary source, so it is labeled unverified."
+  },
+  {
+    "id": "kt-4",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Stress rises with knee flexion angle and with external load."
+  },
+  {
+    "id": "kt-5",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Only one case study linked deep squats to injury."
+  },
+  {
+    "id": "kt-6",
+    "topicId": "knee-travel",
+    "critical": true,
+    "answerId": "b",
+    "explain": "Knee travel is not inherently dangerous, but deep loaded flexion is not automatically right for a painful knee."
+  },
+  {
+    "id": "kt-7",
+    "topicId": "knee-travel",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Their methods are influential but their specific programmes have not been tested in controlled trials in gymnasts."
+  },
+  {
+    "id": "pg-1",
+    "topicId": "progression",
+    "critical": false,
+    "answerId": "a",
+    "explain": "There is no universal timeline. Consistency, control, and the next-day response guide progression."
+  },
+  {
+    "id": "pg-2",
+    "topicId": "progression",
+    "critical": true,
+    "answerId": "d",
+    "explain": "Sharp pain and loss of control are stop signals, not progression signals."
+  },
+  {
+    "id": "pg-3",
+    "topicId": "progression",
+    "critical": false,
+    "answerId": "c",
+    "explain": "Risk peaked near 90 percent of predicted adult height and rose with weekly load."
+  },
+  {
+    "id": "pg-4",
+    "topicId": "progression",
+    "critical": false,
+    "answerId": "a",
+    "explain": "Changing one dial at a time shows how the athlete responds."
+  },
+  {
+    "id": "pg-5",
+    "topicId": "progression",
+    "critical": true,
+    "answerId": "a",
+    "explain": "ShapeLab does not prescribe rehab or override clinicians."
+  },
+  {
+    "id": "pg-6",
+    "topicId": "progression",
+    "critical": false,
+    "answerId": "d",
+    "explain": "It is a coaching progression rule only."
+  },
+  {
+    "id": "ee-1",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Programmes including the Nordic roughly halved hamstring injury rates in a meta-analysis."
+  },
+  {
+    "id": "ee-2",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "a",
+    "explain": "Transfer to tumbling has not been studied."
+  },
+  {
+    "id": "ee-3",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "d",
+    "explain": "Improved capacity is not the same as demonstrated injury prevention."
+  },
+  {
+    "id": "ee-4",
+    "topicId": "exercise-evidence",
+    "critical": true,
+    "answerId": "a",
+    "explain": "Suspected pars stress injury, symptomatic disc problems, neurological symptoms, and acute spinal injury are contraindications."
+  },
+  {
+    "id": "ee-5",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "b",
+    "explain": "The evidence is for knee OA rehabilitation, not prevention in gymnasts."
+  },
+  {
+    "id": "ee-6",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "b",
+    "explain": "Sled training improves early acceleration, but injury prevention in gymnasts is not established."
+  },
+  {
+    "id": "ee-7",
+    "topicId": "exercise-evidence",
+    "critical": false,
+    "answerId": "d",
+    "explain": "It loads the knee extensors sensibly, but no gymnastics injury-prevention study exists."
   }
 ]

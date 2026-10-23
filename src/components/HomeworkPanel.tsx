@@ -24,6 +24,7 @@ import {
 } from '../config/homeworkCatalog'
 import { cameraPromptCue, isPhoneBrowser } from '../lib/delayCameraPipeline'
 import { isCoachProfile, profileRole } from '../lib/profileRole'
+import { scienceLessonFor } from '../content/coachEd/exerciseLinks'
 import { worksWithCoachIds } from '../lib/coachLink'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
 import { HomeworkLogList } from './homework/HomeworkLogList'
@@ -147,6 +148,8 @@ type Props = {
    * device to someone without a profile.
    */
   suspendWrites?: boolean
+  /** Coach and owner viewers only: open the Coach Ed lesson for an exercise. */
+  onOpenCoachEdLesson?: (lessonId: string) => void
 }
 
 function sourceBadge(source: HomeworkSource): { label: string; cls: string } {
@@ -636,6 +639,7 @@ export function HomeworkPanel({
   openPage = null,
   onOpenPageConsumed,
   suspendWrites = false,
+  onOpenCoachEdLesson,
 }: Props) {
   const [items, setItems] = useState<HomeworkItem[]>([])
   const [logs, setLogs] = useState<HomeworkLog[]>([])
@@ -2312,6 +2316,15 @@ export function HomeworkPanel({
                 <div className="mt-1">
                   <ExpandableNotes text={item.notes} previewLines={1} />
                 </div>
+              )}
+              {onOpenCoachEdLesson && item.catalogId && scienceLessonFor(item.catalogId) && (
+                <button
+                  type="button"
+                  onClick={() => onOpenCoachEdLesson(scienceLessonFor(item.catalogId!)!)}
+                  className="mt-1 block text-xs text-[var(--accent)] underline"
+                >
+                  Learn the science (coach education)
+                </button>
               )}
               {item.source !== 'auto' && (
                 <button

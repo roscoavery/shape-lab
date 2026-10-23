@@ -23,9 +23,13 @@ const SEGMENTS: { id: Segment; label: string }[] = [
 
 const SEGMENT_KEY = 'shape-lab.coachEd.segment.v1'
 
-function initialSegment(): Segment {
+function initialRoute(): { segment: Segment; lessonId?: string } {
   const jump = takeMobileSearchJump('coachEd')
-  if (jump && jump.kind === 'coachEd') return jump.segment
+  if (jump && jump.kind === 'coachEd') return { segment: jump.segment, lessonId: jump.lessonId }
+  return { segment: initialSegment() }
+}
+
+function initialSegment(): Segment {
   try {
     const v = sessionStorage.getItem(SEGMENT_KEY) as Segment | null
     if (v && SEGMENTS.some((s) => s.id === v)) return v
@@ -40,8 +44,9 @@ type Detail = { kind: 'condition'; id: string } | { kind: 'lesson'; id: string }
 function Shell() {
   const ctx = useCoachEd()
   const lessons = useLessons()
-  const [segment, setSegment] = useState<Segment>(initialSegment)
-  const [stack, setStack] = useState<Detail[]>([])
+  const [start] = useState(initialRoute)
+  const [segment, setSegment] = useState<Segment>(start.segment)
+  const [stack, setStack] = useState<Detail[]>(() => (start.lessonId ? [{ kind: 'lesson', id: start.lessonId }] : []))
   const detail: Detail = stack.length ? stack[stack.length - 1] : null
   const push = (d: Detail) => setStack((cur) => [...cur, d])
   const back = () => setStack((cur) => cur.slice(0, -1))

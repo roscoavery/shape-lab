@@ -2114,6 +2114,14 @@ export default function App() {
             viewer={activeProfile}
             athletes={athletes}
             suspendWrites={trainGuest}
+            onOpenCoachEdLesson={
+              isCoachProfile(activeProfile)
+                ? (lessonId) => {
+                    stashMobileSearchJump({ kind: 'coachEd', segment: 'study', lessonId })
+                    goTab('coached')
+                  }
+                : undefined
+            }
             onTakeTour={openHwTour}
             onUpdateAthlete={(patch) => {
               if (!trainLogForAthleteId) return

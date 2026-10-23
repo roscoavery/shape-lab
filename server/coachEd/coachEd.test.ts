@@ -69,7 +69,7 @@ test('nothing under src imports answer files or raw question source', () => {
 })
 
 test('every assessment draws questions, always including every critical one', () => {
-  assert.equal(ASSESSMENTS.length, 13)
+  assert.equal(ASSESSMENTS.length, 14)
   for (const a of ASSESSMENTS) {
     const ids = drawQuestionIds(a.id)
     assert.ok(ids && ids.length >= 4, `${a.id} draws at least 4 questions`)

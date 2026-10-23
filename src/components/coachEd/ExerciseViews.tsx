@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { EXERCISES, exerciseById, linkFor } from '../../content/coachEd/exercises'
+import { exerciseById, linkFor } from '../../content/coachEd/exercises'
 import { conditionRow } from '../../content/coachEd/registry'
 import {
   PREVENTION_EVIDENCE_LABELS,
@@ -214,4 +214,3 @@ export function TimelineView({ items }: { items: TimelineItem[] }) {
   )
 }
 
-export const ALL_EXERCISE_IDS = EXERCISES.map((e) => e.id)

@@ -2885,5 +2885,1363 @@ export const QUESTION_BANK: QuestionPublic[] = [
       "hamstring-cpg-2010",
       "orthoinfo-hamstring"
     ]
+  },
+  {
+    "id": "imp-1",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "What does \"impingement\" describe?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A broken bone near a joint"
+      },
+      {
+        "id": "b",
+        "label": "A muscle cramp"
+      },
+      {
+        "id": "c",
+        "label": "Tissue being compressed between two structures in certain joint positions"
+      },
+      {
+        "id": "d",
+        "label": "A torn ligament"
+      }
+    ],
+    "sourceIds": [
+      "warwick-fai-2016",
+      "internal-impingement-2009"
+    ]
+  },
+  {
+    "id": "imp-2",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "A parent says an MRI showed a \"cam\" shape on her daughter's hip but she has no pain. What is accurate?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "She definitely has FAI syndrome"
+      },
+      {
+        "id": "b",
+        "label": "Cam shapes are common in people without pain; FAI syndrome needs symptoms, exam signs, and imaging together"
+      },
+      {
+        "id": "c",
+        "label": "The coach should test the hip to confirm"
+      },
+      {
+        "id": "d",
+        "label": "She must stop all hip flexion permanently"
+      }
+    ],
+    "sourceIds": [
+      "warwick-fai-2016",
+      "fai-asymptomatic-2015"
+    ]
+  },
+  {
+    "id": "imp-3",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Which hip position brings the femoral neck and socket rim closest together?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Hip extension with external rotation"
+      },
+      {
+        "id": "b",
+        "label": "Deep flexion with adduction and internal rotation"
+      },
+      {
+        "id": "c",
+        "label": "Standing straight"
+      },
+      {
+        "id": "d",
+        "label": "Side-lying with the hip neutral"
+      }
+    ],
+    "sourceIds": [
+      "warwick-fai-2016"
+    ]
+  },
+  {
+    "id": "imp-4",
+    "topicId": "impingement",
+    "kind": "scenario",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "A tumbler has pain at the front of her ankle on deep punch landings. What should a coach do?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Tell her she has anterior impingement"
+      },
+      {
+        "id": "b",
+        "label": "Force the ankle forward to find the pain"
+      },
+      {
+        "id": "c",
+        "label": "Tape it and continue full landings"
+      },
+      {
+        "id": "d",
+        "label": "Reduce deep-dorsiflexion work and arrange a clinician visit"
+      }
+    ],
+    "sourceIds": [
+      "ankle-impingement-2016",
+      "anterior-ankle-2006"
+    ]
+  },
+  {
+    "id": "imp-5",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Pain at the back of the ankle when pointing the foot hard is most linked with:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Patellofemoral pain"
+      },
+      {
+        "id": "b",
+        "label": "Posterior ankle impingement"
+      },
+      {
+        "id": "c",
+        "label": "Subacromial pain syndrome"
+      },
+      {
+        "id": "d",
+        "label": "Anterior ankle impingement"
+      }
+    ],
+    "sourceIds": [
+      "posterior-ankle-2005"
+    ]
+  },
+  {
+    "id": "imp-6",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "Why do current guidelines prefer \"subacromial pain syndrome\" over \"shoulder impingement\"?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Because surgery is always needed"
+      },
+      {
+        "id": "b",
+        "label": "A mechanical pinch does not explain most cases; the pain is multifactorial"
+      },
+      {
+        "id": "c",
+        "label": "Because the rotator cuff is not involved"
+      },
+      {
+        "id": "d",
+        "label": "Because it only happens in throwers"
+      }
+    ],
+    "sourceIds": [
+      "sps-guideline-2026",
+      "rcrsp-lewis-2016"
+    ]
+  },
+  {
+    "id": "imp-7",
+    "topicId": "impingement",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "Back-of-wrist pain with loaded extension in a growing gymnast could be several things. Which is NOT one of the usual look-alikes?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Plantar fasciitis"
+      },
+      {
+        "id": "b",
+        "label": "Dorsal ganglion cyst"
+      },
+      {
+        "id": "c",
+        "label": "Gymnast wrist (growth plate stress)"
+      },
+      {
+        "id": "d",
+        "label": "Dorsal wrist capsular impingement"
+      }
+    ],
+    "sourceIds": [
+      "gymnast-wrist-webb-2008",
+      "dorsal-wrist-2017",
+      "ganglion-review-2014"
+    ]
+  },
+  {
+    "id": "kc-1",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "Foot pronation is best described as:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A normal three-plane motion combining eversion, abduction, and dorsiflexion"
+      },
+      {
+        "id": "b",
+        "label": "The same thing as eversion"
+      },
+      {
+        "id": "c",
+        "label": "An injury of the arch"
+      },
+      {
+        "id": "d",
+        "label": "A sign the athlete needs orthotics"
+      }
+    ],
+    "sourceIds": [
+      "neumann-kinesiology"
+    ]
+  },
+  {
+    "id": "kc-2",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "Which statement about \"overpronation\" is most accurate?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "It is a medical diagnosis"
+      },
+      {
+        "id": "b",
+        "label": "It always causes knee pain"
+      },
+      {
+        "id": "c",
+        "label": "Coaches can measure it reliably by eye"
+      },
+      {
+        "id": "d",
+        "label": "It is a descriptive word, not a diagnosis, and there is no agreed cut-off"
+      }
+    ],
+    "sourceIds": [
+      "foot-posture-risk-2014"
+    ]
+  },
+  {
+    "id": "kc-3",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "In running studies, rearfoot eversion early in stance is usually coupled with:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Hip extension only"
+      },
+      {
+        "id": "b",
+        "label": "Shoulder elevation"
+      },
+      {
+        "id": "c",
+        "label": "Tibial internal rotation"
+      },
+      {
+        "id": "d",
+        "label": "Tibial external rotation"
+      }
+    ],
+    "sourceIds": [
+      "joint-coupling-2004"
+    ]
+  },
+  {
+    "id": "kc-4",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "A review of prospective studies found pronated static foot posture was a small risk factor for:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Medial tibial stress syndrome (shin pain)"
+      },
+      {
+        "id": "b",
+        "label": "Concussion"
+      },
+      {
+        "id": "c",
+        "label": "ACL tears in all athletes"
+      },
+      {
+        "id": "d",
+        "label": "Every lower limb injury studied"
+      }
+    ],
+    "sourceIds": [
+      "foot-posture-risk-2014"
+    ]
+  },
+  {
+    "id": "kc-5",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "A meta-analysis linked increased pronation to low back pain. What is the right way to read that?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Flat feet cause back pain"
+      },
+      {
+        "id": "b",
+        "label": "It is an association; the study designs cannot show pronation causes back pain"
+      },
+      {
+        "id": "c",
+        "label": "Fixing the feet will cure back pain"
+      },
+      {
+        "id": "d",
+        "label": "The link is proven in gymnasts"
+      }
+    ],
+    "sourceIds": [
+      "limb-alignment-lbp-2024"
+    ]
+  },
+  {
+    "id": "kc-6",
+    "topicId": "kinetic-chain",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "An arch that flattens when standing but reappears on tiptoe is called:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Rigid flatfoot"
+      },
+      {
+        "id": "b",
+        "label": "High arch"
+      },
+      {
+        "id": "c",
+        "label": "Ankle sprain"
+      },
+      {
+        "id": "d",
+        "label": "Flexible flatfoot"
+      }
+    ],
+    "sourceIds": [
+      "peds-pes-planus-2016",
+      "orthoinfo-flatfoot"
+    ]
+  },
+  {
+    "id": "kc-7",
+    "topicId": "kinetic-chain",
+    "kind": "scenario",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "An athlete's foot stays flat even on tiptoe and is stiff and sore. What should the coach do?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Ignore it, flat feet are normal"
+      },
+      {
+        "id": "b",
+        "label": "Buy her orthotics"
+      },
+      {
+        "id": "c",
+        "label": "Tell the parent and suggest a clinician visit"
+      },
+      {
+        "id": "d",
+        "label": "Prescribe arch exercises and carry on"
+      }
+    ],
+    "sourceIds": [
+      "peds-pes-planus-2016",
+      "orthoinfo-flatfoot"
+    ]
+  },
+  {
+    "id": "rh-1",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "Who introduced the RICE acronym, and when?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "The IOC, in 2024"
+      },
+      {
+        "id": "b",
+        "label": "Dr. Gabe Mirkin, in The Sports Medicine Book (1978)"
+      },
+      {
+        "id": "c",
+        "label": "Bleakley and colleagues, in 2012"
+      },
+      {
+        "id": "d",
+        "label": "Dubois and Esculier, in 2020"
+      }
+    ],
+    "sourceIds": [
+      "mirkin-1978",
+      "mirkin-2014"
+    ]
+  },
+  {
+    "id": "rh-2",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What did POLICE change compared with RICE?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "It removed Compression"
+      },
+      {
+        "id": "b",
+        "label": "It added longer icing"
+      },
+      {
+        "id": "c",
+        "label": "It recommended anti-inflammatory drugs"
+      },
+      {
+        "id": "d",
+        "label": "It replaced Rest with Optimal Loading and added Protection"
+      }
+    ],
+    "sourceIds": [
+      "police-2012"
+    ]
+  },
+  {
+    "id": "rh-3",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What was Mirkin's 2014 reconsideration?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "An expert opinion that ice and complete rest may delay healing, on his own website"
+      },
+      {
+        "id": "b",
+        "label": "A new clinical guideline from a medical society"
+      },
+      {
+        "id": "c",
+        "label": "A retraction of compression"
+      },
+      {
+        "id": "d",
+        "label": "A large randomized trial"
+      }
+    ],
+    "sourceIds": [
+      "mirkin-2014"
+    ]
+  },
+  {
+    "id": "rh-4",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "PEACE & LOVE is best described as:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A proposed framework in an editorial that leaves ice out"
+      },
+      {
+        "id": "b",
+        "label": "A clinical practice guideline"
+      },
+      {
+        "id": "c",
+        "label": "An emergency protocol for fractures"
+      },
+      {
+        "id": "d",
+        "label": "A systematic review proving ice harms healing"
+      }
+    ],
+    "sourceIds": [
+      "peace-love-2020"
+    ]
+  },
+  {
+    "id": "rh-5",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "What does the \"Educate\" step in PEACE emphasise?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Teaching the athlete about the injury and active recovery, and avoiding unnecessary passive treatment"
+      },
+      {
+        "id": "b",
+        "label": "Educating the coach to diagnose"
+      },
+      {
+        "id": "c",
+        "label": "Making the athlete memorize anatomy"
+      },
+      {
+        "id": "d",
+        "label": "Using more ice"
+      }
+    ],
+    "sourceIds": [
+      "peace-love-2020"
+    ]
+  },
+  {
+    "id": "rh-6",
+    "topicId": "rice-history",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "Why does it matter whether a recommendation is a framework, expert opinion, or review?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Frameworks are always stronger than reviews"
+      },
+      {
+        "id": "b",
+        "label": "Expert opinion is the same as a trial"
+      },
+      {
+        "id": "c",
+        "label": "It does not matter"
+      },
+      {
+        "id": "d",
+        "label": "They carry different strength of evidence, and acronyms are not proven single protocols"
+      }
+    ],
+    "sourceIds": [
+      "police-2012",
+      "peace-love-2020",
+      "cryo-critical-2024"
+    ]
+  },
+  {
+    "id": "cr-1",
+    "topicId": "cryotherapy",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "What is the best-supported benefit of icing a soft tissue injury?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Faster tissue healing"
+      },
+      {
+        "id": "b",
+        "label": "Preventing all swelling"
+      },
+      {
+        "id": "c",
+        "label": "Short-term pain relief"
+      },
+      {
+        "id": "d",
+        "label": "Repairing the ligament"
+      }
+    ],
+    "sourceIds": [
+      "cryo-critical-2024",
+      "ice-sr-2004"
+    ]
+  },
+  {
+    "id": "cr-2",
+    "topicId": "cryotherapy",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Where does most of the concern that ice may delay healing come from?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Large human trials in gymnasts"
+      },
+      {
+        "id": "b",
+        "label": "X-ray findings"
+      },
+      {
+        "id": "c",
+        "label": "Coaching tradition"
+      },
+      {
+        "id": "d",
+        "label": "Animal studies"
+      }
+    ],
+    "sourceIds": [
+      "cryo-critical-2024"
+    ]
+  },
+  {
+    "id": "cr-3",
+    "topicId": "cryotherapy",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Which statement about ice and healing is accurate?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Ice definitely delays healing in every injury"
+      },
+      {
+        "id": "b",
+        "label": "Ice is a cure for sprains"
+      },
+      {
+        "id": "c",
+        "label": "It is not established that ice speeds healing, and not established that it always delays healing in people"
+      },
+      {
+        "id": "d",
+        "label": "Ice definitely speeds healing"
+      }
+    ],
+    "sourceIds": [
+      "cryo-critical-2024",
+      "cold-therapy-2021"
+    ]
+  },
+  {
+    "id": "cr-4",
+    "topicId": "cryotherapy",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Why is inflammation after an injury not simply \"bad\"?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "It has no role in healing"
+      },
+      {
+        "id": "b",
+        "label": "Immune cells clear damaged tissue and release signals that start repair"
+      },
+      {
+        "id": "c",
+        "label": "It prevents swelling"
+      },
+      {
+        "id": "d",
+        "label": "It only causes pain"
+      }
+    ],
+    "sourceIds": [
+      "cryo-critical-2024",
+      "peace-love-2020"
+    ]
+  },
+  {
+    "id": "cr-5",
+    "topicId": "cryotherapy",
+    "kind": "scenario",
+    "difficulty": "advanced",
+    "critical": true,
+    "prompt": "An athlete's lower leg is tight, very swollen, much more painful than expected, and her foot is tingling after a knock. What is the correct response?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Call emergency services now; do not let icing delay it"
+      },
+      {
+        "id": "b",
+        "label": "Wrap it tightly to reduce swelling"
+      },
+      {
+        "id": "c",
+        "label": "Ice and elevate for 20 minutes, then reassess"
+      },
+      {
+        "id": "d",
+        "label": "Have her walk it off"
+      }
+    ],
+    "sourceIds": [
+      "medlineplus-compartment",
+      "compartment-2015"
+    ]
+  },
+  {
+    "id": "cr-6",
+    "topicId": "cryotherapy",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Which is a risk of prolonged or excessive icing?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Stronger ligaments"
+      },
+      {
+        "id": "b",
+        "label": "Faster bone healing"
+      },
+      {
+        "id": "c",
+        "label": "Better balance"
+      },
+      {
+        "id": "d",
+        "label": "Skin and nerve injury"
+      }
+    ],
+    "sourceIds": [
+      "cryo-critical-2024",
+      "cold-therapy-2021"
+    ]
+  },
+  {
+    "id": "kt-1",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "In Fry 2003, what happened when a barrier stopped the knees from passing the toes during a squat?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Knee torque doubled"
+      },
+      {
+        "id": "b",
+        "label": "Nothing changed"
+      },
+      {
+        "id": "c",
+        "label": "Both knee and hip torque fell"
+      },
+      {
+        "id": "d",
+        "label": "Knee torque fell a little and hip torque rose a lot"
+      }
+    ],
+    "sourceIds": [
+      "fry-2003"
+    ]
+  },
+  {
+    "id": "kt-2",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What is the main lesson of the restricted-knee squat study?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Restricting motion at one joint redistributes load to other joints"
+      },
+      {
+        "id": "b",
+        "label": "Knees past toes are always dangerous"
+      },
+      {
+        "id": "c",
+        "label": "Squats should never go below parallel"
+      },
+      {
+        "id": "d",
+        "label": "Hip torque does not matter"
+      }
+    ],
+    "sourceIds": [
+      "fry-2003"
+    ]
+  },
+  {
+    "id": "kt-3",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "Which claim about the \"Duke University study\" origin of knees-behind-toes advice is accurate?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Duke published a trial proving knee travel is harmful"
+      },
+      {
+        "id": "b",
+        "label": "It is an unverified popular account; the 1978 authors are listed at Auburn and Illinois"
+      },
+      {
+        "id": "c",
+        "label": "It is a clinical guideline"
+      },
+      {
+        "id": "d",
+        "label": "Duke recommended deep squats for everyone"
+      }
+    ],
+    "sourceIds": [
+      "mclaughlin-1978"
+    ]
+  },
+  {
+    "id": "kt-4",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Patellofemoral (kneecap) joint stress during squatting increases with:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Less knee bend"
+      },
+      {
+        "id": "b",
+        "label": "Deeper knee flexion and added external load"
+      },
+      {
+        "id": "c",
+        "label": "Slower breathing"
+      },
+      {
+        "id": "d",
+        "label": "Standing taller"
+      }
+    ],
+    "sourceIds": [
+      "pf-squat-load-2002"
+    ]
+  },
+  {
+    "id": "kt-5",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What did a 2024 scoping review conclude about deep squats in resistance-trained people?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Deep squats have never been studied"
+      },
+      {
+        "id": "b",
+        "label": "Deep squats damage knees in most people"
+      },
+      {
+        "id": "c",
+        "label": "Deep squats prevent all knee injuries"
+      },
+      {
+        "id": "d",
+        "label": "14 of 15 studies showed no negative effect on knee health with controlled technique"
+      }
+    ],
+    "sourceIds": [
+      "deep-squat-2024"
+    ]
+  },
+  {
+    "id": "kt-6",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": true,
+    "prompt": "An athlete with current front-of-knee pain wants to start deep sissy squats. What is right?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Add weight so it heals faster"
+      },
+      {
+        "id": "b",
+        "label": "Follow her clinician on depth and load; do not start advanced deep knee work through current pain"
+      },
+      {
+        "id": "c",
+        "label": "Start full depth to strengthen it"
+      },
+      {
+        "id": "d",
+        "label": "Knees over toes is always safe, so go ahead"
+      }
+    ],
+    "sourceIds": [
+      "pf-squat-load-2002",
+      "deep-squat-2024"
+    ]
+  },
+  {
+    "id": "kt-7",
+    "topicId": "knee-travel",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "How should Poliquin and Ben Patrick (ATG) material be treated in Coach education?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "As proven injury prevention for gymnasts"
+      },
+      {
+        "id": "b",
+        "label": "As clinical guidelines"
+      },
+      {
+        "id": "c",
+        "label": "As practitioner coaching approaches, not experimental evidence"
+      },
+      {
+        "id": "d",
+        "label": "As systematic reviews"
+      }
+    ],
+    "sourceIds": [
+      "poliquin-1997",
+      "atg-patrick"
+    ]
+  },
+  {
+    "id": "pg-1",
+    "topicId": "progression",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "When is it reasonable to progress a healthy athlete to a harder version of an exercise?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "When the current level is done consistently with control and symptoms stay settled"
+      },
+      {
+        "id": "b",
+        "label": "After exactly two weeks"
+      },
+      {
+        "id": "c",
+        "label": "When a teammate has moved up"
+      },
+      {
+        "id": "d",
+        "label": "When the athlete is bored"
+      }
+    ],
+    "sourceIds": [
+      "trampoline-growth-2021",
+      "pf-squat-load-2002"
+    ]
+  },
+  {
+    "id": "pg-2",
+    "topicId": "progression",
+    "kind": "scenario",
+    "difficulty": "applied",
+    "critical": true,
+    "prompt": "During a set, an athlete's knee starts caving in and she reports sharp pain. What should happen?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Finish the set, then add weight"
+      },
+      {
+        "id": "b",
+        "label": "Move to a harder variation"
+      },
+      {
+        "id": "c",
+        "label": "Push through, it builds toughness"
+      },
+      {
+        "id": "d",
+        "label": "Stop the set and do not progress; tell the parent if pain persists"
+      }
+    ],
+    "sourceIds": [
+      "pf-squat-load-2002"
+    ]
+  },
+  {
+    "id": "pg-3",
+    "topicId": "progression",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Injury risk in competitive trampoline gymnasts in one study was highest:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "During rest weeks"
+      },
+      {
+        "id": "b",
+        "label": "With lower training loads"
+      },
+      {
+        "id": "c",
+        "label": "Around the adolescent growth spurt and with higher weekly load"
+      },
+      {
+        "id": "d",
+        "label": "In the youngest athletes only"
+      }
+    ],
+    "sourceIds": [
+      "trampoline-growth-2021"
+    ]
+  },
+  {
+    "id": "pg-4",
+    "topicId": "progression",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "How many training dials should usually change at once?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "One"
+      },
+      {
+        "id": "b",
+        "label": "All of them"
+      },
+      {
+        "id": "c",
+        "label": "It does not matter"
+      },
+      {
+        "id": "d",
+        "label": "At least three"
+      }
+    ],
+    "sourceIds": [
+      "pf-squat-load-2002"
+    ]
+  },
+  {
+    "id": "pg-5",
+    "topicId": "progression",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": true,
+    "prompt": "An athlete returning from a diagnosed knee injury has a clinician plan. Whose progression rules apply?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "The clinician's plan"
+      },
+      {
+        "id": "b",
+        "label": "The athlete's preference"
+      },
+      {
+        "id": "c",
+        "label": "ShapeLab's healthy-athlete framework"
+      },
+      {
+        "id": "d",
+        "label": "Whatever the group is doing"
+      }
+    ],
+    "sourceIds": [
+      "bern-2016"
+    ]
+  },
+  {
+    "id": "pg-6",
+    "topicId": "progression",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "ShapeLab's back extension target of a 2:00 hold before reps is:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A guideline from a medical society"
+      },
+      {
+        "id": "b",
+        "label": "A medical clearance criterion"
+      },
+      {
+        "id": "c",
+        "label": "A validated test that predicts back injury"
+      },
+      {
+        "id": "d",
+        "label": "A ShapeLab coaching standard, not a validated clinical threshold"
+      }
+    ],
+    "sourceIds": [
+      "lumbar-ext-specificity-2015"
+    ]
+  },
+  {
+    "id": "ee-1",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "foundation",
+    "critical": false,
+    "prompt": "Which exercise has direct evidence of reducing an injury in the sports studied?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Backward walking, for ACL tears"
+      },
+      {
+        "id": "b",
+        "label": "Nordic hamstring curls, for hamstring injuries"
+      },
+      {
+        "id": "c",
+        "label": "Sissy squats, for knee injuries"
+      },
+      {
+        "id": "d",
+        "label": "Jefferson curls, for disc injuries"
+      }
+    ],
+    "sourceIds": [
+      "nordic-sr-2019",
+      "nordic-soccer-2017"
+    ]
+  },
+  {
+    "id": "ee-2",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What is the main limit of the Nordic hamstring evidence for gymnastics?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "It comes mostly from soccer and other running sports"
+      },
+      {
+        "id": "b",
+        "label": "It showed more injuries"
+      },
+      {
+        "id": "c",
+        "label": "There is no evidence at all"
+      },
+      {
+        "id": "d",
+        "label": "It was only studied in rats"
+      }
+    ],
+    "sourceIds": [
+      "nordic-sr-2019"
+    ]
+  },
+  {
+    "id": "ee-3",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Back extension holds improve trunk extensor endurance. What can a coach accurately claim?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "They cure disc injuries"
+      },
+      {
+        "id": "b",
+        "label": "They replace a clinician visit for back pain"
+      },
+      {
+        "id": "c",
+        "label": "They prevent spondylolysis"
+      },
+      {
+        "id": "d",
+        "label": "They build an associated capacity; prevention of pars or disc injuries is not established"
+      }
+    ],
+    "sourceIds": [
+      "lumbar-ext-specificity-2015",
+      "lumbar-ext-lbp-2025"
+    ]
+  },
+  {
+    "id": "ee-4",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": true,
+    "prompt": "Which athlete should never be given Jefferson curls?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A young tumbler with back pain on arching that has not been evaluated"
+      },
+      {
+        "id": "b",
+        "label": "A cleared adult who has completed the readiness steps under supervision"
+      },
+      {
+        "id": "c",
+        "label": "Nobody, they suit everyone"
+      },
+      {
+        "id": "d",
+        "label": "Anyone who wants better hamstring flexibility"
+      }
+    ],
+    "sourceIds": [
+      "orthoinfo-spondy",
+      "spondylolysis-review-2011"
+    ]
+  },
+  {
+    "id": "ee-5",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "Backward walking reduced pain and disability in a meta-analysis of:",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Hamstring strains in sprinters"
+      },
+      {
+        "id": "b",
+        "label": "Adults with knee osteoarthritis, as part of rehabilitation"
+      },
+      {
+        "id": "c",
+        "label": "Young gymnasts, as injury prevention"
+      },
+      {
+        "id": "d",
+        "label": "Concussed athletes"
+      }
+    ],
+    "sourceIds": [
+      "backward-walk-2026"
+    ]
+  },
+  {
+    "id": "ee-6",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "applied",
+    "critical": false,
+    "prompt": "What does resisted sled training reliably improve, according to reviews?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "Wrist strength"
+      },
+      {
+        "id": "b",
+        "label": "Early sprint acceleration"
+      },
+      {
+        "id": "c",
+        "label": "Spinal flexibility"
+      },
+      {
+        "id": "d",
+        "label": "Hamstring injury rates in gymnasts"
+      }
+    ],
+    "sourceIds": [
+      "sled-sr-2016",
+      "sled-meta-2018"
+    ]
+  },
+  {
+    "id": "ee-7",
+    "topicId": "exercise-evidence",
+    "kind": "single",
+    "difficulty": "advanced",
+    "critical": false,
+    "prompt": "Which evidence label fits Poliquin steps for preventing knee overuse injuries in gymnasts?",
+    "choices": [
+      {
+        "id": "a",
+        "label": "A validated clinical guideline"
+      },
+      {
+        "id": "b",
+        "label": "Direct injury reduction evidence"
+      },
+      {
+        "id": "c",
+        "label": "Proven harmful"
+      },
+      {
+        "id": "d",
+        "label": "Biomechanical rationale without proven injury reduction"
+      }
+    ],
+    "sourceIds": [
+      "tendon-adaptation-2015",
+      "pf-squat-load-2002"
+    ]
   }
 ]
