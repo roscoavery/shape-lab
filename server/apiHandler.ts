@@ -414,7 +414,7 @@ export async function handleShapeLabApi(
     const handled = await handleMuseApi(req, res, path)
     if (handled) return true
   }
-  if (!API_PATHS.has(path)) return false
+  if (!API_PATHS.has(path) && !path.startsWith('/api/coach-ed/')) return false
 
   if (path === '/api/health') {
     sendJson(res, 200, { ok: true, homeGym: isHomeGym(), mode: persistMode(), holdBuild: 'lace' })
@@ -479,6 +479,11 @@ export async function handleShapeLabApi(
   const gate = await gateApiRequest(req, res, path)
   if (gate.handled) return true
   const viewer = gate.user
+
+  if (path.startsWith('/api/coach-ed/')) {
+    const { handleCoachEdApi } = await import('./coachEd/routes.ts')
+    return handleCoachEdApi(req, res, path, viewer)
+  }
 
   // Gyms. Shapelab admin manages them; a gym owner sees their own gym.
   if (path === '/api/gyms') {

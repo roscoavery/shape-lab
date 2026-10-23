@@ -45,6 +45,7 @@ const HISTORY_FILES = new Set([
   'data/coach-content.json',
   'data/learn-notes.json',
   'data/shape-copy.json',
+  'data/coach-ed.json',
 ])
 
 function snapshotHistory(rel: string): void {

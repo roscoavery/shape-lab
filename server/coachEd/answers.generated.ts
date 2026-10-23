@@ -2,494 +2,692 @@
 // Server only. Nothing under src/ may import this file.
 import type { QuestionAnswer } from '../../src/content/coachEd/types.ts'
 
-export const QUESTION_ANSWERS: QuestionAnswer[] = [
+export type ServerQuestion = QuestionAnswer & { topicId: string; critical: boolean }
+
+export const QUESTION_ANSWERS: ServerQuestion[] = [
   {
     "id": "scope-1",
+    "topicId": "scope",
+    "critical": true,
     "answerId": "b",
     "explain": "Return to activity is a medical decision. Coaches follow the clinician plan and do not clear athletes."
   },
   {
     "id": "scope-2",
+    "topicId": "scope",
+    "critical": true,
     "answerId": "d",
     "explain": "Coaches notice, protect, and report. Naming, testing, and grading belong to a clinician."
   },
   {
     "id": "scope-3",
+    "topicId": "scope",
+    "critical": false,
     "answerId": "a",
     "explain": "Coaches do not promise time frames. Recovery depends on the injury and the athlete, and a clinician sets the plan."
   },
   {
     "id": "scope-4",
+    "topicId": "scope",
+    "critical": false,
     "answerId": "b",
     "explain": "Facts help the clinician. Guesses and opinions do not."
   },
   {
     "id": "load-1",
+    "topicId": "load",
+    "critical": false,
     "answerId": "d",
     "explain": "Overuse injuries build gradually from repeated load with too little recovery. The others are single events."
   },
   {
     "id": "load-2",
+    "topicId": "load",
+    "critical": false,
     "answerId": "b",
     "explain": "Growth plates and apophyses are weaker than the nearby tendon and bone, so repeated load can irritate or injure them."
   },
   {
     "id": "load-3",
+    "topicId": "load",
+    "critical": false,
     "answerId": "c",
     "explain": "Pain at rest, at night, in one spot, or getting worse is a red flag for a bone or growth area injury."
   },
   {
     "id": "load-4",
+    "topicId": "load",
+    "critical": false,
     "answerId": "a",
     "explain": "The module labels this as uncertain and does not invent a number."
   },
   {
     "id": "tis-1",
+    "topicId": "tissues",
+    "critical": false,
     "answerId": "a",
     "explain": "Ligaments connect bone to bone. Tendons connect muscle to bone."
   },
   {
     "id": "tis-2",
+    "topicId": "tissues",
+    "critical": false,
     "answerId": "b",
     "explain": "A sprain is a ligament injury. A strain is a muscle or tendon injury."
   },
   {
     "id": "tis-3",
+    "topicId": "tissues",
+    "critical": false,
     "answerId": "d",
     "explain": "Growth plates are made of cartilage near the ends of long bones and are the last portion to harden."
   },
   {
     "id": "tis-4",
+    "topicId": "tissues",
+    "critical": true,
     "answerId": "b",
     "explain": "Coaches must not test or stress an injured joint. Only a clinician examines stability and grades a sprain."
   },
   {
     "id": "tis-5",
+    "topicId": "tissues",
+    "critical": false,
     "answerId": "a",
     "explain": "Tendons adapt slowly to load, which is why tendinopathy builds gradually and is rehabilitated with graded loading."
   },
   {
     "id": "fx-1",
+    "topicId": "fractures",
+    "critical": false,
     "answerId": "c",
     "explain": "Growth plates are cartilage near the ends of long bones in children. Fractures there need prompt attention."
   },
   {
     "id": "fx-2",
+    "topicId": "fractures",
+    "critical": false,
     "answerId": "c",
     "explain": "Being able to move a joint does not rule out a fracture. Some non-displaced growth plate fractures cannot be seen on X-ray, so the clinical exam matters."
   },
   {
     "id": "fx-3",
+    "topicId": "fractures",
+    "critical": true,
     "answerId": "d",
     "explain": "Deformity with loss of circulation is an emergency. Keep the athlete still and call 911."
   },
   {
     "id": "fx-4",
+    "topicId": "fractures",
+    "critical": false,
     "answerId": "a",
     "explain": "AAOS OrthoInfo says Type II fractures are the most common type of growth plate fracture."
   },
   {
     "id": "fx-5",
+    "topicId": "fractures",
+    "critical": false,
     "answerId": "b",
     "explain": "Type V is a compression crush of the growth plate and is rare."
   },
   {
     "id": "heal-1",
+    "topicId": "healing",
+    "critical": false,
     "answerId": "a",
     "explain": "Pain often settles before tissue is strong again. Clearance comes from the clinician."
   },
   {
     "id": "heal-2",
+    "topicId": "healing",
+    "critical": false,
     "answerId": "c",
     "explain": "Return to impact depends on strength, control, and clearance as well as tissue healing."
   },
   {
     "id": "heal-3",
+    "topicId": "healing",
+    "critical": false,
     "answerId": "d",
     "explain": "The module does not fabricate recovery estimates."
   },
   {
     "id": "heal-4",
+    "topicId": "healing",
+    "critical": false,
     "answerId": "b",
     "explain": "The Bern consensus describes a continuum with decisions based on criteria rather than only time."
   },
   {
     "id": "em-1",
+    "topicId": "emergency",
+    "critical": true,
     "answerId": "d",
     "explain": "Unresponsive and not breathing normally is a cardiac emergency. Call 911, start compressions, and use an AED as soon as it is available."
   },
   {
     "id": "em-2",
+    "topicId": "emergency",
+    "critical": true,
     "answerId": "b",
     "explain": "Deformity with numbness is an emergency."
   },
   {
     "id": "em-3",
+    "topicId": "emergency",
+    "critical": true,
     "answerId": "a",
     "explain": "When in doubt, choose the safer, higher level."
   },
   {
     "id": "em-4",
+    "topicId": "emergency",
+    "critical": false,
     "answerId": "b",
     "explain": "An emergency action plan assigns roles and speeds the response."
   },
   {
     "id": "em-5",
+    "topicId": "emergency",
+    "critical": false,
     "answerId": "d",
     "explain": "Inability to bear weight and bone tenderness are the types of findings the Ottawa rules use to prompt an X-ray decision by a clinician."
   },
   {
     "id": "con-1",
+    "topicId": "concussion",
+    "critical": true,
     "answerId": "a",
     "explain": "CDC steps: stop play, remove the athlete, notify parents, document. Return is a medical decision."
   },
   {
     "id": "con-2",
+    "topicId": "concussion",
+    "critical": true,
     "answerId": "b",
     "explain": "Loss of consciousness is not required. A bump, blow, or jolt to the head or body can cause a concussion."
   },
   {
     "id": "con-3",
+    "topicId": "concussion",
+    "critical": true,
     "answerId": "d",
     "explain": "Unequal pupils are on the CDC list of concussion danger signs."
   },
   {
     "id": "con-4",
+    "topicId": "concussion",
+    "critical": true,
     "answerId": "a",
     "explain": "A worsening headache that does not go away is a danger sign."
   },
   {
     "id": "con-5",
+    "topicId": "concussion",
+    "critical": false,
     "answerId": "c",
     "explain": "CDC notes that signs may be delayed, which is why the athlete is monitored and kept out the day of the injury."
   },
   {
     "id": "con-6",
+    "topicId": "concussion",
+    "critical": false,
     "answerId": "b",
     "explain": "The figure describes symptom recovery in general. Each athlete is cleared by a healthcare provider and returns in steps."
   },
   {
     "id": "sp-1",
+    "topicId": "spine-emergency",
+    "critical": true,
     "answerId": "d",
     "explain": "Neck pain with tingling after a fall is treated as a possible spine injury. Keep still and call 911."
   },
   {
     "id": "sp-2",
+    "topicId": "spine-emergency",
+    "critical": true,
     "answerId": "c",
     "explain": "A coach cannot rule out a spine injury by checking movement."
   },
   {
     "id": "sp-3",
+    "topicId": "spine-emergency",
+    "critical": true,
     "answerId": "a",
     "explain": "Unnecessary movement can cause harm. Wait for trained responders unless life-saving action or scene safety requires moving."
   },
   {
     "id": "sp-4",
+    "topicId": "spine-emergency",
+    "critical": false,
     "answerId": "c",
     "explain": "They can occur together and a fall that causes one should make you consider the other."
   },
   {
     "id": "an-1",
+    "topicId": "ankle",
+    "critical": false,
     "answerId": "d",
     "explain": "Lateral ankle sprains most often involve the ATFL, and the CFL in more severe cases."
   },
   {
     "id": "an-2",
+    "topicId": "ankle",
+    "critical": false,
     "answerId": "a",
     "explain": "Lateral sprains follow a sudden inward roll of the foot."
   },
   {
     "id": "an-3",
+    "topicId": "ankle",
+    "critical": false,
     "answerId": "a",
     "explain": "The rules were built to help exclude fractures. They are a clinician tool."
   },
   {
     "id": "an-4",
+    "topicId": "ankle",
+    "critical": false,
     "answerId": "b",
     "explain": "The syndesmosis is the set of ligaments binding the tibia and fibula just above the ankle."
   },
   {
     "id": "an-5",
+    "topicId": "ankle",
+    "critical": false,
     "answerId": "d",
     "explain": "In a growing child a growth plate fracture can be mistaken for a sprain."
   },
   {
     "id": "kn-1",
+    "topicId": "knee",
+    "critical": false,
     "answerId": "b",
     "explain": "The anterior cruciate ligament is a stabilizing ligament in the knee."
   },
   {
     "id": "kn-2",
+    "topicId": "knee",
+    "critical": true,
     "answerId": "b",
     "explain": "A pop and rapid swelling suggest a significant internal injury. Do not test the knee."
   },
   {
     "id": "kn-3",
+    "topicId": "knee",
+    "critical": false,
     "answerId": "c",
     "explain": "Mechanical symptoms such as catching or locking are typical of meniscal injury."
   },
   {
     "id": "kn-4",
+    "topicId": "knee",
+    "critical": false,
     "answerId": "d",
     "explain": "It is a growth-related overuse condition at the tibial tubercle."
   },
   {
     "id": "kn-5",
+    "topicId": "knee",
+    "critical": true,
     "answerId": "a",
     "explain": "A sudden injury with inability to straighten the knee may be a fracture and needs urgent evaluation."
   },
   {
     "id": "spo-1",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "c",
     "explain": "Spondylolysis is a defect or stress fracture of the pars."
   },
   {
     "id": "spo-2",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "a",
     "explain": "-listhesis means a slip."
   },
   {
     "id": "spo-3",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "c",
     "explain": "Spondylosis is spinal osteoarthritis."
   },
   {
     "id": "spo-4",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "d",
     "explain": "Ankylosing spondylitis is an inflammatory disease that can fuse vertebrae over time."
   },
   {
     "id": "spo-5",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "a",
     "explain": "AAOS names gymnastics among sports with repeated stress and hyperextension of the lumbar spine."
   },
   {
     "id": "spo-6",
+    "topicId": "spondylo",
+    "critical": true,
     "answerId": "a",
     "explain": "Persistent back pain with arching in a young gymnast needs a clinician, and testing by arching can worsen a stress injury."
   },
   {
     "id": "spo-7",
+    "topicId": "spondylo",
+    "critical": false,
     "answerId": "a",
     "explain": "Neurologic changes can signal nerve compression and need emergency care."
   },
   {
     "id": "wr-1",
+    "topicId": "wrist",
+    "critical": false,
     "answerId": "b",
     "explain": "Ganglions are fluid-filled cysts. AAOS says they are not cancerous and most are harmless."
   },
   {
     "id": "wr-2",
+    "topicId": "wrist",
+    "critical": true,
     "answerId": "c",
     "explain": "Do not press, pop, drain, or hit a wrist lump. A clinician confirms what it is."
   },
   {
     "id": "wr-3",
+    "topicId": "wrist",
+    "critical": false,
     "answerId": "a",
     "explain": "AAOS says more than half go away on their own."
   },
   {
     "id": "wr-4",
+    "topicId": "wrist",
+    "critical": false,
     "answerId": "d",
     "explain": "Scaphoid fractures can be missed on early X-rays and can heal poorly if untreated."
   },
   {
     "id": "wr-5",
+    "topicId": "wrist",
+    "critical": false,
     "answerId": "c",
     "explain": "Gymnast wrist is associated with distal radial growth plate stress injury."
   },
   {
     "id": "wr-6",
+    "topicId": "wrist",
+    "critical": false,
     "answerId": "a",
     "explain": "The range is for normal daily activity, not weight-bearing gymnastics."
   },
   {
     "id": "gr-1",
+    "topicId": "growth",
+    "critical": false,
     "answerId": "b",
     "explain": "It is irritation of the growth area at the back of the heel bone."
   },
   {
     "id": "gr-2",
+    "topicId": "growth",
+    "critical": true,
     "answerId": "b",
     "explain": "Night pain, warmth, swelling, or a fall are red flags for other causes such as fracture or infection."
   },
   {
     "id": "gr-3",
+    "topicId": "growth",
+    "critical": false,
     "answerId": "d",
     "explain": "Growth-related overuse is managed by load management and clinician guidance."
   },
   {
     "id": "gr-4",
+    "topicId": "growth",
+    "critical": false,
     "answerId": "b",
     "explain": "Repeated pull or impact at a softer growth area causes pain without a clear single injury."
   },
   {
     "id": "mt-1",
+    "topicId": "muscle-tendon",
+    "critical": false,
     "answerId": "c",
     "explain": "Reviews describe sprinting and extreme hip flexion with the knee straight as common set-ups."
   },
   {
     "id": "mt-2",
+    "topicId": "muscle-tendon",
+    "critical": false,
     "answerId": "c",
     "explain": "Forced stretching of a freshly injured muscle can make it worse."
   },
   {
     "id": "mt-3",
+    "topicId": "muscle-tendon",
+    "critical": true,
     "answerId": "d",
     "explain": "A sudden pop and loss of push-off needs urgent evaluation."
   },
   {
     "id": "mt-4",
+    "topicId": "muscle-tendon",
+    "critical": false,
     "answerId": "b",
     "explain": "The guideline emphasizes well-dosed, exercise-based loading."
   },
   {
     "id": "rc-1",
+    "topicId": "recovery",
+    "critical": true,
     "answerId": "b",
     "explain": "Clearance is a clinician decision."
   },
   {
     "id": "rc-2",
+    "topicId": "recovery",
+    "critical": false,
     "answerId": "b",
     "explain": "Ranges describe groups and vary with the person."
   },
   {
     "id": "rc-3",
+    "topicId": "recovery",
+    "critical": false,
     "answerId": "a",
     "explain": "The ladder moves from clearance to conditioning, low-impact skills, controlled landings, then basic tumbling."
   },
   {
     "id": "rc-4",
+    "topicId": "recovery",
+    "critical": false,
     "answerId": "d",
     "explain": "New symptoms are a stop rule."
   },
   {
     "id": "rc-5",
+    "topicId": "recovery",
+    "critical": false,
     "answerId": "c",
     "explain": "The module is explicit that the stages are teaching labels."
   },
   {
     "id": "pl-1",
+    "topicId": "planes",
+    "critical": false,
     "answerId": "a",
     "explain": "The sagittal plane divides left and right."
   },
   {
     "id": "pl-2",
+    "topicId": "planes",
+    "critical": false,
     "answerId": "b",
     "explain": "A cartwheel travels side to side in the frontal plane."
   },
   {
     "id": "pl-3",
+    "topicId": "planes",
+    "critical": false,
     "answerId": "c",
     "explain": "Twisting is transverse-plane rotation around the long axis."
   },
   {
     "id": "pl-4",
+    "topicId": "planes",
+    "critical": false,
     "answerId": "d",
     "explain": "Flexion and extension are sagittal-plane actions."
   },
   {
     "id": "ja-1",
+    "topicId": "joint-actions",
+    "critical": false,
     "answerId": "c",
     "explain": "Plantarflexion points the foot. Dorsiflexion brings the top of the foot toward the shin."
   },
   {
     "id": "ja-2",
+    "topicId": "joint-actions",
+    "critical": false,
     "answerId": "d",
     "explain": "Abduction moves a limb away from the midline."
   },
   {
     "id": "ja-3",
+    "topicId": "joint-actions",
+    "critical": false,
     "answerId": "a",
     "explain": "Extension of the spine is arching."
   },
   {
     "id": "ja-4",
+    "topicId": "joint-actions",
+    "critical": false,
     "answerId": "b",
     "explain": "A handstand puts the wrist in loaded extension."
   },
   {
     "id": "ja-5",
+    "topicId": "joint-actions",
+    "critical": false,
     "answerId": "a",
     "explain": "Overhead reach needs scapular upward rotation as well as shoulder movement."
   },
   {
     "id": "ld-1",
+    "topicId": "loading",
+    "critical": false,
     "answerId": "a",
     "explain": "Compression is a force on tissue. Flexion, abduction, and dorsiflexion are joint actions."
   },
   {
     "id": "ld-2",
+    "topicId": "loading",
+    "critical": false,
     "answerId": "d",
     "explain": "Absorbing a landing is largely eccentric work."
   },
   {
     "id": "ld-3",
+    "topicId": "loading",
+    "critical": false,
     "answerId": "b",
     "explain": "Head-first landings load the spine along its long axis."
   },
   {
     "id": "ld-4",
+    "topicId": "loading",
+    "critical": false,
     "answerId": "a",
     "explain": "Holding a position is largely isometric."
   },
   {
     "id": "sm-1",
+    "topicId": "stretch-methods",
+    "critical": false,
     "answerId": "c",
     "explain": "Dynamic stretching is controlled active movement."
   },
   {
     "id": "sm-2",
+    "topicId": "stretch-methods",
+    "critical": false,
     "answerId": "a",
     "explain": "The review states the literature does not support autogenic or reciprocal inhibition and favors changes in stretch perception."
   },
   {
     "id": "sm-3",
+    "topicId": "stretch-methods",
+    "critical": false,
     "answerId": "d",
     "explain": "The review concluded changes after single sessions and 3 to 8 week programs are mostly due to modified sensation."
   },
   {
     "id": "sm-4",
+    "topicId": "stretch-methods",
+    "critical": false,
     "answerId": "c",
     "explain": "Bouncing with momentum into end range is not supported and is linked with strain set-ups."
   },
   {
     "id": "sp-p1",
+    "topicId": "stretch-power",
+    "critical": false,
     "answerId": "a",
     "explain": "Short holds are fine and dynamic work follows; long static holds can reduce force output."
   },
   {
     "id": "sp-p2",
+    "topicId": "stretch-power",
+    "critical": false,
     "answerId": "b",
     "explain": "The systematic review found significant reductions are likely with stretches of about 60 seconds or longer."
   },
   {
     "id": "sp-p3",
+    "topicId": "stretch-power",
+    "critical": false,
     "answerId": "b",
     "explain": "Thacker et al. found no significant association with total injuries."
   },
   {
     "id": "sp-p4",
+    "topicId": "stretch-power",
+    "critical": false,
     "answerId": "d",
     "explain": "The module labels this as uncertain."
   },
   {
     "id": "hy-1",
+    "topicId": "splits-hyper",
+    "critical": true,
     "answerId": "a",
     "explain": "Forced end-range stretching is a set-up for strain and for sit-bone injury."
   },
   {
     "id": "hy-2",
+    "topicId": "splits-hyper",
+    "critical": false,
     "answerId": "d",
     "explain": "Hypermobile athletes need control, not more range."
   },
   {
     "id": "hy-3",
+    "topicId": "splits-hyper",
+    "critical": false,
     "answerId": "a",
     "explain": "The Beighton score is a clinical screening tool and conditions are diagnosed by a clinician."
   },
   {
     "id": "hy-4",
+    "topicId": "splits-hyper",
+    "critical": false,
     "answerId": "b",
     "explain": "A bony pull at the sit bone in a growing athlete needs evaluation."
   }

@@ -30,6 +30,9 @@ const ADMIN_WRITE_PATHS = new Set([
   '/api/research',
   '/api/coach-stills',
   '/api/desk-messages',
+  '/api/coach-ed/review',
+  '/api/coach-ed/media',
+  '/api/coach-ed/settings',
 ])
 
 const COACH_WRITE_PATHS = new Set([
