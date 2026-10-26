@@ -60,3 +60,69 @@ export async function stampGuardianLinks(opts: {
   if (!changed) return
   await writeRosterFile({ ...roster, athletes: next })
 }
+
+/**
+ * Parent bootstrap for invite redemption (beta-readiness fix). A parent
+ * account created from an invite has linkedAthleteIds but no roster row of
+ * its own, and the whole client family surface (Parent Home, kids list,
+ * Athlete View entry) is keyed off a parent roster row — so without one
+ * the parent signs in to nothing. This creates that row exactly once:
+ * the id derives from the account id, so re-running finds the same row
+ * instead of duplicating it. The caller then points the account's
+ * rosterProfileId at the row and stamps guardian links, which makes the
+ * existing Parent Home / Athlete View / Parent Gate paths work unchanged.
+ * The parent is never treated as one of the athletes: the row's role is
+ * 'parent' and its linkedAthleteIds are the invite's athletes only.
+ */
+export async function ensureParentRosterProfile(opts: {
+  accountId: string
+  displayName: string
+  linkedAthleteIds: string[]
+}): Promise<{ id: string } | null> {
+  const linked = asIds(opts.linkedAthleteIds)
+  if (!linked.length) return null
+  const id = `par_${opts.accountId}`
+  const roster = await readRosterFile()
+  const athletes = Array.isArray(roster.athletes) ? roster.athletes : []
+  const byId = new Map(
+    athletes.map((row) => {
+      const r = row as Record<string, unknown>
+      return [typeof r.id === 'string' ? r.id : '', r]
+    }),
+  )
+  const childName = linked
+    .map((athleteId) => {
+      const row = byId.get(athleteId)
+      return typeof row?.name === 'string' ? row.name : ''
+    })
+    .filter(Boolean)
+    .join(', ')
+  const existing = byId.get(id)
+  if (existing && existing.role === 'parent') {
+    const merged = [...new Set([...asIds(existing.linkedAthleteIds), ...linked])]
+    const changed =
+      merged.length !== asIds(existing.linkedAthleteIds).length ||
+      (childName && existing.childName !== childName)
+    if (!changed) return { id }
+    const next = athletes.map((row) =>
+      (row as Record<string, unknown>).id === id
+        ? { ...existing, linkedAthleteIds: merged, childName: childName || existing.childName }
+        : row,
+    )
+    await writeRosterFile({ ...roster, athletes: next })
+    return { id }
+  }
+  if (existing) return null
+  const firstName = opts.displayName.trim().split(/\s+/)[0] || opts.displayName
+  const row = {
+    id,
+    name: opts.displayName,
+    firstName,
+    role: 'parent',
+    linkedAthleteIds: linked,
+    childName,
+    createdAt: new Date().toISOString(),
+  }
+  await writeRosterFile({ ...roster, athletes: [...athletes, row] })
+  return { id }
+}

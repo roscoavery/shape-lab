@@ -434,20 +434,63 @@ async function main() {
   const parentCookie = cookieFrom('', parentLogin)
   const parentRows = (await rosterAs(parentCookie)).athletes || []
   const parentRowIds = parentRows.map((row) => row.id)
+  const parentMe = await req('/api/auth/me', { cookie: parentCookie })
+  const parentRowId = parentMe.json?.user?.rosterProfileId || ''
+  const parentAccountId = parentMe.json?.user?.accountId || ''
   ok(
-    'invited parent roster is exactly the linked athletes',
+    'invited parent account is bound to a parent roster row',
+    typeof parentRowId === 'string' && parentRowId.length > 0,
+    JSON.stringify(parentMe.json?.user),
+  )
+  ok(
+    'invited parent roster is exactly the linked athletes plus their own parent row',
     parentRowIds.includes(SAM) &&
       parentRowIds.includes(BLAKE) &&
-      parentRowIds.every((id) => id === SAM || id === BLAKE),
+      parentRowIds.every((id) => id === SAM || id === BLAKE || id === parentRowId),
     parentRowIds.join(','),
   )
+  const rosterAfterParent = await rosterAs(cookie)
+  const parentRowAdmin = athleteRow(rosterAfterParent, parentRowId)
+  ok(
+    'parent bootstrap created a parent row linked to exactly the invited athletes',
+    parentRowAdmin?.role === 'parent' && sameIds(parentRowAdmin?.linkedAthleteIds, [SAM, BLAKE]),
+    JSON.stringify(parentRowAdmin),
+  )
+  ok(
+    'guardian links are stamped on both linked athletes',
+    [SAM, BLAKE].every((id) =>
+      (athleteRow(rosterAfterParent, id)?.guardianRelationships || []).some(
+        (rel) => rel.accountId === parentAccountId || rel.rosterProfileId === parentRowId,
+      ),
+    ),
+  )
 
-  // Athlete invite: binds the existing profile, creates no duplicate.
-  const countBefore = (adminRoster.athletes || []).length
+  // Athlete invite: binds the existing profile as "self", creates no duplicate.
+  const rosterBeforeAthlete = await rosterAs(cookie)
+  const countBefore = (rosterBeforeAthlete.athletes || []).length
+  const multiAthleteInvite = await createInvite('athlete', [SAM, BLAKE])
+  ok(
+    'athlete invite with two athletes is 400',
+    multiAthleteInvite.status === 400,
+    multiAthleteInvite.json?.error || String(multiAthleteInvite.status),
+  )
+  const ghostAthleteInvite = await createInvite('athlete', ['ath_example_ghost'])
+  ok(
+    'athlete invite for a missing profile is 400',
+    ghostAthleteInvite.status === 400,
+    ghostAthleteInvite.json?.error || String(ghostAthleteInvite.status),
+  )
+  const coachLinksInvite = await createInvite('coach', [SAM])
+  const coachLinksPeek = await req(`/api/auth/account-invite?token=${tokenOf(coachLinksInvite.json?.url)}`)
+  ok(
+    'coach invite carries no athlete links even when passed',
+    coachLinksInvite.status === 200 && (coachLinksPeek.json?.athleteIds || []).length === 0,
+    JSON.stringify(coachLinksPeek.json),
+  )
   const athleteInvite = await createInvite('athlete', [SAM])
   const athleteToken = tokenOf(athleteInvite.json?.url)
   ok('admin can create an athlete invitation', athleteInvite.status === 200 && athleteToken.length >= 32)
-  const peekAthlete = await req(`/api/auth/account-invite?token=${encodeURIComponent(athleteToken)}`)
+  const peekAthlete = await req(`/api/auth/account-invite?token=${athleteToken}`)
   ok(
     'athlete invite peeks bound to the existing profile',
     peekAthlete.status === 200 &&
@@ -460,16 +503,47 @@ async function main() {
     body: JSON.stringify({
       token: athleteToken,
       email: `v4-access-invited-athlete-${RUN}@example.com`,
-      password: 'v4-access-invited-password',
+      password: 'v4-access-athlete-password',
       displayName: 'V4 invited athlete',
     }),
   })
   ok(
-    'athlete invite redeems as an athlete linked to the profile',
+    'athlete invite redeems bound to the existing profile as self',
     redeemAthlete.status === 200 &&
       redeemAthlete.json?.user?.role === 'athlete' &&
-      sameIds(redeemAthlete.json?.user?.linkedAthleteIds, [SAM]),
+      redeemAthlete.json?.user?.rosterProfileId === SAM &&
+      (redeemAthlete.json?.user?.linkedAthleteIds || []).length === 0,
     redeemAthlete.json?.error || JSON.stringify(redeemAthlete.json?.user),
+  )
+  const invitedAthleteLogin = await login(`v4-access-invited-athlete-${RUN}@example.com`, 'v4-access-athlete-password')
+  ok('invited athlete can sign in', invitedAthleteLogin.status === 200, String(invitedAthleteLogin.status))
+  const invitedAthleteCookie = cookieFrom('', invitedAthleteLogin)
+  const invitedAthleteRows = ((await rosterAs(invitedAthleteCookie)).athletes || []).map((row) => row.id)
+  ok(
+    'invited athlete roster is exactly their own profile',
+    invitedAthleteRows.length === 1 && invitedAthleteRows[0] === SAM,
+    invitedAthleteRows.join(','),
+  )
+  const athleteInvite2 = await createInvite('athlete', [SAM])
+  const athleteToken2 = tokenOf(athleteInvite2.json?.url)
+  const redeemAthleteTampered = await req('/api/auth/account-invite', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: athleteToken2,
+      email: `v4-access-invited-athlete2-${RUN}@example.com`,
+      password: 'v4-access-athlete-password',
+      displayName: 'V4 invited athlete 2',
+      // Tampering attempts: binding must come from the invite, not the body.
+      rosterProfileId: BLAKE,
+      linkedAthleteIds: [BLAKE],
+    }),
+  })
+  ok(
+    'tampered athlete binding is ignored at redemption',
+    redeemAthleteTampered.status === 200 &&
+      redeemAthleteTampered.json?.user?.rosterProfileId === SAM &&
+      (redeemAthleteTampered.json?.user?.linkedAthleteIds || []).length === 0,
+    redeemAthleteTampered.json?.error || JSON.stringify(redeemAthleteTampered.json?.user),
   )
   const rosterAfterAthleteInvite = await rosterAs(cookie)
   ok(
@@ -478,6 +552,92 @@ async function main() {
       (rosterAfterAthleteInvite.athletes || []).filter((row) => row.id === SAM).length === 1,
     `before ${countBefore} after ${(rosterAfterAthleteInvite.athletes || []).length}`,
   )
+
+  // Failed redemption must not consume the invite.
+  console.log('\nFailed redemption keeps the invite')
+  const failInvite = await createInvite('parent', [BLAKE])
+  const failToken = tokenOf(failInvite.json?.url)
+  const failDup = await req('/api/auth/account-invite', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: failToken,
+      email: parentEmail,
+      password: 'v4-access-parent-password',
+      displayName: 'V4 duplicate attempt',
+    }),
+  })
+  ok('redemption with a duplicate email is 400', failDup.status === 400, failDup.json?.error || String(failDup.status))
+  const failShort = await req('/api/auth/account-invite', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: failToken,
+      email: `v4-access-fail-then-ok-${RUN}@example.com`,
+      password: 'short',
+      displayName: 'V4 short password attempt',
+    }),
+  })
+  ok('redemption with a short password is 400', failShort.status === 400, failShort.json?.error || String(failShort.status))
+  const peekAfterFail = await req(`/api/auth/account-invite?token=${failToken}`)
+  ok(
+    'invite is still valid after failed redemptions',
+    peekAfterFail.status === 200 && peekAfterFail.json?.valid === true,
+    JSON.stringify(peekAfterFail.json),
+  )
+  const failThenOk = await req('/api/auth/account-invite', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: failToken,
+      email: `v4-access-fail-then-ok-${RUN}@example.com`,
+      password: 'v4-access-parent-password',
+      displayName: 'V4 fail then ok',
+    }),
+  })
+  ok(
+    'correct redemption after failures succeeds',
+    failThenOk.status === 200 && failThenOk.json?.authenticated === true,
+    failThenOk.json?.error || String(failThenOk.status),
+  )
+  const peekAfterOk = await req(`/api/auth/account-invite?token=${failToken}`)
+  ok('invite is single-use after the successful redemption', peekAfterOk.json?.valid === false)
+
+  // Concurrent double-use: exactly one redemption may succeed.
+  console.log('\nConcurrent redemption')
+  const raceInvite = await createInvite('coach', [])
+  const raceToken = tokenOf(raceInvite.json?.url)
+  const [raceA, raceB] = await Promise.all([
+    req('/api/auth/account-invite', {
+      method: 'POST',
+      body: JSON.stringify({
+        token: raceToken,
+        email: `v4-access-race-a-${RUN}@example.com`,
+        password: 'v4-access-race-password',
+        displayName: 'V4 race A',
+      }),
+    }),
+    req('/api/auth/account-invite', {
+      method: 'POST',
+      body: JSON.stringify({
+        token: raceToken,
+        email: `v4-access-race-b-${RUN}@example.com`,
+        password: 'v4-access-race-password',
+        displayName: 'V4 race B',
+      }),
+    }),
+  ])
+  const raceStatuses = [raceA.status, raceB.status].sort()
+  ok(
+    'concurrent redemptions yield exactly one success and one rejection',
+    raceStatuses[0] === 200 && raceStatuses[1] === 401,
+    `A ${raceA.status} B ${raceB.status}`,
+  )
+  const raceWinnerEmail =
+    raceA.status === 200 ? `v4-access-race-a-${RUN}@example.com` : `v4-access-race-b-${RUN}@example.com`
+  const raceWinnerLogin = await login(raceWinnerEmail, 'v4-access-race-password')
+  ok('the concurrent winner can sign in', raceWinnerLogin.status === 200, String(raceWinnerLogin.status))
+  const raceLoserEmail =
+    raceA.status === 200 ? `v4-access-race-b-${RUN}@example.com` : `v4-access-race-a-${RUN}@example.com`
+  const raceLoserLogin = await login(raceLoserEmail, 'v4-access-race-password')
+  ok('the concurrent loser has no account', raceLoserLogin.status === 401, String(raceLoserLogin.status))
 
   // Expired invite: module-level, in a scratch data dir (see helper header).
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'shapelab-invite-unit-'))

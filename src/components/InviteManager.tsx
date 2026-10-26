@@ -16,6 +16,13 @@ export function InviteManager({ athletes }: Props) {
   const [copied, setCopied] = useState(false)
 
   const toggleAthlete = (id: string) => {
+    // Athlete invitations bind exactly one existing profile: picking
+    // another athlete replaces the previous pick. Parent invitations keep
+    // the multi-select. The server enforces the same rule.
+    if (role === 'athlete') {
+      setSelectedAthletes((prev) => (prev.includes(id) ? [] : [id]))
+      return
+    }
     setSelectedAthletes((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
     )
@@ -25,8 +32,12 @@ export function InviteManager({ athletes }: Props) {
     setError(null)
     setInviteUrl(null)
     setCopied(false)
-    if ((role === 'parent' || role === 'athlete') && selectedAthletes.length === 0) {
-      setError('Choose at least one athlete for a parent or athlete invitation.')
+    if (role === 'athlete' && selectedAthletes.length !== 1) {
+      setError('Choose the existing athlete profile this login belongs to.')
+      return
+    }
+    if (role === 'parent' && selectedAthletes.length === 0) {
+      setError('Choose the athlete profiles this parent should be linked to.')
       return
     }
     setBusy(true)
@@ -56,8 +67,12 @@ export function InviteManager({ athletes }: Props) {
       <section>
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           Send someone a link to create their own login. The link works once and
-          expires in 7 days. Coaches get a coach account. Parents and athletes
-          get linked to the athlete profiles you choose.
+          expires in 7 days.
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
+          {role === 'coach' && 'Creates a coach login. Athlete access is assigned separately.'}
+          {role === 'parent' && 'Choose the athlete profiles this parent should be linked to.'}
+          {role === 'athlete' && 'Choose the existing athlete profile this login belongs to.'}
         </p>
 
         <div className="mt-3 flex gap-2">
@@ -84,7 +99,9 @@ export function InviteManager({ athletes }: Props) {
         {(role === 'parent' || role === 'athlete') && (
           <div className="mt-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Link to athlete{selectedAthletes.length !== 1 ? 's' : ''}
+              {role === 'athlete'
+                ? 'Athlete profile'
+                : `Link to athlete${selectedAthletes.length !== 1 ? 's' : ''}`}
             </p>
             <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-[var(--panel-border)] p-2">
               {athletes.length === 0 ? (

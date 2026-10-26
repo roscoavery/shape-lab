@@ -21,14 +21,15 @@ import {
 } from './accounts.ts'
 import { clampMaxDevices } from './types.ts'
 import { readAudit, writeAudit } from './audit.ts'
-import { stampGuardianLinks } from './familyLinks.ts'
+import { stampGuardianLinks, ensureParentRosterProfile } from './familyLinks.ts'
 import {
   createInvite,
   peekInvite,
   redeemInvite,
   createAccountInvite,
   peekAccountInvite,
-  redeemAccountInvite,
+  consumeAccountInvite,
+  withInviteLock,
 } from './invites.ts'
 import { isAdmin, isKiosk } from './permissions.ts'
 import { mailEnabledFor, sendInviteEmail } from './mail.ts'
@@ -650,23 +651,68 @@ export async function handleAuthRoutes(
       return true
     }
     const token = body.token || ''
-    const redeemed = await redeemAccountInvite(token)
-    if (!redeemed) {
-      sendJson(res, 401, { error: 'That invitation link is wrong, expired, or already used.' })
-      return true
-    }
     try {
-      const created = await createAccount({
-        email: body.email || '',
-        password: body.password || '',
-        role: redeemed.role,
-        displayName: body.displayName || body.email || 'Account',
-        linkedAthleteIds: redeemed.athleteIds.length > 0 ? redeemed.athleteIds : undefined,
+      // Beta-readiness fix: validate, create the account, and only then
+      // consume the invite, all inside one invite lock. The old flow
+      // consumed first, so a duplicate email or short password burned a
+      // valid invite even though no account was created; and two
+      // concurrent redemptions could both pass the still-open check.
+      // Here a failed creation throws before consume, so the invite stays
+      // valid and the user can fix the mistake and retry. Role and
+      // athlete binding come only from the server-stored invite.
+      const created = await withInviteLock(async () => {
+        const peeked = await peekAccountInvite(token)
+        if (!peeked.valid || !peeked.role) return null
+        const role = peeked.role
+        const athleteIds = peeked.athleteIds ?? []
+        const account = await createAccount({
+          email: body.email || '',
+          password: body.password || '',
+          role,
+          displayName: body.displayName || body.email || 'Account',
+          // Athlete accounts bind to their own profile as "self": the rest
+          // of the app authorizes an athlete by rosterProfileId, not by
+          // linkedAthleteIds, so the invite's single athlete id goes here
+          // and nowhere else. Parent accounts keep linkedAthleteIds.
+          rosterProfileId: role === 'athlete' ? athleteIds[0] : undefined,
+          linkedAthleteIds: role === 'parent' && athleteIds.length > 0 ? athleteIds : undefined,
+        })
+        if (role === 'parent') {
+          // Parent bootstrap: the client family surface (Parent Home, kids
+          // list, Athlete View entry) is keyed off a parent roster row,
+          // which invite redemption never created. Create it once here
+          // (id derives from the account, so repeats find the same row),
+          // point the account at it, and stamp guardian links, so the
+          // existing parent paths work unchanged.
+          const parentRow = await ensureParentRosterProfile({
+            accountId: account.accountId,
+            displayName: account.displayName,
+            linkedAthleteIds: athleteIds,
+          })
+          if (parentRow) {
+            const saved = await updateAccount(account.accountId, { rosterProfileId: parentRow.id })
+            await stampGuardianLinks({
+              accountId: account.accountId,
+              rosterProfileId: parentRow.id,
+              linkedAthleteIds: athleteIds,
+            })
+            account.rosterProfileId = saved.rosterProfileId
+          }
+        }
+        const consumed = await consumeAccountInvite(token)
+        if (!consumed) {
+          throw new Error('That invitation link is wrong, expired, or already used.')
+        }
+        return account
       })
+      if (!created) {
+        sendJson(res, 401, { error: 'That invitation link is wrong, expired, or already used.' })
+        return true
+      }
       const session = await createSession(created.accountId)
       setSessionCookie(req, res, session.id)
       await writeAudit('auth.invite', null, {
-        detail: `redeem ${redeemed.role} invitation`,
+        detail: `redeem ${created.role} invitation`,
       })
       sendJson(res, 200, { authenticated: true, user: created, csrf: session.csrf })
     } catch (err) {

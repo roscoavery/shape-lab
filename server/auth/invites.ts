@@ -6,6 +6,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
 import { readJson, writeJson } from '../persist.ts'
+import { readRosterFile } from '../rosterStore.ts'
 import { findAccountById } from './accounts.ts'
 
 const FILE = 'data/invites.json'
@@ -150,6 +151,13 @@ export async function redeemInvite(token: string): Promise<{ accountId: string }
  * Create an account-creation invite. The invite authorizes creating ONE new
  * account with the specified role. For parent/athlete roles, the athleteIds
  * bind the new account to existing athlete profiles.
+ *
+ * Binding rules (beta-readiness fix): an athlete invite binds exactly ONE
+ * existing athlete profile (that login IS that athlete, via rosterProfileId
+ * at redemption); a parent invite binds one or more existing athletes; a
+ * coach invite carries no athlete links at all. Every linked id must name
+ * an athlete row that exists right now, so an invite can never bind a
+ * login to a phantom or a non-athlete profile.
  */
 export async function createAccountInvite(
   role: 'coach' | 'parent' | 'athlete',
@@ -160,16 +168,40 @@ export async function createAccountInvite(
   if (role !== 'coach' && role !== 'parent' && role !== 'athlete') {
     throw new Error('Invalid role for invitation.')
   }
-  // Parent and athlete invites must bind to at least one existing athlete.
-  if ((role === 'parent' || role === 'athlete') && athleteIds.length === 0) {
+  const ids = [...new Set(
+    (Array.isArray(athleteIds) ? athleteIds : []).filter(
+      (id): id is string => typeof id === 'string' && id.trim().length > 0,
+    ),
+  )]
+  if (role === 'athlete' && ids.length !== 1) {
+    throw new Error('An athlete invitation must choose exactly one existing athlete profile.')
+  }
+  if (role === 'parent' && ids.length === 0) {
     throw new Error('Parent and athlete invitations must link to an athlete profile.')
+  }
+  // Coach invites never carry athlete links, even if the caller passed some.
+  const linked = role === 'coach' ? [] : ids
+  if (linked.length > 0) {
+    const roster = await readRosterFile()
+    const rows = new Map(
+      (Array.isArray(roster.athletes) ? roster.athletes : []).map((row) => {
+        const r = row as { id?: unknown; role?: unknown }
+        return [typeof r.id === 'string' ? r.id : '', typeof r.role === 'string' ? r.role : 'athlete']
+      }),
+    )
+    for (const id of linked) {
+      const rowRole = rows.get(id)
+      if (rowRole === undefined || rowRole === 'parent' || rowRole === 'coach' || rowRole === 'gym_owner') {
+        throw new Error('That athlete profile no longer exists.')
+      }
+    }
   }
   const now = Date.now()
   const token = randomBytes(32).toString('hex')
   const invite: AccountCreationInvite = {
     id: `ainv_${randomBytes(8).toString('hex')}`,
     role,
-    athleteIds: [...athleteIds],
+    athleteIds: [...linked],
     createdBy,
     tokenHash: hashToken(token),
     createdAt: new Date(now).toISOString(),
@@ -206,10 +238,35 @@ export async function peekAccountInvite(token: string): Promise<{
 }
 
 /**
- * Redeem an account-creation invite. Marks it used and returns the authorized
- * role and athlete IDs. The caller creates the account with these values.
+ * In-process invite lock. The gym server is a single Node process, so
+ * serializing the validate → create-account → consume sequence here is
+ * what makes a one-time invite actually one-time: two concurrent
+ * redemptions cannot both pass the still-open check before either writes.
+ * The lock is held only for the redemption sequence, never for peeking.
  */
-export async function redeemAccountInvite(token: string): Promise<{
+let inviteLock: Promise<void> = Promise.resolve()
+export async function withInviteLock<T>(fn: () => Promise<T>): Promise<T> {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const previous = inviteLock
+  inviteLock = previous.then(() => gate)
+  await previous
+  try {
+    return await fn()
+  } finally {
+    release()
+  }
+}
+
+/**
+ * Consume an account-creation invite. Marks it used and returns the
+ * authorized role and athlete IDs. Call this ONLY after account creation
+ * has succeeded, inside withInviteLock, so a failed creation never burns
+ * the invite and a concurrent redemption cannot slip through.
+ */
+export async function consumeAccountInvite(token: string): Promise<{
   role: 'coach' | 'parent' | 'athlete'
   athleteIds: string[]
 } | null> {
@@ -227,4 +284,18 @@ export async function redeemAccountInvite(token: string): Promise<{
   next[idx] = { ...row, usedAt: new Date(now).toISOString() }
   await writeFile(file.invites, next)
   return { role: row.role, athleteIds: [...row.athleteIds] }
+}
+
+/**
+ * Redeem an account-creation invite. Marks it used and returns the authorized
+ * role and athlete IDs. Kept for the module-level probe only: the live
+ * redeem flow must NOT use this (it would burn the invite before account
+ * creation). It peeks, creates the account, then consumes, all inside
+ * withInviteLock. See server/auth/routes.ts.
+ */
+export async function redeemAccountInvite(token: string): Promise<{
+  role: 'coach' | 'parent' | 'athlete'
+  athleteIds: string[]
+} | null> {
+  return consumeAccountInvite(token)
 }

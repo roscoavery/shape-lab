@@ -13,12 +13,26 @@
  * scratch file between two fresh child processes and checks that peek and
  * redeem both refuse the token here, through the real invites module.
  */
+import fs from 'node:fs'
+import path from 'node:path'
 import { createAccountInvite, peekAccountInvite, redeemAccountInvite } from '../server/auth/invites.ts'
 
 const fakeReq = { headers: { host: '127.0.0.1' } }
 const mode = process.argv[2]
 
 if (mode === 'create') {
+  // Invites now validate that linked ids name real athlete rows, so seed the
+  // scratch roster with the example athlete before creating the invite.
+  const dataDir = path.join(process.cwd(), 'data')
+  fs.mkdirSync(dataDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(dataDir, 'roster.json'),
+    JSON.stringify({
+      kind: 'shape-lab-roster',
+      version: 1,
+      athletes: [{ id: 'ath_example_sam', name: 'Sam', createdAt: new Date().toISOString() }],
+    }),
+  )
   const invite = await createAccountInvite('parent', ['ath_example_sam'], 'acct_access_check', fakeReq)
   const token = new URL(invite.url).searchParams.get('invite') || ''
   const peek = await peekAccountInvite(token)
