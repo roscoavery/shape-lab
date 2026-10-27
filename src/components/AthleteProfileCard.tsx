@@ -455,6 +455,28 @@ export function AthleteProfileCard({
           )}
         </div>
       )}
+      {isShapelabAdmin(viewer) && !isRyanAthlete(athlete) && onAthleteChange && (
+        <label className="flex items-center gap-2 text-sm">
+          <span className="font-semibold">Role</span>
+          <select
+            value={profileRole(athlete)}
+            onChange={(e) =>
+              onAthleteChange({
+                ...athlete,
+                role: e.target.value as NonNullable<Athlete['role']>,
+                updatedAt: new Date().toISOString(),
+              })
+            }
+            className="h-10 flex-1 rounded-xl border border-white/15 bg-black/40 px-3 text-white"
+          >
+            {PROFILE_KINDS.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {!canEditProfile && canAdminEditRoster(viewer) && onAthleteChange && (
         <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
           <summary className="cursor-pointer text-sm font-semibold">
@@ -471,28 +493,6 @@ export function AthleteProfileCard({
               showPhoto={false}
             />
           </div>
-          {isShapelabAdmin(viewer) && !isRyanAthlete(athlete) && (
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              <span className="font-semibold">Role</span>
-              <select
-                value={profileRole(athlete)}
-                onChange={(e) =>
-                  onAthleteChange({
-                    ...athlete,
-                    role: e.target.value as NonNullable<Athlete['role']>,
-                    updatedAt: new Date().toISOString(),
-                  })
-                }
-                className="h-10 flex-1 rounded-xl border border-white/15 bg-black/40 px-3 text-white"
-              >
-                {PROFILE_KINDS.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
         </details>
       )}
       {isCoachProfile(viewer) && isAthleteProfile(athlete) && (
