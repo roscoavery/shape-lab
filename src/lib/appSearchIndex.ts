@@ -185,6 +185,7 @@ function clipHits(needle: string, clips: GymClip[]): AppSearchHit[] {
       name: c.name,
       url: c.url,
       keywords: c.keywords,
+      postedBy: c.postedBy,
       createdAt: '',
     }
     if (!itemMatchesQuery(asItem, needle) && !c.collectionName.toLowerCase().includes(needle.toLowerCase())) {

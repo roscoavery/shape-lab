@@ -264,7 +264,13 @@ export function mergeKeywords(a?: string[], b?: string[]): string[] {
 }
 
 export function itemMatchesQuery(item: RefItem, query: string): boolean {
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const words = query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/^@+/, ''))
+    .filter(Boolean)
   if (words.length === 0) return true
   const key = item.url ? socialVideoKey(item.url) : null
   const haystacks = [

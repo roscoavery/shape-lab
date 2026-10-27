@@ -28,7 +28,7 @@ import {
   type VerifiedMuseKey,
 } from './auth/museKeys.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
-import { canonicalSocialUrl, socialPlatform } from '../src/lib/socialUrls.ts'
+import { canonicalSocialUrl, normalizeSocialHandle, socialPlatform } from '../src/lib/socialUrls.ts'
 import { readCoachInterviewFile } from './coachInterviewStore.ts'
 import { readRosterFile, writeRosterFile } from './rosterStore.ts'
 import { readFeedFile, addTextFeedPost } from './feedStore.ts'
@@ -225,6 +225,10 @@ async function handleLibraryAdd(req: IncomingMessage, res: ServerResponse): Prom
   const keywords = Array.isArray(body.keywords)
     ? body.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0).slice(0, 12)
     : []
+  // Creator handle of the account that originally posted the clip, without @.
+  // Reel URLs carry no username in the path, so without this the item can
+  // never be found by searching the creator's handle.
+  const postedBy = normalizeSocialHandle(typeof body.postedBy === 'string' ? body.postedBy : null)
 
   const canonical = canonicalSocialUrl(url)
   const key = itemUrlKey(canonical)
@@ -256,6 +260,7 @@ async function handleLibraryAdd(req: IncomingMessage, res: ServerResponse): Prom
     name: name.slice(0, 120),
     ...(platform ? { kind: platform } : {}),
     ...(keywords.length > 0 ? { keywords } : {}),
+    ...(postedBy ? { postedBy } : {}),
     addedVia: 'muse-connection',
     createdAt: now,
   }
@@ -277,6 +282,70 @@ async function handleLibraryAdd(req: IncomingMessage, res: ServerResponse): Prom
   await writeLibraryFile({ ...library, collections: nextCollections })
   await verified.touch()
   sendJson(res, 201, { item, collection: collectionName })
+  return true
+}
+
+/**
+ * Stamp creator handles onto library items that lack one, matched by
+ * canonical URL. Only fills blanks: an item that already carries a
+ * postedBy is never overwritten, and URLs matching no item are reported
+ * back instead of silently dropped. Searching a creator's handle can
+ * only find items that carry the handle, and most reel URLs have no
+ * username in the path, so this is what makes handle search complete.
+ */
+async function handleLibraryPostedBy(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'library:add')
+  if (!verified) return true
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(await readRequestBody(req)) as Record<string, unknown>
+  } catch {
+    sendJson(res, 400, { error: 'Send JSON with updates: [{url, postedBy}].' })
+    return true
+  }
+  const raw = Array.isArray(body.updates) ? body.updates.slice(0, 500) : []
+  const byKey = new Map<string, string>()
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const { url, postedBy } = entry as Record<string, unknown>
+    if (typeof url !== 'string' || !isHttpUrl(url)) continue
+    const handle = normalizeSocialHandle(typeof postedBy === 'string' ? postedBy : null)
+    if (!handle) continue
+    const key = itemUrlKey(url)
+    if (!byKey.has(key)) byKey.set(key, handle)
+  }
+  if (byKey.size === 0) {
+    sendJson(res, 400, { error: 'No usable updates: each needs a valid url and postedBy handle.' })
+    return true
+  }
+  const library = await readLibraryFile()
+  let stamped = 0
+  let alreadyHad = 0
+  const seenKeys = new Set<string>()
+  for (const col of library.collections as Array<{ items?: Array<Record<string, unknown>> }>) {
+    for (const item of col.items ?? []) {
+      if (!item || typeof item !== 'object' || typeof item.url !== 'string') continue
+      const handle = byKey.get(itemUrlKey(item.url))
+      if (!handle) continue
+      seenKeys.add(itemUrlKey(item.url))
+      if (typeof item.postedBy === 'string' && item.postedBy.trim().length > 0) {
+        alreadyHad += 1
+        continue
+      }
+      item.postedBy = handle
+      stamped += 1
+    }
+  }
+  const unknownUrls = [...byKey.keys()].filter((k) => !seenKeys.has(k))
+  if (stamped > 0) {
+    await writeLibraryFile(library)
+    await verified.touch()
+  }
+  sendJson(res, 200, { stamped, alreadyHad, unknown: unknownUrls.length, unknownUrls })
   return true
 }
 
@@ -1150,6 +1219,7 @@ export async function handleMuseApi(  req: IncomingMessage,
 ): Promise<boolean> {
   if (path === '/api/muse/library') return handleLibraryGet(req, res)
   if (path === '/api/muse/library/items') return handleLibraryAdd(req, res)
+  if (path === '/api/muse/library/posted-by') return handleLibraryPostedBy(req, res)
   if (path === '/api/muse/philosophy') return handlePhilosophy(req, res)
   if (path === '/api/muse/coach-shapes') return handleCoachShapes(req, res)
   if (path === '/api/muse/roster/athletes') return handleRosterAdd(req, res)

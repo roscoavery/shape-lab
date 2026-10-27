@@ -380,6 +380,7 @@ export function ReferenceFeed({ athlete = null, athletes = [], onCompareWithRefe
         name: c.name,
         url: c.url,
         keywords: c.keywords,
+        postedBy: c.postedBy,
         createdAt: '',
       }
       return (

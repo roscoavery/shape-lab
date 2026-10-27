@@ -327,7 +327,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'The feet apart for standing dub take off helps generate torque against floor for contact twist.',
     },
   ],
-  'angle-bhs': [],
+  'angle-bhs': [
+    {
+      who: 'Coach B',
+      url: 'https://www.instagram.com/reel/DfAnrv8N9ss/',
+      watchFor: 'Bounce backhandspring, the shapes, angles, and timing of the round off back handspring connection.',
+      creator: 'coachwithpatience',
+    },
+  ],
   // Skill path steps
   'back-tuck': [
     {
@@ -502,6 +509,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/round-off-zombie.mp4',
       watchFor: 'Round off to zombie shape, connections class at TumbleSmart.',
     },
+    {
+      who: 'Coach B',
+      url: 'https://www.instagram.com/reel/De96ijGB_Ju/',
+      watchFor: 'Snap to hollow on the round off, the key to a good round off back handspring connection.',
+      creator: 'coachwithpatience',
+    },
   ],
   'ro-bhs': [
     {
@@ -549,6 +562,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-bhs-carpet-foam-transition.mp4',
       watchFor:
         'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
+    },
+    {
+      who: 'Coach B',
+      url: 'https://www.instagram.com/reel/DfAnrv8N9ss/',
+      watchFor: 'Bounce backhandspring, the shapes, angles, and timing of the round off back handspring connection.',
+      creator: 'coachwithpatience',
     },
   ],
   'ro-bhs-series': [
@@ -830,6 +849,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Hangtime TNT Gymnastics',
       url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
       watchFor: 'Back handspring zombie fall to hollow.',
+    },
+    {
+      who: 'Coach B',
+      url: 'https://www.instagram.com/reel/DfAnrv8N9ss/',
+      watchFor: 'Bounce backhandspring, the shapes, angles, and timing of the round off back handspring connection.',
+      creator: 'coachwithpatience',
     },
   ],
   'standing-tuck': [
