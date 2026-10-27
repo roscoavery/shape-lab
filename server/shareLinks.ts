@@ -25,6 +25,10 @@ import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { sendJson } from './instagramResolve.ts'
 import { readJson, writeJson } from './persist.ts'
+import {
+  answeredQuestionIds,
+  isValidDateOfBirth,
+} from '../src/lib/intakeQuestions.ts'
 
 export type ShareLinkType = 'intake' | 'intake-open' | 'intake-group' | 'library'
 
@@ -201,13 +205,16 @@ export async function handleShareIntake(
       sendJson(res, 404, { error: 'Invalid or expired link.' })
       return
     }
-    const answered = new Set((athlete.intakeAnswers ?? []).map((a: any) => a.questionId))
+    // Answered means really answered: stored fields count too (a phone
+    // number or birthday filled in the app is already known), and a blank
+    // row left by a skipped question does not count.
+    const answered = answeredQuestionIds(athlete as any)
     sendJson(res, 200, {
       ok: true,
       mode: 'athlete',
       coachName: coach?.name ?? 'Your coach',
       athleteName: athlete.name ?? '',
-      answeredIds: [...answered],
+      answeredIds: answered,
     })
     return
   }
@@ -342,12 +349,35 @@ export async function handleShareIntakeSubmit(
 
 /** Save fresh (non-not_sure) answers to an athlete's intakeAnswers + profile fields. */
 function saveAnswersToAthlete(athlete: any, answers: any[]): void {
-  const existing = new Set((athlete.intakeAnswers ?? []).map((a: any) => a.questionId))
-  const fresh = answers.filter(
-    (a: any) => a?.questionId && !existing.has(a.questionId) && a.answer !== 'not_sure',
+  // Only answers with a real value count. A blank row (a skipped phone
+  // number, an unanswered question) must neither be recorded as answered
+  // nor block the real answer when it arrives later.
+  const existing = new Set(
+    (athlete.intakeAnswers ?? [])
+      .filter((a: any) => a?.questionId && a.answer && a.answer !== 'not_sure')
+      .map((a: any) => a.questionId),
   )
-  athlete.intakeAnswers = [...(athlete.intakeAnswers ?? []), ...fresh]
+  const fresh = answers.filter(
+    (a: any) =>
+      a?.questionId &&
+      !existing.has(a.questionId) &&
+      a.answer !== 'not_sure' &&
+      String(a.answer ?? '').trim() !== '' &&
+      (a.questionId !== 'birthday' || isValidDateOfBirth(a.answer)),
+  )
+  athlete.intakeAnswers = [
+    ...(athlete.intakeAnswers ?? []).filter(
+      (a: any) => a?.questionId && a.answer && a.answer !== 'not_sure',
+    ),
+    // Stamp a missing askedAt: the roster merge keeps the newest askedAt
+    // per question, so an unstamped row would lose to any older row.
+    ...fresh.map((a: any) => ({
+      ...a,
+      askedAt: a.askedAt || new Date().toISOString(),
+    })),
+  ]
   const FIELD_MAP: Record<string, string> = {
+    birthday: 'dateOfBirth',
     parentPhone: 'parentPhone',
     favoriteColor: 'favoriteColor',
     handstandFloor: 'handstandFloor',
@@ -368,6 +398,7 @@ function saveAnswersToAthlete(athlete: any, answers: any[]): void {
   for (const a of fresh) {
     const field = FIELD_MAP[a.questionId]
     if (!field || !a.answer || a.answer === 'not_sure') continue
+    if (a.questionId === 'birthday' && !isValidDateOfBirth(a.answer)) continue
     if (a.questionId === 'shoulderOpen') {
       const num = SHOULDER_NUM[a.answer]
       if (num) athlete[field] = num

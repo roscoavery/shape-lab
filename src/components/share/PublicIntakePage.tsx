@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CORE_INTAKE, type IntakeQuestion } from '../../lib/intakeQuestions'
+import { CORE_INTAKE, isValidDateOfBirth, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
 import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
@@ -99,7 +99,15 @@ function QuestionView({
         )
       )}
       <p className="text-base font-semibold text-white">{q.prompt}</p>
-      {q.kind === 'color' ? (
+      {q.kind === 'date' ? (
+        <input
+          type="date"
+          value={value}
+          max={new Date().toISOString().slice(0, 10)}
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
+        />
+      ) : q.kind === 'color' ? (
         <div className="mt-4 grid grid-cols-4 gap-2">
           {q.options!.map((o) => {
             const swatch = FAVORITE_COLORS.find((c) => c.id === o.value)?.swatch ?? '#888'
@@ -406,7 +414,13 @@ export function PublicIntakePage({ token }: { token: string }) {
       const payload: any = {
         answers: questions
           .filter((q) => q.kind !== 'photo')
-          .map((q) => ({ questionId: q.id, answer: answers[q.id] ?? '' })),
+          .map((q) => ({
+            questionId: q.id,
+            answer: answers[q.id] ?? '',
+            // The roster merge keeps the newest askedAt per question: a row
+            // without one always loses to an older row, even a blank one.
+            askedAt: new Date().toISOString(),
+          })),
         workingTowards,
       }
       if (photoDataUrl) payload.photoDataUrl = photoDataUrl
@@ -461,6 +475,8 @@ export function PublicIntakePage({ token }: { token: string }) {
   const last = qIndex >= questions.length - 1
   const isNew = mode !== 'athlete'
   const photoRequired = q?.kind === 'photo' && !photoDataUrl
+  // Birthday is necessary info: the link does not move on without a real date.
+  const birthdayRequired = q?.kind === 'date' && !isValidDateOfBirth(answers[q.id] ?? '')
 
   return (
     <div className="min-h-dvh bg-[#0a1014] px-4 py-8">
@@ -658,16 +674,15 @@ export function PublicIntakePage({ token }: { token: string }) {
                   type="button"
                   onClick={() => {
                     if (last) {
-                      if (isNew) setStep('towards')
-                      else void submit()
+                      setStep('towards')
                     } else {
                       setQIndex(qIndex + 1)
                     }
                   }}
-                  disabled={submitting || photoRequired}
+                  disabled={submitting || photoRequired || birthdayRequired}
                   className="h-12 flex-[2] rounded-xl bg-sky-400 text-base font-bold text-black disabled:opacity-40"
                 >
-                  {submitting ? 'Saving…' : last ? (isNew ? 'Next' : 'Save answers') : 'Next'}
+                  {submitting ? 'Saving…' : 'Next'}
                 </button>
               </div>
             </div>

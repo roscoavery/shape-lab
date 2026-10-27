@@ -3,6 +3,7 @@ import type { Athlete, ReferencePhoto } from '../../types'
 import {
   applyIntakeField,
   handstandContest,
+  isValidDateOfBirth,
   pendingIntake,
   upsertIntakeAnswer,
 } from '../../lib/intakeQuestions'
@@ -36,6 +37,7 @@ export function PreTestIntake({
   const [index, setIndex] = useState(0)
   const [ready, setReady] = useState(() => pendingIntake(athlete).length === 0)
   const [phone, setPhone] = useState(athlete.parentPhone || '')
+  const [dob, setDob] = useState(athlete.dateOfBirth || '')
   const q = ready ? undefined : queue[index]
 
   const parkNow = (from: Athlete = athlete) => {
@@ -46,6 +48,16 @@ export function PreTestIntake({
         questionId: q.id,
         prompt: q.prompt,
         answer: phone.trim(),
+        askedAt: new Date().toISOString(),
+      })
+      onSave(next)
+    }
+    if (q?.kind === 'date' && isValidDateOfBirth(dob)) {
+      next = applyIntakeField(from, 'birthday', dob)
+      next = upsertIntakeAnswer(next, {
+        questionId: q.id,
+        prompt: q.prompt,
+        answer: dob,
         askedAt: new Date().toISOString(),
       })
       onSave(next)
@@ -191,6 +203,34 @@ export function PreTestIntake({
               className="max-h-64 w-full object-contain"
             />
           )}
+        </div>
+      )}
+      {q.kind === 'date' && (
+        <div className="mt-4 space-y-2">
+          <input
+            type="date"
+            value={dob}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setDob(e.target.value)}
+            className="h-12 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!isValidDateOfBirth(dob)}
+              onClick={() => void answer(dob, dob)}
+              className="h-12 flex-1 rounded-xl bg-[var(--accent)] font-bold text-[var(--on-accent)] disabled:opacity-40"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => void answer('', 'Skipped')}
+              className="h-12 rounded-xl px-4 text-sm text-[var(--muted)]"
+            >
+              Skip for now
+            </button>
+          </div>
         </div>
       )}
       {q.kind === 'skip-phone' && (

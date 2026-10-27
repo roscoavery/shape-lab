@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { FavoriteColor } from '../types'
+import type { FavoriteColor } from '../types.ts'
 
 export const FAVORITE_COLORS: { id: FavoriteColor; label: string; swatch: string }[] = [
   { id: 'red', label: 'Red', swatch: '#fb7185' },
@@ -163,7 +163,15 @@ export function profileThemeStyle(color?: string | null): CSSProperties {
 /** Paint the whole app with a favorite color. Hex only — old Safari drops oklch. */
 export function applyAppTheme(color?: string | null) {
   const t = profileTheme(color)
-  const root = document.documentElement
+  // Reached from the server too (for FAVORITE_COLORS), where there is no
+  // document: resolve it off globalThis so this module stays loadable there.
+  const root = (globalThis as any).document?.documentElement as
+    | {
+        style: { setProperty: (key: string, value: string) => void }
+        dataset: Record<string, string>
+      }
+    | undefined
+  if (!root) return
   root.style.setProperty('--accent', t.accent)
   root.style.setProperty('--accent-dim', t.accentDim)
   root.style.setProperty('--good', t.accent)

@@ -3,15 +3,15 @@
  * Add a row here each week — unanswered prompts show up on the next test.
  */
 
-import type { Athlete, HoldGuess, IntakeAnswer, VUpGuess, WallHoldGuess } from '../types'
-import { FAVORITE_COLORS } from './profileTheme'
+import type { Athlete, HoldGuess, IntakeAnswer, VUpGuess, WallHoldGuess } from '../types.ts'
+import { FAVORITE_COLORS } from './profileTheme.ts'
 
 export type IntakeChoice = { value: string; label: string }
 
 export type IntakeQuestion = {
   id: string
   prompt: string
-  kind: 'choice' | 'skip-phone' | 'photo' | 'color'
+  kind: 'choice' | 'skip-phone' | 'photo' | 'color' | 'date'
   options?: IntakeChoice[]
   stillShapeId?: string
   /** Direct still image file (under /references/) — overrides stillShapeId. */
@@ -24,6 +24,19 @@ export type IntakeQuestion = {
   weekly?: boolean
   /** Conditional: only ask when this returns true for the athlete's current answers. */
   showIf?: (answers: Record<string, string>) => boolean
+}
+
+/** Birthday, YYYY-MM-DD. Must be a real calendar date and not in the future. */
+export function isValidDateOfBirth(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const d = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return false
+  if (d.toISOString().slice(0, 10) !== value) return false
+  const today = new Date().toISOString().slice(0, 10)
+  if (value > today) return false
+  if (Number(value.slice(0, 4)) < 1900) return false
+  return true
 }
 
 export const HOLD_OPTS: IntakeChoice[] = [
@@ -84,6 +97,21 @@ export const WEEK_ENERGY_OPTS: IntakeChoice[] = [
 
 /** Permanent pre-test questions. Weekly extras go in WEEKLY_INTAKE. */
 export const CORE_INTAKE: IntakeQuestion[] = [
+  // Identity first: birthday and parent phone are necessary for every
+  // athlete profile and account, so they lead, before the skill questions.
+  // The skill questions keep their established relative order after them.
+  {
+    id: 'birthday',
+    prompt: 'What is your birthday?',
+    kind: 'date',
+    once: true,
+  },
+  {
+    id: 'parentPhone',
+    prompt: 'Parent phone, skip if you do not know it yet.',
+    kind: 'skip-phone',
+    once: true,
+  },
   {
     id: 'shoulderOpen',
     prompt: 'How hard is fully open shoulders for you? 1 is easy, 5 is hardest.',
@@ -218,12 +246,6 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     kind: 'photo',
     once: true,
   },
-  {
-    id: 'parentPhone',
-    prompt: 'Parent phone, skip if you do not know it yet.',
-    kind: 'skip-phone',
-    once: true,
-  },
 ]
 
 /**
@@ -254,6 +276,7 @@ export function weeklyQuestionId(baseId: string, week = isoWeekKey()): string {
 }
 
 function hasAnswer(athlete: Athlete, id: string): boolean {
+  if (id === 'birthday') return Boolean(athlete.dateOfBirth)
   if (id === 'photo') return Boolean(athlete.photoDataUrl)
   if (id === 'parentPhone') return Boolean(athlete.parentPhone || athlete.phone)
   if (id === 'favoriteColor') return Boolean(athlete.favoriteColor)
@@ -262,7 +285,27 @@ function hasAnswer(athlete: Athlete, id: string): boolean {
   if (id === 'hollowHold') return Boolean(athlete.hollowHold)
   if (id === 'supermanHold') return Boolean(athlete.supermanHold)
   if (id === 'vUps') return Boolean(athlete.vUps)
-  return (athlete.intakeAnswers ?? []).some((a) => a.questionId === id)
+  // A blank or "not sure" row is not an answer: it must not mark the
+  // question answered, or a skipped question is never asked again.
+  return (athlete.intakeAnswers ?? []).some(
+    (a) => a.questionId === id && Boolean(a.answer) && a.answer !== 'not_sure',
+  )
+}
+
+/**
+ * Every CORE_INTAKE question id this athlete has actually answered, from
+ * stored profile fields as well as recorded intake answers. The public
+ * intake link uses this so already-known info is not asked again.
+ */
+export function answeredQuestionIds(athlete: Athlete): string[] {
+  const ids = new Set<string>()
+  for (const a of athlete.intakeAnswers ?? []) {
+    if (a.questionId && a.answer && a.answer !== 'not_sure') ids.add(a.questionId)
+  }
+  for (const q of CORE_INTAKE) {
+    if (hasAnswer(athlete, q.id)) ids.add(q.id)
+  }
+  return [...ids]
 }
 
 export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
@@ -309,6 +352,9 @@ export function upsertIntakeAnswer(
 }
 
 export function applyIntakeField(athlete: Athlete, id: string, value: string): Athlete {
+  if (id === 'birthday') {
+    return isValidDateOfBirth(value) ? { ...athlete, dateOfBirth: value } : athlete
+  }
   if (id === 'parentPhone') return { ...athlete, parentPhone: value }
   if (id === 'favoriteColor') return { ...athlete, favoriteColor: value as Athlete['favoriteColor'] }
   if (id === 'handstandFloor') return { ...athlete, handstandFloor: value as HoldGuess }
