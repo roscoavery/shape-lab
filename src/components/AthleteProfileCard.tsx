@@ -52,6 +52,7 @@ import { MentionText } from './MentionText'
 import { ProfileHighlights } from './stories/ProfileHighlights'
 import { StoryComposer } from './stories/StoryComposer'
 import { StoryViewer } from './stories/StoryViewer'
+import { ProfilePhotoViewer } from './ProfilePhotoViewer'
 import { ProfileFieldsEditor } from './today/ProfileFieldsEditor'
 import { SkillGoalPicker } from './coach/SkillGoalPicker'
 import { AthleteIntakeLink } from './share/AthleteIntakeLink'
@@ -175,6 +176,7 @@ export function AthleteProfileCard({
   const [watchStories, setWatchStories] = useState<GymStory[] | null>(null)
   const [watchPass, setWatchPass] = useState<FeedPost | null>(null)
   const [storySheet, setStorySheet] = useState(false)
+  const [photoExpanded, setPhotoExpanded] = useState(false)
   const [editAnswers, setEditAnswers] = useState(false)
   const nameEdit = useProfileDraft(onAthleteChange)
   const adminFix = useProfileDraft(onAthleteChange)
@@ -341,10 +343,22 @@ export function AthleteProfileCard({
     viewStories()
   }
 
+  // Someone else's profile photo expands to the full picture so a coach
+  // can actually see the face. Your own tap still opens your story sheet,
+  // and a profile with no photo keeps the stories behavior. Stories stay
+  // reachable from the Stories stat below.
+  const openAvatar = () => {
+    if (!own && athlete.photoDataUrl) {
+      setPhotoExpanded(true)
+      return
+    }
+    openStories()
+  }
+
   const body = (
     <div className="flex flex-col gap-5">
       <header id="tour-profile-header" className="flex items-start gap-4">
-        <button type="button" onClick={openStories} className="shrink-0">
+        <button type="button" onClick={openAvatar} className="shrink-0">
           <span
             className={`block rounded-full p-[3px] ${
               live.length
@@ -905,6 +919,13 @@ export function AthleteProfileCard({
           highlights={viewer ? storiesFile.highlights.filter((h) => h.ownerId === viewer.id) : []}
           onClose={() => setWatchStories(null)}
           onHighlightSaved={reloadStories}
+        />
+      )}
+      {photoExpanded && athlete.photoDataUrl && (
+        <ProfilePhotoViewer
+          src={athlete.photoDataUrl}
+          name={athlete.name}
+          onClose={() => setPhotoExpanded(false)}
         />
       )}
       {watchPass && (
