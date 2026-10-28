@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import type { Athlete } from '../../types'
+import type { Athlete, AthleteSkillGoal } from '../../types'
 import { createId } from '../../lib/storage'
 import { displayPersonName, namesMatch } from '../../lib/classStation'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
-import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS, type AcroTrack } from '../../lib/acroSkills'
+import type { UnifiedSkill } from '../../config/unifiedSkillSeed'
+import { SkillMapView } from '../learn/SkillMapView'
+import { AcroMapView } from '../learn/AcroMapView'
 
 type Props = {
   coach: Athlete
@@ -16,46 +18,61 @@ type Props = {
 
 type Step = 'name' | 'snapshot' | 'skills'
 
-const TRACK_RGB: Record<AcroTrack, string> = {
-  standing: '192,132,252',
-  front: '251,146,60',
-  side: '96,165,250',
-  other: '74,222,128',
-}
+type Pick = { id: string; name: string }
 
 /**
  * Fast athlete profile creation for clinics. Stepped flow:
  * 1. Name (quick)
  * 2. Snapshot (optional, can skip)
- * 3. Working towards: acro skill map, be quick, pick up to 3, Done.
+ * 3. Working towards: main or acro skill map, be quick, pick up to 3, Done — or skip.
  */
 export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, onAdded }: Props) {
   const [step, setStep] = useState<Step>('name')
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
   const [photo, setPhoto] = useState('')
-  const [workingTowards, setWorkingTowards] = useState<string[]>([])
+  const [map, setMap] = useState<'main' | 'acro'>('main')
+  const [workingTowards, setWorkingTowards] = useState<Pick[]>([])
 
   const firstName = first.trim()
   const lastName = last.trim()
   const canSave = firstName.length > 0 && lastName.length > 0
   const existing = canSave ? athletes.find((a) => namesMatch(a, firstName, lastName)) : undefined
 
-  const toggleWorking = (id: string) => {
+  // The maps shine a skill's path on the first tap and only call this on
+  // a second tap on the same skill, exactly as on the intake link.
+  const toggleWorking = (skill: UnifiedSkill) => {
     setWorkingTowards((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.some((p) => p.id === skill.id)) return prev.filter((p) => p.id !== skill.id)
       if (prev.length >= 3) return prev
-      return [...prev, id]
+      return [...prev, { id: skill.id, name: skill.name }]
     })
   }
 
-  const save = () => {
+  const save = (picks: Pick[] = workingTowards) => {
     if (!canSave) return
+    const now = new Date().toISOString()
+    const pickIds = picks.map((p) => p.id)
+    // Goals carry the display names so picks show under "Working towards"
+    // on the profile, as intake picks do. Acro ids keep working in the
+    // check-in board and recap lists, which resolve by acro id.
+    const freshGoals = (existingGoals: AthleteSkillGoal[] | undefined): AthleteSkillGoal[] => {
+      const seen = new Set((existingGoals ?? []).map((g) => g.label.toLowerCase()))
+      const fresh = picks
+        .filter((p) => !seen.has(p.name.toLowerCase()))
+        .map((p) => ({ id: createId('sg'), label: p.name, setAt: now, source: 'coach' as const }))
+      return [...(existingGoals ?? []), ...fresh]
+    }
     if (existing) {
       const updated: Athlete = {
         ...existing,
-        ...(workingTowards.length > 0
-          ? { acroWorkingTowards: Array.from(new Set([...(existing.acroWorkingTowards ?? []), ...workingTowards])).slice(0, 3) }
+        ...(pickIds.length > 0
+          ? {
+              acroWorkingTowards: Array.from(
+                new Set([...(existing.acroWorkingTowards ?? []), ...pickIds]),
+              ).slice(0, 3),
+              skillGoals: freshGoals(existing.skillGoals),
+            }
           : {}),
       }
       onAthletesChange(athletes.map((a) => (a.id === existing.id ? updated : a)))
@@ -63,7 +80,6 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
       onClose()
       return
     }
-    const now = new Date().toISOString()
     const athlete: Athlete = {
       id: createId('ath'),
       name: displayPersonName(firstName, lastName),
@@ -76,7 +92,8 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
       needsOnboarding: true,
       photoDataUrl: photo || undefined,
       createdAt: now,
-      ...(workingTowards.length > 0 ? { acroWorkingTowards: workingTowards } : {}),
+      ...(pickIds.length > 0 ? { acroWorkingTowards: pickIds } : {}),
+      ...(pickIds.length > 0 ? { skillGoals: freshGoals(undefined) } : {}),
     }
     if (athlete.photoDataUrl) rememberLocalPhoto(athlete.id, athlete.photoDataUrl)
     onAthletesChange([...athletes, athlete])
@@ -208,51 +225,53 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                 Be quick! Pick up to 3 you can reasonably work towards now.
               </p>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                {workingTowards.length}/3 selected
+                Tap a skill once to see the steps to get there. Tap it again to pick it.
+                Skip this step if you&apos;re not sure.
               </p>
-              <div className="mt-3 max-h-[50vh] space-y-3 overflow-y-auto">
-                {[7, 6, 5, 4, 3, 2, 1].map((level) => (
-                  <div key={level}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">
-                      Level {level}
-                    </p>
-                    <div className="mt-1 grid grid-cols-4 gap-1.5">
-                      {ACRO_TRACKS.map((track) => {
-                        const skills = ACRO_SKILLS.filter((s) => s.track === track && s.level === level)
-                        const rgb = TRACK_RGB[track]
-                        if (skills.length === 0) return <div key={track} />
-                        return (
-                          <div key={track} className="space-y-1.5">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">
-                              {ACRO_TRACK_LABELS[track]}
-                            </p>
-                            {skills.map((sk) => {
-                              const on = workingTowards.includes(sk.id)
-                              const disabled = !on && workingTowards.length >= 3
-                              return (
-                                <button
-                                  key={sk.id}
-                                  type="button"
-                                  onClick={() => toggleWorking(sk.id)}
-                                  disabled={disabled}
-                                  className="w-full rounded-lg border-2 px-1.5 py-2 text-center text-[10px] font-bold leading-tight text-white disabled:opacity-30"
-                                  style={{
-                                    background: on ? `rgba(${rgb},0.25)` : '#000000',
-                                    borderColor: `rgba(${rgb},${on ? 1 : 0.6})`,
-                                    boxShadow: on ? `0 0 8px rgba(${rgb},0.5)` : 'none',
-                                  }}
-                                >
-                                  {sk.name}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMap('main')}
+                  className={`h-11 rounded-xl text-sm font-bold ${
+                    map === 'main'
+                      ? 'bg-sky-400 text-black'
+                      : 'border border-white/15 text-white/70'
+                  }`}
+                >
+                  Main skill map
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMap('acro')}
+                  className={`h-11 rounded-xl text-sm font-bold ${
+                    map === 'acro'
+                      ? 'bg-sky-400 text-black'
+                      : 'border border-white/15 text-white/70'
+                  }`}
+                >
+                  Acro map
+                </button>
               </div>
+              <p className="mt-3 text-xs text-white/50">
+                {workingTowards.length}/3 selected
+                {workingTowards.length > 0 && `: ${workingTowards.map((p) => p.name).join(', ')}`}
+              </p>
+              <div className="mt-2 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
+                {map === 'main' ? (
+                  <SkillMapView onTileTap={toggleWorking} />
+                ) : (
+                  <AcroMapView onTileTap={toggleWorking} />
+                )}
+              </div>
+              {workingTowards.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setWorkingTowards([])}
+                  className="mt-2 text-sm font-semibold text-sky-300"
+                >
+                  Clear selection
+                </button>
+              )}
               <div className="mt-4 flex justify-between">
                 <button
                   type="button"
@@ -261,13 +280,22 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                 >
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={save}
-                  className="rounded-lg bg-[var(--accent)] px-8 py-2.5 text-sm font-semibold text-[var(--on-accent)]"
-                >
-                  Done
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => save([])}
+                    className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => save()}
+                    className="rounded-lg bg-[var(--accent)] px-8 py-2.5 text-sm font-semibold text-[var(--on-accent)]"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </>
           )}
