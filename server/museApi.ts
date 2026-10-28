@@ -35,7 +35,7 @@ import { readFeedFile, addTextFeedPost } from './feedStore.ts'
 import { readCoachContentFile, writeCoachContentFile } from './coachContentStore.ts'
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
-import { readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
+import { mergeChalkboardBoards, readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import { appendHoldLog, HOLD_LOG_SHAPES, roundHoldSecondsUp } from './holdLog.ts'
 
 const WINDOW_DAYS = 30
@@ -1209,6 +1209,60 @@ async function handleChalkboardDeleteItem(
   return true
 }
 
+async function handleChalkboardMerge(
+  req: IncomingMessage,
+  res: ServerResponse,
+  boardId: string,
+): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'chalkboards:write')
+  if (!verified) return true
+  const body = await readJsonBody(req)
+  const sourceBoardId =
+    body && typeof body.sourceBoardId === 'string' ? body.sourceBoardId.trim() : ''
+  if (!sourceBoardId) {
+    sendJson(res, 400, { error: 'Send JSON with a sourceBoardId to fold in.' })
+    return true
+  }
+  if (sourceBoardId === boardId) {
+    sendJson(res, 400, { error: 'A chalkboard cannot merge into itself.' })
+    return true
+  }
+  const file = await readChalkboardsFile()
+  const boards = chalkboardBoards(file)
+  if (!findBoard(boards, boardId) || !findBoard(boards, sourceBoardId)) {
+    sendJson(res, 404, { error: 'Chalkboard not found.' })
+    return true
+  }
+  const merged = mergeChalkboardBoards(
+    boards,
+    file.removedBoardIds ?? [],
+    boardId,
+    sourceBoardId,
+    new Date().toISOString(),
+  )
+  await writeChalkboardsFile({
+    ...file,
+    boards: merged.boards,
+    removedBoardIds: merged.removedBoardIds,
+  })
+  await verified.touch()
+  const target = merged.boards.find((b) => b.id === boardId)
+  const targetItemCount = Array.isArray(target?.items) ? target.items.length : 0
+  sendJson(res, 200, {
+    merged: true,
+    targetBoardId: boardId,
+    removedBoardId: sourceBoardId,
+    targetItemCount,
+    moved: merged.moved,
+    skipped: merged.skipped,
+  })
+  return true
+}
+
 /**
  * Entry point from handleShapeLabApi. Returns true when the request was
  * handled here (including auth failures).
@@ -1234,6 +1288,10 @@ export async function handleMuseApi(  req: IncomingMessage,
     return req.method === 'GET' ? handleSkillMapsGet(req, res) : handleSkillMapsPost(req, res)
   }
   if (path === '/api/muse/chalkboards') return handleChalkboardsList(req, res)
+  const chalkboardMergeMatch = /^\/api\/muse\/chalkboards\/([^/]+)\/merge$/.exec(path)
+  if (chalkboardMergeMatch) {
+    return handleChalkboardMerge(req, res, decodeURIComponent(chalkboardMergeMatch[1]))
+  }
   const chalkboardItemsMatch = /^\/api\/muse\/chalkboards\/([^/]+)\/items$/.exec(path)
   if (chalkboardItemsMatch) {
     return handleChalkboardAddItem(req, res, decodeURIComponent(chalkboardItemsMatch[1]))

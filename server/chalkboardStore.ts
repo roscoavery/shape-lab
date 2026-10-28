@@ -97,6 +97,72 @@ function union(existing: unknown[], incoming: unknown[]): unknown[] {
   return [...map.values()]
 }
 
+function isRecord(raw: unknown): raw is Record<string, unknown> {
+  return !!raw && typeof raw === 'object'
+}
+
+export type ChalkboardMergeOutcome = {
+  boards: Record<string, unknown>[]
+  removedBoardIds: string[]
+  moved: { id: string; title: string }[]
+  skipped: { id: string; title: string }[]
+}
+
+/**
+ * Fold one chalkboard into another. Every moved item keeps exactly what
+ * it had (same id, url, pins, loops, creator, createdAt) with only
+ * boardId re-pointed, so relative video links survive — the item-add
+ * endpoint would drop those. The folded board is tombstoned, never
+ * hard-deleted, so a stale client snapshot cannot resurrect it. The
+ * caller must have verified both boards exist and differ.
+ */
+export function mergeChalkboardBoards(
+  boards: unknown[],
+  removedBoardIds: string[],
+  targetId: string,
+  sourceId: string,
+  now: string,
+): ChalkboardMergeOutcome {
+  const rows = boards.filter(isRecord).filter((b) => typeof b.id === 'string')
+  const target = rows.find((b) => b.id === targetId)
+  const source = rows.find((b) => b.id === sourceId)
+  if (!target || !source) {
+    return { boards: rows, removedBoardIds: [...removedBoardIds], moved: [], skipped: [] }
+  }
+  const targetItems = (Array.isArray(target.items) ? target.items : []).filter(isRecord)
+  const sourceItems = (Array.isArray(source.items) ? source.items : []).filter(isRecord)
+  const seen = new Set<string>()
+  for (const item of targetItems) {
+    if (typeof item.url === 'string' && item.url) seen.add(`url:${item.url}`)
+    if (typeof item.title === 'string') seen.add(`title:${item.title}`)
+  }
+  const moved: { id: string; title: string }[] = []
+  const skipped: { id: string; title: string }[] = []
+  const movedItems: Record<string, unknown>[] = []
+  for (const item of sourceItems) {
+    const id = typeof item.id === 'string' ? item.id : ''
+    const title = typeof item.title === 'string' ? item.title : ''
+    const urlDup =
+      typeof item.url === 'string' && item.url !== '' && seen.has(`url:${item.url}`)
+    if (urlDup || seen.has(`title:${title}`)) {
+      skipped.push({ id, title })
+      continue
+    }
+    movedItems.push({ ...item, boardId: targetId })
+    moved.push({ id, title })
+    if (typeof item.url === 'string' && item.url) seen.add(`url:${item.url}`)
+    seen.add(`title:${title}`)
+  }
+  const nextBoards = rows
+    .filter((b) => b.id !== sourceId)
+    .map((b) =>
+      b.id === targetId ? { ...b, items: [...targetItems, ...movedItems], updatedAt: now } : b,
+    )
+  const nextRemoved = [...removedBoardIds]
+  if (!nextRemoved.includes(sourceId)) nextRemoved.push(sourceId)
+  return { boards: nextBoards, removedBoardIds: nextRemoved, moved, skipped }
+}
+
 export async function writeChalkboardsFile(raw: unknown): Promise<DiskChalkboards> {
   const body = raw && typeof raw === 'object' ? (raw as DiskChalkboards) : EMPTY
   const current = await readChalkboardsFile()
