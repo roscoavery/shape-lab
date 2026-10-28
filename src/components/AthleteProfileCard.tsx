@@ -87,6 +87,51 @@ import { TourOfferButton } from './tour/TourOfferButton'
 type Tab = 'posts' | 'passes' | 'stories'
 type Compose = 'story' | 'post' | 'pass' | null
 
+/**
+ * Profile edits stay local until Done/close commits them once. The editor
+ * used to call onChange on every keystroke, so one name edit fired a full
+ * roster save per letter — and a gym-file poll landing mid-edit could apply
+ * an intermediate spelling over the finished one. Committing once, with
+ * exactly what the fields say at Done time, is what makes an edit stick.
+ */
+function useProfileDraft(onCommit?: (next: Athlete) => void) {
+  const [draft, setDraftState] = useState<Athlete | null>(null)
+  const draftRef = useRef<Athlete | null>(null)
+  const baseRef = useRef<Athlete | null>(null)
+  const commitRef = useRef(onCommit)
+  commitRef.current = onCommit
+  const setDraft = (next: Athlete) => {
+    draftRef.current = next
+    setDraftState(next)
+  }
+  const open = (base: Athlete) => {
+    baseRef.current = base
+    setDraft(base)
+  }
+  const commit = () => {
+    const d = draftRef.current
+    const base = baseRef.current
+    draftRef.current = null
+    baseRef.current = null
+    setDraftState(null)
+    if (d && base && d.id === base.id && JSON.stringify(d) !== JSON.stringify(base)) {
+      commitRef.current?.(d)
+    }
+  }
+  // Leaving the card mid-edit keeps what was typed instead of dropping it.
+  useEffect(
+    () => () => {
+      const d = draftRef.current
+      const base = baseRef.current
+      if (d && base && d.id === base.id && JSON.stringify(d) !== JSON.stringify(base)) {
+        commitRef.current?.(d)
+      }
+    },
+    [],
+  )
+  return { draft, setDraft, open, commit }
+}
+
 type Props = {
   athlete: Athlete
   viewer: Athlete | null
@@ -122,6 +167,19 @@ export function AthleteProfileCard({
   const [watchPass, setWatchPass] = useState<FeedPost | null>(null)
   const [storySheet, setStorySheet] = useState(false)
   const [editAnswers, setEditAnswers] = useState(false)
+  const nameEdit = useProfileDraft(onAthleteChange)
+  const adminFix = useProfileDraft(onAthleteChange)
+  const adminDetailsRef = useRef<HTMLDetailsElement | null>(null)
+  const prevProfileIdRef = useRef(athlete.id)
+  useEffect(() => {
+    if (prevProfileIdRef.current === athlete.id) return
+    prevProfileIdRef.current = athlete.id
+    nameEdit.commit()
+    adminFix.commit()
+    setEditAnswers(false)
+    adminDetailsRef.current?.removeAttribute('open')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athlete.id])
   const [seenTick, setSeenTick] = useState(0)
   const [note, setNote] = useState('')
   const [noteAudience, setNoteAudience] = useState<NoteAudience>('athlete')
@@ -437,7 +495,15 @@ export function AthleteProfileCard({
         <div id="tour-profile-edit" className="flex flex-col gap-3">
           <button
             type="button"
-            onClick={() => setEditAnswers((v) => !v)}
+            onClick={() => {
+              if (editAnswers) {
+                nameEdit.commit()
+                setEditAnswers(false)
+              } else {
+                nameEdit.open(athlete)
+                setEditAnswers(true)
+              }
+            }}
             className="self-start rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold"
           >
             {editAnswers ? 'Done editing' : 'Edit name, photo and answers'}
@@ -445,9 +511,9 @@ export function AthleteProfileCard({
           {editAnswers && (
             <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
               <ProfileFieldsEditor
-              athlete={athlete}
+              athlete={nameEdit.draft ?? athlete}
               athletes={athletes}
-              onChange={onAthleteChange}
+              onChange={nameEdit.setDraft}
               adminEdit={canAdminEditRoster(viewer)}
               parentAccessEditable={own || canAdminEditRoster(viewer)}
             />
@@ -478,16 +544,23 @@ export function AthleteProfileCard({
         </label>
       )}
       {!canEditProfile && canAdminEditRoster(viewer) && onAthleteChange && (
-        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+        <details
+          ref={adminDetailsRef}
+          onToggle={(e) => {
+            if (e.currentTarget.open) adminFix.open(athlete)
+            else adminFix.commit()
+          }}
+          className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2"
+        >
           <summary className="cursor-pointer text-sm font-semibold">
             Admin · name and phone
             <span className="ml-2 text-xs font-medium text-[var(--muted)]">fix this profile</span>
           </summary>
           <div className="mt-3">
             <ProfileFieldsEditor
-              athlete={athlete}
+              athlete={adminFix.draft ?? athlete}
               athletes={athletes}
-              onChange={onAthleteChange}
+              onChange={adminFix.setDraft}
               adminEdit
               contactOnly
               showPhoto={false}

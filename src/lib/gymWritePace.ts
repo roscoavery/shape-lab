@@ -17,6 +17,11 @@ export function shouldHoldGymWrite(now = Date.now()): boolean {
   return now < holdUntil
 }
 
+/** Milliseconds until the write hold lifts (0 when writes are allowed). */
+export function gymWriteHoldRemainingMs(now = Date.now()): number {
+  return Math.max(0, holdUntil - now)
+}
+
 export function noteGymWriteLimited(now = Date.now()): void {
   holdUntil = now + GYM_WRITE_COOLDOWN_MS
 }

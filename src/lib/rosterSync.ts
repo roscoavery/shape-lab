@@ -60,7 +60,7 @@ import {
   savePainJournal,
 } from './careStore'
 import { compressProfilePhoto, isPhotoUrl, photoIdentity } from './profilePhoto'
-import { gymWriteFetch, isStopWriteStatus, shouldHoldGymWrite } from './gymWritePace'
+import { gymWriteFetch, gymWriteHoldRemainingMs, isStopWriteStatus, shouldHoldGymWrite } from './gymWritePace'
 import { noteSessionLost } from './authSession'
 
 export type RosterBackup = {
@@ -502,6 +502,21 @@ async function pushOnePhoto(id: string, photo: string): Promise<string | null> {
 
 let rosterPushBusy = false
 let rosterPushAgain = false
+let rosterPushRetryTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * A roster change that could not be pushed yet (write hold, failed PUT)
+ * must be retried with the latest snapshot — never silently dropped. A
+ * dropped final write is how a finished edit reverts to an intermediate
+ * spelling the next time the gym file is pulled.
+ */
+function scheduleRosterPushRetry(delayMs: number): void {
+  if (rosterPushRetryTimer) return
+  rosterPushRetryTimer = setTimeout(() => {
+    rosterPushRetryTimer = null
+    void pushServerRoster()
+  }, Math.max(250, delayMs))
+}
 
 async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
   const body = snapshot ?? localRosterSnapshot()
@@ -546,7 +561,10 @@ async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
 }
 
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean> {
-  if (shouldHoldGymWrite()) return false
+  if (shouldHoldGymWrite()) {
+    scheduleRosterPushRetry(gymWriteHoldRemainingMs() + 500)
+    return false
+  }
   if (!shouldPushRoster((snapshot ?? localRosterSnapshot()).athletes.length)) return false
   if (rosterPushBusy) {
     rosterPushAgain = true
@@ -556,10 +574,16 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
   try {
     let next = snapshot
     while (true) {
-      if (shouldHoldGymWrite()) return false
+      if (shouldHoldGymWrite()) {
+        scheduleRosterPushRetry(gymWriteHoldRemainingMs() + 500)
+        return false
+      }
       const ok = await putRosterNow(next)
       if (!ok) {
-        rosterPushAgain = false
+        // Keep the pending flag: a newer snapshot arrived while this PUT was
+        // in flight (or the hold started mid-loop). Retry with the latest
+        // local snapshot instead of dropping the change.
+        if (rosterPushAgain) scheduleRosterPushRetry(1500)
         return false
       }
       if (!rosterPushAgain) return true
