@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import PublicSharePage from './components/share/PublicSharePage.tsx'
 import PublicFolderPage from './components/share/PublicFolderPage.tsx'
+import PublicLearnPage from './components/share/PublicLearnPage.tsx'
 import PublicIntakePage from './components/share/PublicIntakePage.tsx'
 import PublicLibraryPage from './components/share/PublicLibraryPage.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
@@ -33,6 +34,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {shareFolderTokenFromPath() ? (
       <PublicFolderPage token={shareFolderTokenFromPath()!} />
+    ) : parentLearnTokenFromPath() ? (
+      <PublicLearnPage token={parentLearnTokenFromPath()!} />
     ) : shareCardIdFromPath() ? (
       <PublicSharePage cardId={shareCardIdFromPath()!} />
     ) : intakeTokenFromPath() ? (
@@ -49,6 +52,16 @@ createRoot(document.getElementById('root')!).render(
 function shareFolderTokenFromPath(): string | null {
   try {
     const m = /^\/share\/folder\/([^/?#]+)/.exec(window.location.pathname)
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
+
+/** /share/learn/<token> renders the public no-account parent Learn desk. Checked before the card route: /share/<id> would otherwise swallow "learn" as a card id. */
+function parentLearnTokenFromPath(): string | null {
+  try {
+    const m = /^\/share\/learn\/([^/?#]+)/.exec(window.location.pathname)
     return m ? decodeURIComponent(m[1]) : null
   } catch {
     return null

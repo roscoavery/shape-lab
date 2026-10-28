@@ -31,7 +31,7 @@ import {
 } from '../src/lib/intakeQuestions.ts'
 import { readSkillPathsFile } from './skillPathStore.ts'
 
-export type ShareLinkType = 'intake' | 'intake-open' | 'intake-group' | 'library'
+export type ShareLinkType = 'intake' | 'intake-open' | 'intake-group' | 'library' | 'parent-learn'
 
 type ShareTokenRecord = {
   token: string
@@ -68,9 +68,9 @@ function isValidTokenFormat(t: string): boolean {
   return /^[a-f0-9]{32}$/.test(t.trim())
 }
 
-/** Get or create the long-lived library token for a coach. */
+/** Get or create the long-lived library or parent-learn token for a coach. */
 export async function getOrCreateShareToken(
-  type: 'library',
+  type: 'library' | 'parent-learn',
   coachId: string,
 ): Promise<string> {
   const file = await readTokens()

@@ -131,6 +131,7 @@ import {
 import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { handleShareCard } from './shareCard.ts'
+import { handleShareLearn } from './shareLearn.ts'
 import {
   getOrCreateGroupIntakeToken,
   getOrCreateIntakeToken,
@@ -303,7 +304,8 @@ const API_PATHS = new Set([
   '/api/share-links/intake-open-token',
   '/api/share-links/intake-group-token',
   '/api/share-links/library-token',
-  '/api/coach-media',
+  '/api/share-links/parent-learn-token',
+  '/api/share/learn',
   '/api/coach-media-file',
   '/api/stories',
   '/api/story-file',
@@ -457,6 +459,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/library') {
     await handleShareLibrary(req, res, url)
+    return true
+  }
+  if (path === '/api/share/learn') {
+    await handleShareLearn(req, res, url)
     return true
   }
   if (path === '/api/share/find-athlete') {
@@ -1675,6 +1681,16 @@ export async function handleShapeLabApi(
     const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
     const token = await getOrCreateShareToken('library', coachId)
     sendJson(res, 200, { token, path: `/studylib/${token}` })
+    return true
+  }
+  if (path === '/api/share-links/parent-learn-token') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Use POST' })
+      return true
+    }
+    const coachId = (viewer as any)?.rosterProfileId ?? (viewer as any)?.id ?? 'ath_ryan'
+    const token = await getOrCreateShareToken('parent-learn', coachId)
+    sendJson(res, 200, { token, path: `/share/learn/${token}` })
     return true
   }
   if (path === '/api/athlete-videos/file-class') {

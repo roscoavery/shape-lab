@@ -2,6 +2,7 @@
  * Coach-only panel for public share links (build 1076+).
  *
  * - Shape study link: read-only shape library, no account needed.
+ * - Parent Learn link: the whole Learn section parents see, no account needed.
  * - New athlete link: anyone can create a profile from scratch and answer
  *   all the intake questions. No quick-add needed first.
  * - Group sign-up link: pick a training event; anyone who signs up through
@@ -196,6 +197,12 @@ export function ShareLinksPanel() {
         label="Shape study link"
         blurb="Read-only shape library for athletes to study. No account needed."
         endpoint="/api/share-links/library-token"
+      />
+
+      <LinkRow
+        label="Parent Learn link"
+        blurb="The whole Learn section parents see in the app: Parent Guide, progression levels, coaching concepts, nutrition. No account needed."
+        endpoint="/api/share-links/parent-learn-token"
       />
     </div>
   )
