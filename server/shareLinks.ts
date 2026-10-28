@@ -201,6 +201,10 @@ export async function handleShareIntake(
   // Same still data as the study link, so question pictures honor Ryan's
   // main-still picks and deletions instead of the raw shipped files.
   const stillData = await loadShareStillData()
+  // The study link and shape test require a library-type token, but this
+  // page is opened with an intake token. Hand over the coach's long-lived
+  // library token so those buttons do not hit "invalid or expired".
+  const libraryToken = await getOrCreateShareToken('library', rec.coachId)
 
   if (rec.type === 'intake' && rec.athleteId) {
     const athlete = athletes.find((a: any) => a.id === rec.athleteId)
@@ -219,6 +223,7 @@ export async function handleShareIntake(
       athleteName: athlete.name ?? '',
       answeredIds: answered,
       stillData,
+      libraryToken,
     })
     return
   }
@@ -241,6 +246,7 @@ export async function handleShareIntake(
     coachName: coach?.name ?? 'Your coach',
     groupName,
     stillData,
+    libraryToken,
   })
 }
 

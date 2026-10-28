@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CORE_INTAKE, isValidDateOfBirth, type IntakeQuestion } from '../../lib/intakeQuestions'
+import { isValidDateOfBirth, publicIntakeQuestions, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
 import {
@@ -203,6 +203,14 @@ function QuestionView({
             className="hidden"
           />
         </div>
+      ) : q.kind === 'text' ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={q.placeholder ?? 'Tell your coach a little bit about it.'}
+          rows={4}
+          className="mt-3 w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-white"
+        />
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-2">
           {q.options!.map((o) => (
@@ -375,6 +383,7 @@ export function PublicIntakePage({ token }: { token: string }) {
   const [loading, setLoading] = useState(true)
   const [invalid, setInvalid] = useState(false)
   const [stillData, setStillData] = useState<PublicStillData | null>(null)
+  const [libraryToken, setLibraryToken] = useState('')
   const [mode, setMode] = useState<Mode>('athlete')
   const [coachName, setCoachName] = useState('')
   const [athleteName, setAthleteName] = useState('')
@@ -417,6 +426,9 @@ export function PublicIntakePage({ token }: { token: string }) {
         ) {
           setStillData(sd as PublicStillData)
         }
+        if (typeof data.libraryToken === 'string' && data.libraryToken) {
+          setLibraryToken(data.libraryToken)
+        }
         if (data.mode === 'open' || data.mode === 'group') setStep('name')
       })
       .catch(() => {
@@ -431,15 +443,10 @@ export function PublicIntakePage({ token }: { token: string }) {
   }, [token])
 
   const questions = useMemo(() => {
-    const answered = new Set(answeredIds)
     // Include in-progress answers so conditional follow-ups (e.g. twistBetter
     // after answering "both") appear immediately.
     const current: Record<string, string> = { ...answers }
-    return CORE_INTAKE.filter((q) => {
-      if (answered.has(q.id)) return false
-      if (q.showIf && !q.showIf(current)) return false
-      return true
-    })
+    return publicIntakeQuestions(answeredIds, current)
   }, [answeredIds, answers])
 
   const submit = async () => {
@@ -451,6 +458,9 @@ export function PublicIntakePage({ token }: { token: string }) {
           .filter((q) => q.kind !== 'photo')
           .map((q) => ({
             questionId: q.id,
+            // The prompt travels with the row so the answer reads plainly
+            // in Research notes ("prompt → answer") instead of "undefined".
+            prompt: q.prompt,
             answer: answers[q.id] ?? '',
             // The roster merge keeps the newest askedAt per question: a row
             // without one always loses to an older row, even a blank one.
@@ -523,13 +533,13 @@ export function PublicIntakePage({ token }: { token: string }) {
         {done ? (
           postStep === 'study' ? (
             <PublicLibraryPage
-              token={token}
+              token={libraryToken}
               onExit={() => setPostStep('none')}
               hideTestButton
             />
           ) : postStep === 'test' ? (
             <PublicShapeTest
-              token={token}
+              token={libraryToken}
               onExit={() => setPostStep('none')}
               presetName={{
                 firstName: mode !== 'athlete' ? firstName.trim() : (athleteName?.split(' ')[0] ?? ''),
@@ -632,13 +642,13 @@ export function PublicIntakePage({ token }: { token: string }) {
         ) : questions.length === 0 ? (
           postStep === 'study' ? (
             <PublicLibraryPage
-              token={token}
+              token={libraryToken}
               onExit={() => setPostStep('none')}
               hideTestButton
             />
           ) : postStep === 'test' ? (
             <PublicShapeTest
-              token={token}
+              token={libraryToken}
               onExit={() => setPostStep('none')}
               presetName={{
                 firstName: athleteName?.split(' ')[0] ?? '',

@@ -41,7 +41,7 @@ import { AttachWinClip } from './feed/AttachWinClip'
 import { WinComposer } from './feed/WinComposer'
 import { videoFileAccept } from '../lib/saveMedia'
 import { profileThemeStyle } from '../lib/profileTheme'
-import { handstandContest } from '../lib/intakeQuestions'
+import { handstandContest, intakeAnswerLines } from '../lib/intakeQuestions'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
@@ -191,6 +191,7 @@ export function AthleteProfileCard({
   const adminDelete =
     Boolean(onDeleteProfile) && isShapelabAdmin(viewer) && !isRyanAthlete(athlete)
   const facts = profileFactLines(athlete)
+  const answerLines = useMemo(() => intakeAnswerLines(athlete), [athlete])
   const first = shoulderFirstPost(athlete.openShoulderHardness)
   const notes = visibleCoachNotes(athlete, viewer)
   const notesByCoach = groupNotesByAuthor(notes)
@@ -453,6 +454,24 @@ export function AthleteProfileCard({
             </span>
           ))}
         </div>
+      )}
+      {privateOk && answerLines.length > 0 && (
+        <details className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Intake answers
+            <span className="ml-2 text-xs font-medium text-[var(--muted)]">
+              {answerLines.length} answered
+            </span>
+          </summary>
+          <div className="mt-2 space-y-2">
+            {answerLines.map((line) => (
+              <div key={line.id}>
+                <p className="text-xs text-white/50">{line.prompt}</p>
+                <p className="text-sm font-semibold text-white">{line.answer}</p>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
       {theirCoaches.length > 0 &&
         isAthleteProfile(athlete) &&

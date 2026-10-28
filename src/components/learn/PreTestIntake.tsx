@@ -38,6 +38,7 @@ export function PreTestIntake({
   const [ready, setReady] = useState(() => pendingIntake(athlete).length === 0)
   const [phone, setPhone] = useState(athlete.parentPhone || '')
   const [dob, setDob] = useState(athlete.dateOfBirth || '')
+  const [text, setText] = useState('')
   const q = ready ? undefined : queue[index]
 
   const parkNow = (from: Athlete = athlete) => {
@@ -247,6 +248,34 @@ export function PreTestIntake({
               type="button"
               disabled={!phone.trim()}
               onClick={() => void answer(phone.trim(), phone.trim())}
+              className="h-12 flex-1 rounded-xl bg-[var(--accent)] font-bold text-[var(--on-accent)] disabled:opacity-40"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => void answer('', 'Skipped')}
+              className="h-12 rounded-xl px-4 text-sm text-[var(--muted)]"
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+      )}
+      {q.kind === 'text' && (
+        <div className="mt-4 space-y-2">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={q.placeholder ?? 'Tell your coach a little bit about it.'}
+            rows={4}
+            className="w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2.5"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!text.trim()}
+              onClick={() => void answer(text.trim(), text.trim())}
               className="h-12 flex-1 rounded-xl bg-[var(--accent)] font-bold text-[var(--on-accent)] disabled:opacity-40"
             >
               Save

@@ -11,8 +11,10 @@ export type IntakeChoice = { value: string; label: string }
 export type IntakeQuestion = {
   id: string
   prompt: string
-  kind: 'choice' | 'skip-phone' | 'photo' | 'color' | 'date'
+  kind: 'choice' | 'skip-phone' | 'photo' | 'color' | 'date' | 'text'
   options?: IntakeChoice[]
+  /** Hint text for free-text questions. */
+  placeholder?: string
   stillShapeId?: string
   /** Direct still image file (under /references/) — overrides stillShapeId. */
   stillFile?: string
@@ -111,6 +113,27 @@ export const CORE_INTAKE: IntakeQuestion[] = [
     prompt: 'Parent phone, skip if you do not know it yet.',
     kind: 'skip-phone',
     once: true,
+  },
+  // Health up front, before the skill self-assessment: an injury changes
+  // how the answers after it should be read. The detail is free text and
+  // only asked after a yes.
+  {
+    id: 'injuryAware',
+    prompt: 'Any injuries you want your coach to be aware of?',
+    kind: 'choice',
+    once: true,
+    options: [
+      { value: 'yes', label: 'Yes' },
+      { value: 'no', label: 'No' },
+    ],
+  },
+  {
+    id: 'injuryDetails',
+    prompt: 'Tell your coach a little bit about it.',
+    kind: 'text',
+    once: true,
+    showIf: (a) => a.injuryAware === 'yes',
+    placeholder: 'What is hurt, how long it has hurt, and anything your coach should know.',
   },
   {
     id: 'shoulderOpen',
@@ -308,6 +331,34 @@ export function answeredQuestionIds(athlete: Athlete): string[] {
   return [...ids]
 }
 
+/**
+ * Questions the public intake link still has to ask: core questions the
+ * athlete has not answered, plus this week's weekly questions under their
+ * week-keyed ids (so next week's ask is a new question, not a repeat).
+ * The link used to ask core questions only, so the weekly body-feeling
+ * question never showed there. Conditional follow-ups (twist better side,
+ * injury details) appear as soon as the answer they depend on is given.
+ */
+export function publicIntakeQuestions(
+  answeredIds: string[],
+  current: Record<string, string>,
+  week = isoWeekKey(),
+): IntakeQuestion[] {
+  const answered = new Set(answeredIds)
+  const out = CORE_INTAKE.filter((q) => {
+    if (answered.has(q.id)) return false
+    if (q.showIf && !q.showIf(current)) return false
+    return true
+  })
+  for (const q of WEEKLY_INTAKE) {
+    const weekly = { ...q, id: weeklyQuestionId(q.id, week) }
+    if (answered.has(weekly.id)) continue
+    if (weekly.showIf && !weekly.showIf(current)) continue
+    out.push(weekly)
+  }
+  return out
+}
+
 export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
   const week = isoWeekKey()
   const answers: Record<string, string> = {}
@@ -329,8 +380,7 @@ export function pendingIntake(athlete: Athlete): IntakeQuestion[] {
 }
 
 /** Wall handstand always sits on the next card after no-wall. */
-function pairWallAfterFloor(list: IntakeQuestion[]): IntakeQuestion[] {
-  // Ryan's order: wall handstand comes BEFORE handstand without a wall.
+function pairWallAfterFloor(list: IntakeQuestion[]): IntakeQuestion[] {  // Ryan's order: wall handstand comes BEFORE handstand without a wall.
   const wall = list.find((q) => q.id === 'handstandWall')
   const floorAt = list.findIndex((q) => q.id === 'handstandFloor')
   if (!wall) return list
@@ -385,4 +435,116 @@ export function handstandContest(athlete: {
   handstandWall?: string
 }): boolean {
   return athlete.handstandFloor === 'contest' && athlete.handstandWall === 'over_min'
+}
+
+export type IntakeAnswerLine = { id: string; prompt: string; answer: string }
+
+/** Values that mean no answer was given, never shown as one. */
+function isNoAnswer(value: string | undefined | null): boolean {
+  if (!value) return true
+  const v = value.trim()
+  return v === '' || v === 'not_sure' || v === 'Skipped'
+}
+
+function labelFor(q: IntakeQuestion, value: string): string {
+  return q.options?.find((o) => o.value === value)?.label ?? value
+}
+
+/** Stored profile-field value for a question, when no answer row exists. */
+function fieldValue(athlete: Athlete, id: string): string | undefined {
+  switch (id) {
+    case 'birthday':
+      return athlete.dateOfBirth || undefined
+    case 'parentPhone':
+      return athlete.parentPhone || athlete.phone || undefined
+    case 'favoriteColor':
+      return athlete.favoriteColor || undefined
+    case 'handstandFloor':
+      return athlete.handstandFloor || undefined
+    case 'handstandWall':
+      return athlete.handstandWall || undefined
+    case 'hollowHold':
+      return athlete.hollowHold || undefined
+    case 'supermanHold':
+      return athlete.supermanHold || undefined
+    case 'vUps':
+      return athlete.vUps || undefined
+    case 'pushUps':
+      return athlete.pushUps || undefined
+    case 'shoulderOpen':
+      return athlete.openShoulderHardness ? String(athlete.openShoulderHardness) : undefined
+    case 'cartwheelSide':
+      return athlete.cartwheelLeg || undefined
+    case 'twistDirection':
+      return athlete.twistDirection || undefined
+    case 'twistBetter':
+      return athlete.twistBetterSide || undefined
+    case 'dominantHand':
+      return athlete.dominantHand || undefined
+    case 'skateStance':
+      return athlete.skateStance || undefined
+    case 'harderShape':
+      return athlete.harderShape || undefined
+    default:
+      return undefined
+  }
+}
+
+function newestRow(rows: IntakeAnswer[]): IntakeAnswer | undefined {
+  let best: IntakeAnswer | undefined
+  let bestAt = -1
+  for (const row of rows) {
+    const at = Date.parse(row.askedAt ?? '') || 0
+    if (at >= bestAt) {
+      best = row
+      bestAt = at
+    }
+  }
+  return best
+}
+
+/**
+ * What the athlete actually said, for a coach viewing the profile: one
+ * line per answered intake question, newest answer wins, option codes
+ * shown as their labels, free-text answers verbatim. Falls back to the
+ * stored profile field when an answer was recorded without a row. The
+ * photo question is left out: the photo itself is on the profile.
+ */
+export function intakeAnswerLines(athlete: Athlete): IntakeAnswerLine[] {
+  const rows = athlete.intakeAnswers ?? []
+  const newestById = new Map<string, IntakeAnswer>()
+  for (const row of rows) {
+    const prev = newestById.get(row.questionId)
+    if (!prev || (Date.parse(row.askedAt ?? '') || 0) >= (Date.parse(prev.askedAt ?? '') || 0)) {
+      newestById.set(row.questionId, row)
+    }
+  }
+  const lines: IntakeAnswerLine[] = []
+  for (const q of CORE_INTAKE) {
+    if (q.kind === 'photo') continue
+    const row = newestById.get(q.id)
+    let value: string | undefined
+    if (row && !isNoAnswer(row.answer)) value = row.answer
+    else {
+      const field = fieldValue(athlete, q.id)
+      if (field && !isNoAnswer(field)) value = field
+    }
+    if (!value) continue
+    if (q.id === 'handstandWall' || q.id === 'hollowHold' || q.id === 'supermanHold') {
+      value = asMinuteHold(value) ?? value
+    }
+    if (q.id === 'dominantHand' && value === 'ambidextrous') value = 'both'
+    lines.push({ id: q.id, prompt: q.prompt, answer: labelFor(q, value) })
+  }
+  const weekly = WEEKLY_INTAKE[0]
+  if (weekly) {
+    const weeklyRows = rows.filter(
+      (a) => a.questionId === weekly.id || a.questionId.startsWith(`${weekly.id}_`),
+    )
+    const latest = newestRow(weeklyRows)
+    if (latest && !isNoAnswer(latest.answer)) {
+      lines.push({ id: weekly.id, prompt: weekly.prompt, answer: labelFor(weekly, latest.answer) })
+    }
+  }
+  return lines
 }
