@@ -33,6 +33,7 @@ import { SessionClock } from '../today/SessionClock'
 import {
   getOrCreateClassPlan,
   plansForDate,
+  fallbackLessonPlanForAthletes,
   togglePlanTask,
   taskDoneFor,
   taskRepsDoneFor,
@@ -87,6 +88,10 @@ export function LessonWorkspace({
   const [showAddAthlete, setShowAddAthlete] = useState(false)
   const [addAthleteQuery, setAddAthleteQuery] = useState('')
   const [showCheckinBoard, setShowCheckinBoard] = useState(false)
+  // Which athlete's checklist the plan list shows in a multi-athlete
+  // lesson ('all' = the coach's whole-list view, as before). Athletes
+  // tap their name and see only their tasks, like the class checklist.
+  const [planView, setPlanView] = useState<'all' | string>('all')
 
   // Planned tasks for this lesson (written in the morning brief or calendar).
   // The plan lives in the class-plan store under lesson:<calendarEventId>,
@@ -106,20 +111,19 @@ export function LessonWorkspace({
       const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, coach.id)
       if (p.tasks.length > 0) return p.tasks
     }
-    // Fallback: find today's lesson plans with tasks for this athlete.
+    // Fallback: only a plan that actually belongs to this lesson's
+    // athletes. Another lesson's plan must never leak in through its
+    // 'all' tasks — same-day lessons share a date, not a plan.
     const athleteIds = new Set<string>()
     if (athlete) athleteIds.add(athlete.id)
     for (const a of lessonAthletes ?? []) athleteIds.add(a.id)
     for (const sid of lessonAthleteIds(session)) athleteIds.add(sid)
     if (athleteIds.size === 0) return []
-    const plans = plansForDate(date).filter((p) => p.offeringId.startsWith('lesson:'))
-    for (const p of plans) {
-      const mine = p.tasks.filter(
-        (t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)),
-      )
-      if (mine.length > 0) return mine
-    }
-    return []
+    const fallback = fallbackLessonPlanForAthletes(plansForDate(date), athleteIds)
+    if (!fallback) return []
+    return fallback.tasks.filter(
+      (t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)),
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.calendarEventId, session.id, coach?.id, athlete?.id, plansTick, planDate])
 
@@ -140,11 +144,14 @@ export function LessonWorkspace({
     if (athlete) athleteIds.add(athlete.id)
     for (const a of lessonAthletes ?? []) athleteIds.add(a.id)
     for (const sid of lessonAthleteIds(session)) athleteIds.add(sid)
-    const plans = plansForDate(date).filter((p) => p.offeringId.startsWith('lesson:'))
-    for (const p of plans) {
-      if (p.tasks.some((t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)))) {
-        return p
-      }
+    const fallback = fallbackLessonPlanForAthletes(plansForDate(date), athleteIds)
+    if (
+      fallback &&
+      fallback.tasks.some(
+        (t) => t.athleteIds.includes('all') || t.athleteIds.some((id) => athleteIds.has(id)),
+      )
+    ) {
+      return fallback
     }
     return null
   }
@@ -164,14 +171,33 @@ export function LessonWorkspace({
   const grouped = useMemo(() => groupLessonWork(session), [session])
   const people = lessonAthletes?.length ? lessonAthletes : athlete ? [athlete] : []
   const peopleIds = people.length ? people.map((a) => a.id) : lessonAthleteIds(session)
+  // The picked name in a multi-athlete lesson, or 'all' for the coach's
+  // whole-list view. A picked id that is no longer in the lesson falls
+  // back to the whole list.
+  const planViewId =
+    planView !== 'all' && people.some((p) => p.id === planView) ? planView : 'all'
+  // Tasks for the picked name: her tagged tasks plus Everyone tasks,
+  // exactly like the class checklist. When no task carries a tag (the
+  // plan was written before it was linked), the whole list is hers.
+  const visibleTasks = useMemo(() => {
+    if (planViewId === 'all') return lessonTasks
+    const anyTagged = lessonTasks.some((t) => t.athleteIds.some((id) => id !== 'all'))
+    if (!anyTagged) return lessonTasks
+    return lessonTasks.filter(
+      (t) => t.athleteIds.includes(planViewId) || t.athleteIds.includes('all'),
+    )
+  }, [lessonTasks, planViewId])
+  // Athletes a check-off in the current view applies to: one athlete
+  // under her own name, the whole lesson under Everyone.
+  const viewAthleteIds = planViewId === 'all' ? peopleIds : [planViewId]
   const [videoAthleteId, setVideoAthleteId] = useState(peopleIds[0] ?? session.athleteId)
   const [boardAthleteId, setBoardAthleteId] = useState(peopleIds[0] ?? session.athleteId)
   const videoAthlete = people.find((a) => a.id === videoAthleteId) ?? people[0] ?? athlete
   const boardAthlete = people.find((a) => a.id === boardAthleteId) ?? people[0] ?? athlete
 
   return (
-    <div className="flex flex-col gap-3">
-      <section className="rounded-xl border border-[var(--accent)]/40 bg-[var(--panel)] p-4">
+    <div className="flex min-w-0 flex-col gap-3 [&>*]:min-w-0">
+      <section className="min-w-0 rounded-xl border border-[var(--accent)]/40 bg-[var(--panel)] p-4">
         <p className="text-xs uppercase tracking-wider text-[var(--accent)]">Live lesson</p>
         <h2 className="text-xl font-semibold">
           {athleteName}
@@ -179,7 +205,7 @@ export function LessonWorkspace({
         </h2>
         {(athlete?.needsOnboarding || athlete?.createdFromCalendar) && (
           <div className="mt-2 rounded-lg bg-[#102820] px-3 py-2">
-            <p className="text-xs text-[var(--accent)]">
+            <p className="break-words text-xs text-[var(--accent)]">
               {athlete.firstName || 'This athlete'} was added from your calendar.
               {!athlete.lastName?.trim() ? (
                 <> What is {athlete.firstName || 'their'}'s last name? Tap their profile to add it.</>
@@ -190,7 +216,7 @@ export function LessonWorkspace({
           </div>
         )}
         {session.calendarTitle && session.calendarStartAt && (
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-1 break-words text-sm text-[var(--muted)]">
             Calendar · {session.calendarTitle} ·{' '}
             {new Date(session.calendarStartAt).toLocaleString(undefined, {
               hour: 'numeric',
@@ -205,34 +231,74 @@ export function LessonWorkspace({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
               From the calendar
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--text)]">
               {session.calendarNotes}
             </p>
           </div>
         )}
         {lessonTasks.length > 0 && (
-          <div className="mt-2 rounded-lg bg-[#121820] px-3 py-2">
+          <div className="mt-2 min-w-0 rounded-lg bg-[#121820] px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
               Today's plan
             </p>
+            {people.length > 1 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPlanView('all')}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    planViewId === 'all'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                  }`}
+                >
+                  Everyone
+                </button>
+                {people.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPlanView(p.id)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      planViewId === p.id
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                    }`}
+                  >
+                    {p.firstName || p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {visibleTasks.length === 0 ? (
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                No tasks for {people.find((p) => p.id === planViewId)?.firstName ?? 'this athlete'} yet.
+              </p>
+            ) : (
             <ul className="mt-1 space-y-1">
-              {lessonTasks.map((t, i) => {
-                // Done means done for every athlete in this lesson.
+              {visibleTasks.map((t, i) => {
+                // Done means done for every athlete this view covers:
+                // one athlete under her own name, the whole lesson
+                // under Everyone.
                 const done =
-                  peopleIds.length > 0 ? peopleIds.every((id) => taskDoneFor(t, id)) : false
-                const reps = peopleIds.length === 1 ? taskRepsDoneFor(t, peopleIds[0]) : null
+                  viewAthleteIds.length > 0 ? viewAthleteIds.every((id) => taskDoneFor(t, id)) : false
+                const reps = viewAthleteIds.length === 1 ? taskRepsDoneFor(t, viewAthleteIds[0]) : null
                 return (
                 <li
                   key={t.id}
                   style={rowStyle(i)}
                   className="flex items-center gap-1.5 text-sm"
                 >
-                  <DragGrip {...handleProps(i)} />
+                  {planViewId === 'all' ? (
+                    <DragGrip {...handleProps(i)} />
+                  ) : (
+                    <span className="w-[26px] shrink-0" aria-hidden="true" />
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       const p = findTaskPlan()
-                      if (p) togglePlanTask(p.id, t.id, peopleIds.length > 0 ? peopleIds : undefined)
+                      if (p) togglePlanTask(p.id, t.id, viewAthleteIds.length > 0 ? viewAthleteIds : undefined)
                     }}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                       done
@@ -255,9 +321,10 @@ export function LessonWorkspace({
                 )
               })}
             </ul>
+            )}
           </div>
         )}
-        <p className="mt-1 text-sm text-[var(--muted)]">
+        <p className="mt-1 break-words text-sm text-[var(--muted)]">
           {plan ? plan.title : 'Open lesson'} · start the clock, log the hold.{' '}
           Leave the app if you need to, this lesson stays open until you End lesson.
         </p>
@@ -345,7 +412,7 @@ export function LessonWorkspace({
       </section>
 
       {plan && (plan.blocks.length > 0 || (plan.extraExercises?.length ?? 0) > 0) && (
-        <section className="rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-4">
+        <section className="min-w-0 rounded-xl border border-[var(--accent)]/30 bg-[var(--panel)] p-4">
           <p className="text-xs uppercase tracking-wider text-[var(--accent)]">Today’s plan</p>
           <h3 className="text-lg font-semibold">{plan.title}</h3>
           {plan.blocks.length === 0 ? (

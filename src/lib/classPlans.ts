@@ -39,6 +39,28 @@ export function stampPlanAthlete(planId: string, athleteId: string) {
 }
 
 /**
+ * Fallback plan for a live lesson whose own event-linked plan is empty:
+ * the first plan of the day that actually belongs to one of this
+ * lesson's athletes (stamped, task-tagged, or session-matched). A plan
+ * belonging to another lesson must never leak in through its 'all'
+ * tasks — same-day lessons share a date, not a plan.
+ */
+export function fallbackLessonPlanForAthletes(
+  plans: ClassPlan[],
+  athleteIds: ReadonlySet<string>,
+): ClassPlan | null {
+  if (athleteIds.size === 0) return null
+  for (const p of plans) {
+    if (!p.offeringId.startsWith('lesson:')) continue
+    const mine = lessonPlanAthleteIds(p)
+    for (const id of mine) {
+      if (athleteIds.has(id)) return p
+    }
+  }
+  return null
+}
+
+/**
  * Class plans: the coach's morning prep for each class.
  *
  * For each class on a date, the coach can write class-level notes and
