@@ -15,7 +15,7 @@ import {
   verifyCoachPasscode,
 } from './coachAuth.ts'
 import { decryptSecret, encryptSecret, hasCredentialKey, redactSecrets } from './crypto.ts'
-import { normalizeAlias } from './matching.ts'
+import { normalizeAlias, unescapeCalendarText } from './matching.ts'
 import { decodeCredential, icloudCalendarProvider } from './providers/icloud.ts'
 import { syncConnectionForCoach } from './sync.ts'
 import {
@@ -129,7 +129,10 @@ export async function handleCalendarApi(
     const events = db.events
       .filter((e) => {
         if (e.status === 'cancelled') return false
-        if (!e.matchedAthleteId || !allowed.has(e.matchedAthleteId)) return false
+        // An athlete sees events where they are any linked athlete, not
+        // only the primary.
+        const ids = e.matchedAthleteIds?.length ? e.matchedAthleteIds : e.matchedAthleteId ? [e.matchedAthleteId] : []
+        if (!ids.some((id) => allowed.has(id))) return false
         const start = Date.parse(e.startAt)
         return Number.isFinite(start) && start >= from && start <= to
       })
@@ -357,7 +360,7 @@ export async function handleCalendarApi(
     sendJson(res, 200, {
       events: events.map((e) => ({
         ...e,
-        notes: e.description || '',
+        notes: unescapeCalendarText(e.description || ''),
         lessonLinks: links.filter((l) => l.calendarEventId === e.id),
       })),
     })
@@ -376,7 +379,7 @@ export async function handleCalendarApi(
     sendJson(res, 200, {
       events: events.map((e) => ({
         ...e,
-        notes: e.description || '',
+        notes: unescapeCalendarText(e.description || ''),
         lessonLinks: links.filter((l) => l.calendarEventId === e.id),
       })),
     })
@@ -497,10 +500,14 @@ export async function handleCalendarApi(
       try {
         const body = JSON.parse(await readRequestBody(req)) as {
           athleteId?: string
+          athleteIds?: string[]
           saveSeries?: boolean
           saveTitle?: boolean
         }
-        if (!body.athleteId) {
+        // Up to 3 athletes per lesson event. Legacy single-athlete callers
+        // send athleteId; the multi-athlete picker sends athleteIds.
+        const ids = [...new Set([...(body.athleteIds ?? []), ...(body.athleteId ? [body.athleteId] : [])].filter(Boolean))].slice(0, 3)
+        if (ids.length === 0) {
           sendJson(res, 400, { error: 'MISSING_ATHLETE' })
           return true
         }
@@ -514,7 +521,8 @@ export async function handleCalendarApi(
         await upsertManualMatch({
           coachId,
           eventId,
-          athleteId: body.athleteId,
+          athleteId: ids[0]!,
+          athleteIds: ids,
           saveSeries: Boolean(body.saveSeries),
           saveTitle: Boolean(body.saveTitle),
           seriesKey,

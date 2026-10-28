@@ -49,6 +49,8 @@ export type CalendarEvent = {
   status: 'confirmed' | 'cancelled' | 'tentative'
   lastModifiedAt: string
   matchedAthleteId: string | null
+  /** Every athlete linked to this event, up to 3 for lessons. The first id is the primary and mirrors matchedAthleteId. */
+  matchedAthleteIds?: string[]
   matchStatus: CalendarMatchStatus
   matchConfidence: number
   createdAt: string

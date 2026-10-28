@@ -31,7 +31,7 @@ import { MorningBrief } from '../today/MorningBrief'
 import { ShareLinksPanel } from '../share/ShareLinksPanel'
 import { AthleteIntakeLink } from '../share/AthleteIntakeLink'
 import { CalendarDesk } from '../calendar/CalendarDesk'
-import { authorizeCalendarFromSession, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
+import { authorizeCalendarFromSession, eventAthleteIds, fetchTodayEvents, hasCalendarApiToken } from '../../lib/calendarClient'
 import { getSessionGlow, type SessionKind } from '../../lib/sessionGlow'
 import { getAutoStartSessions, setAutoStartSessions } from '../../lib/sessionPrefs'
 import { PracticeNudge } from '../today/PracticeNudge'
@@ -229,12 +229,15 @@ export function HomeDashboard({
       const glow = getSessionGlow(events)
       setGlowingKinds(glow.glowing)
       const lessonEvent = glow.closest.lesson
-      if (lessonEvent?.matchedAthleteId) {
-        setWithIds((prev) => {
-          if (prev.length) return prev
-          pickSetAtRef.current = Date.now()
-          return [lessonEvent.matchedAthleteId!]
-        })
+      if (lessonEvent) {
+        const ids = eventAthleteIds(lessonEvent)
+        if (ids.length > 0) {
+          setWithIds((prev) => {
+            if (prev.length) return prev
+            pickSetAtRef.current = Date.now()
+            return ids
+          })
+        }
       }
       // Auto-start school/camp/clinic from the calendar when enabled.
       if (getAutoStartSessions()) {
@@ -671,6 +674,7 @@ export function HomeDashboard({
           coachId={signedIn.id}
           athletes={athletes}
           onStartLesson={onStartLesson}
+          onAthletesChange={onAthletesChange}
         />
         </div>
       </CollapsibleSection>

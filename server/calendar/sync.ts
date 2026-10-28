@@ -108,6 +108,14 @@ export async function syncConnectionForCoach(
       let athleteId = existing?.matchedAthleteId ?? match.athleteId
       let matchStatus = existing?.matchedAthleteId ? 'matched' : match.matchStatus
       let matchConfidence = existing?.matchedAthleteId ? 1 : match.matchConfidence
+      // A hand-linked athlete list survives re-syncs: the stored list wins
+      // over a fresh single match, exactly as the primary id already did.
+      const athleteIds =
+        existing?.matchedAthleteIds?.length && existing.matchedAthleteId
+          ? existing.matchedAthleteIds
+          : athleteId
+            ? [athleteId]
+            : []
 
       // Auto-correct calendar-created athletes with bad names from buggy
       // extraction (e.g., "Tumbler" captured as a last name). Re-run the
@@ -184,6 +192,7 @@ export async function syncConnectionForCoach(
         status: norm.status,
         lastModifiedAt: norm.lastModifiedAt,
         matchedAthleteId: athleteId,
+        matchedAthleteIds: athleteIds,
         matchStatus,
         matchConfidence,
         createdAt: existing?.createdAt ?? now,

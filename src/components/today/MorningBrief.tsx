@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
 import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
-import { fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from './LessonPlanCard'
 import { ReuseChecklist } from './ReuseChecklist'
@@ -102,7 +102,8 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
     }
     let unmatchedLessons = 0
     for (const l of lessons) {
-      if (l.matchedAthleteId) ids.add(l.matchedAthleteId)
+      const linked = eventAthleteIds(l)
+      if (linked.length > 0) for (const id of linked) ids.add(id)
       else unmatchedLessons += 1
     }
     // An unmatched lesson still means someone is coming — count them even
@@ -213,12 +214,16 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
                 const athlete = ev.matchedAthleteId
                   ? athleteById(athletes, ev.matchedAthleteId)
                   : null
+                const eventAthletes = eventAthleteIds(ev)
+                  .map((id) => athleteById(athletes, id))
+                  .filter((a): a is Athlete => Boolean(a))
                 const planKey = `lesson:${ev.id}`
                 return (
                   <LessonPlanCard
                     key={ev.id || i}
                     event={ev}
                     athlete={athlete ?? null}
+                    athletes={eventAthletes}
                     coachId={coach.id}
                     dateKey={lessonPlanDateKey(ev)}
                     open={openOfferingId === planKey}

@@ -6,6 +6,7 @@ import {
   normalizeAlias,
   coachingLikelyTitle,
   extractUnmatchedPersonName,
+  unescapeCalendarText,
 } from './matching.ts'
 import type { AthleteCalendarAlias, CalendarEventMapping, CalendarTitleMapping } from './types.ts'
 
@@ -18,6 +19,20 @@ const athletes: Athlete[] = [
 describe('normalizeAlias', () => {
   it('normalizes spacing and case', () => {
     assert.equal(normalizeAlias('  Hannah   Smith '), 'hannah smith')
+  })
+})
+
+describe('unescapeCalendarText', () => {
+  it('decodes HTML entities from calendar descriptions', () => {
+    assert.equal(
+      unescapeCalendarText('Tumbler Name: Berkley &amp; Baylor Weaver'),
+      'Tumbler Name: Berkley & Baylor Weaver',
+    )
+    assert.equal(unescapeCalendarText('a &lt;b&gt; &quot;q&quot; &#39;s&#39;'), `a <b> "q" 's'`)
+  })
+
+  it('still unescapes iCal sequences', () => {
+    assert.equal(unescapeCalendarText('line one\\nline two'), 'line one\nline two')
   })
 })
 

@@ -5,6 +5,7 @@ import {
   authorizeCalendarFromSession,
   createCalendarEvent,
   deleteCalendarEvent,
+  eventAthleteIds,
   fetchCalendarRange,
   hasCalendarApiToken,
   matchCalendarEvent,
@@ -31,6 +32,8 @@ import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
 import { subscribeClassPlans, pullClassPlans, lessonPlanDateKey } from '../../lib/classPlans'
+import { EventAthletePicker } from './EventAthletePicker'
+import { QuickAddAthlete } from '../today/QuickAddAthlete'
 
 type Props = {
   coachId: string
@@ -40,6 +43,8 @@ type Props = {
     planId?: string | null,
     calendar?: { eventId: string; title: string; startAt: string; endAt: string; notes?: string | null },
   ) => void
+  /** When provided, the match dialog can quick-add an athlete with no profile yet. */
+  onAthletesChange?: (next: Athlete[]) => void
 }
 
 const HOUR_START = 7
@@ -172,7 +177,7 @@ export function happeningNow(events: TodayCalendarEvent[], now = new Date()): To
   )
 }
 
-export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
+export function CalendarDesk({ coachId, athletes, onStartLesson, onAthletesChange }: Props) {
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [selected, setSelected] = useState(() => new Date())
   const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('day')
@@ -182,6 +187,8 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const [authChecked, setAuthChecked] = useState(false)
   const [passcode, setPasscode] = useState('')
   const [pickEventId, setPickEventId] = useState<string | null>(null)
+  const [pickSelected, setPickSelected] = useState<string[]>([])
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [saveSeries, setSaveSeries] = useState(false)
   const [saveTitle, setSaveTitle] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -362,8 +369,19 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
   const pickEvent = displayEvents.find((e) => e.id === pickEventId) ?? events.find((e) => e.id === pickEventId) ?? null
   const openEvent = displayEvents.find((e) => e.id === openEventId) ?? events.find((e) => e.id === openEventId) ?? null
 
-  const startLesson = (ev: TodayCalendarEvent, athleteId: string) => {
-    onStartLesson([athleteId], null, {
+  // Seed the match dialog with whoever is already on the event. Only the
+  // opening of the dialog reseeds; later refreshes must not clobber the
+  // coach's in-progress picks.
+  useEffect(() => {
+    if (!pickEventId) return
+    const ev =
+      displayEvents.find((e) => e.id === pickEventId) ?? events.find((e) => e.id === pickEventId)
+    setPickSelected(ev ? eventAthleteIds(ev) : [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickEventId])
+
+  const startLesson = (ev: TodayCalendarEvent, athleteIds: string[]) => {
+    onStartLesson(athleteIds, null, {
       eventId: ev.id,
       title: ev.title,
       startAt: ev.startAt,
@@ -811,30 +829,17 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog">
           <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
             <h4 className="font-semibold">{pickEvent.title}</h4>
-            <p className="text-sm text-[var(--muted)]">Match this event to an athlete</p>
-            <ul className="mt-3 flex flex-col gap-2">
-              {roster.map((a) => (
-                <li key={a.id}>
-                  <button
-                    type="button"
-                    className="w-full rounded-lg border border-[var(--panel-border)] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
-                    onClick={() => {
-                      void matchCalendarEvent(pickEvent.id, a.id, {
-                        saveSeries,
-                        saveTitle,
-                      }).then(() => {
-                        setPickEventId(null)
-                        void refresh()
-                        // Do NOT auto-start here. Linking just attaches the
-                        // profile; the clock starts the lesson at its time.
-                      })
-                    }}
-                  >
-                    {a.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <p className="text-sm text-[var(--muted)]">
+              Match this event to its athletes, up to 3. Add everyone before you plan, so each athlete gets a checklist.
+            </p>
+            <div className="mt-3">
+              <EventAthletePicker
+                athletes={roster}
+                selectedIds={pickSelected}
+                onChange={setPickSelected}
+                onAddNew={onAthletesChange ? () => setQuickAddOpen(true) : undefined}
+              />
+            </div>
             <label className="mt-3 flex items-center gap-2 text-xs">
               <input type="checkbox" checked={saveTitle} onChange={(e) => setSaveTitle(e.target.checked)} />
               Use this match for future events with the same title
@@ -843,12 +848,51 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
               <input type="checkbox" checked={saveSeries} onChange={(e) => setSaveSeries(e.target.checked)} />
               Use for this recurring series
             </label>
-            <button type="button" className="mt-3 text-sm text-[var(--muted)] underline" onClick={() => setPickEventId(null)}>
-              Cancel
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={pickSelected.length === 0}
+                onClick={() => {
+                  void matchCalendarEvent(pickEvent.id, pickSelected, {
+                    saveSeries,
+                    saveTitle,
+                  }).then(() => {
+                    setPickEventId(null)
+                    void refresh()
+                    // Do NOT auto-start here. Linking just attaches the
+                    // profiles; the clock starts the lesson at its time.
+                  })
+                }}
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+              >
+                Done
+              </button>
+              <button type="button" className="text-sm text-[var(--muted)] underline" onClick={() => setPickEventId(null)}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {quickAddOpen && onAthletesChange && (() => {
+        const coach = athletes.find((a) => a.id === coachId) ?? null
+        if (!coach) return null
+        return (
+          <QuickAddAthlete
+            coach={coach}
+            athletes={athletes}
+            onAthletesChange={onAthletesChange}
+            onClose={() => setQuickAddOpen(false)}
+            onAdded={(athlete) => {
+              // The new profile joins this event's picks right away.
+              setPickSelected((cur) =>
+                cur.includes(athlete.id) || cur.length >= 3 ? cur : [...cur, athlete.id],
+              )
+            }}
+          />
+        )
+      })()}
 
       {fullScreen && (view === 'week' || view === 'day') && (
         <div className="fixed inset-x-0 top-0 z-[70] flex h-[100dvh] flex-col bg-[#0b1118] text-[var(--text)]">
@@ -968,6 +1012,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson }: Props) {
                   <LessonPlanCard
                     event={openEvent}
                     athlete={openEvent.matchedAthleteId ? (athletes.find((a) => a.id === openEvent.matchedAthleteId) ?? null) : null}
+                    athletes={eventAthleteIds(openEvent).map((id) => athletes.find((a) => a.id === id)).filter((a): a is Athlete => Boolean(a))}
                     coachId={coachId}
                     dateKey={lessonPlanDateKey(openEvent)}
                     open={true}
@@ -1138,7 +1183,7 @@ function EventPreview({
   onToggle: () => void
   athleteName: (id: string | null) => string
   activeLessonId: string | null
-  onStart: (ev: TodayCalendarEvent, athleteId: string) => void
+  onStart: (ev: TodayCalendarEvent, athleteIds: string[]) => void
   onPick: () => void
   onDelete?: () => void
   compact?: boolean
@@ -1146,13 +1191,15 @@ function EventPreview({
   const linked = ev.lessonLinks?.[0]
   const linkedSession = linked ? getLessonSession(linked.lessonId) : null
   const activeForEvent = linked && activeLessonId === linked.lessonId && linkedSession && !linkedSession.endedAt
-  const matchLine = ev.matchedAthleteId
-    ? athleteName(ev.matchedAthleteId)
-    : ev.matchStatus === 'ambiguous'
-      ? 'Multiple athletes possible'
-      : ev.matchStatus === 'needs_athlete'
-        ? 'Needs athlete'
-        : 'Event'
+  const ids = eventAthleteIds(ev)
+  const matchLine =
+    ids.length > 0
+      ? ids.map((id) => athleteName(id)).join(', ')
+      : ev.matchStatus === 'ambiguous'
+        ? 'Multiple athletes possible'
+        : ev.matchStatus === 'needs_athlete'
+          ? 'Needs athlete'
+          : 'Event'
   return (
     <div className={`rounded-lg bg-[#121820] ${compact ? 'px-1.5 py-1' : 'px-3 py-2'}`}>
       <div className="flex items-start justify-between gap-2">
@@ -1166,20 +1213,20 @@ function EventPreview({
           {!compact && <p className="text-xs text-[var(--muted)]">{matchLine}</p>}
         </button>
         {!compact &&
-          (ev.matchedAthleteId ? (
+          (ids.length > 0 ? (
             <div className="flex shrink-0 gap-1.5">
               <button
                 type="button"
                 className="rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs font-semibold"
                 onClick={onPick}
-                title="Change which athlete this event is linked to"
+                title="Change which athletes this event is linked to"
               >
                 Change
               </button>
               <button
                 type="button"
                 className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
-                onClick={() => onStart(ev, ev.matchedAthleteId!)}
+                onClick={() => onStart(ev, ids)}
               >
                 {activeForEvent ? 'Resume' : 'Start'}
               </button>
@@ -1204,11 +1251,11 @@ function EventPreview({
             <p>No notes on this event.</p>
           )}
           {compact &&
-            (ev.matchedAthleteId ? (
+            (ids.length > 0 ? (
               <button
                 type="button"
                 className="mt-1 rounded-md bg-[var(--accent)] px-2 py-1 text-[11px] font-semibold text-[#06281f]"
-                onClick={() => onStart(ev, ev.matchedAthleteId!)}
+                onClick={() => onStart(ev, ids)}
               >
                 {activeForEvent ? 'Resume lesson' : 'Start lesson'}
               </button>

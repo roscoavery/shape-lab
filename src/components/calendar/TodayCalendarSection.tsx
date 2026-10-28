@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import {
   authorizeCalendarApi,
   authorizeCalendarFromSession,
+  eventAthleteIds,
   fetchTodayEvents,
   hasCalendarApiToken,
   matchCalendarEvent,
@@ -13,6 +14,7 @@ import { digitsOnlyPin } from '../../lib/athletePasscode'
 import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
+import { EventAthletePicker } from './EventAthletePicker'
 import { subscribeClassPlans, pullClassPlans, todayKey } from '../../lib/classPlans'
 
 type Props = {
@@ -36,6 +38,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
   const [events, setEvents] = useState<TodayCalendarEvent[]>([])
   const [loadError, setLoadError] = useState(false)
   const [pickEventId, setPickEventId] = useState<string | null>(null)
+  const [pickSelected, setPickSelected] = useState<string[]>([])
   const [saveSeries, setSaveSeries] = useState(false)
   const [saveTitle, setSaveTitle] = useState(false)
   const [needsAuth, setNeedsAuth] = useState(false)
@@ -126,14 +129,15 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
       )
     }
 
-    if (ev.matchedAthleteId) {
+    const linkedIds = eventAthleteIds(ev)
+    if (linkedIds.length > 0) {
       if (activeForEvent) {
         return (
           <button
             type="button"
             className="rounded-md bg-[var(--accent-dim)] px-2.5 py-1 text-xs font-semibold text-white"
             onClick={() =>
-              onStartLesson([ev.matchedAthleteId!], null, {
+              onStartLesson(linkedIds, null, {
                 eventId: ev.id,
                 title: ev.title,
                 startAt: ev.startAt,
@@ -163,7 +167,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
             type="button"
             className="rounded-md bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[#06281f]"
             onClick={() =>
-              onStartLesson([ev.matchedAthleteId!], null, {
+              onStartLesson(eventAthleteIds(ev), null, {
                 eventId: ev.id,
                 title: ev.title,
                 startAt: ev.startAt,
@@ -190,6 +194,14 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
   }
 
   const pickEvent = events.find((e) => e.id === pickEventId) ?? null
+
+  // Seed the match dialog with whoever is already on the event.
+  useEffect(() => {
+    if (!pickEventId) return
+    const ev = events.find((e) => e.id === pickEventId)
+    setPickSelected(ev ? eventAthleteIds(ev) : [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickEventId])
 
   return (
     <section className="min-w-0 max-w-full overflow-x-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
@@ -250,13 +262,15 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
       <ul className="mt-3 flex flex-col gap-2">
         {events.map((ev) => {
           const open = openEventId === ev.id
-          const matchLine = ev.matchedAthleteId
-            ? athleteName(ev.matchedAthleteId)
-            : ev.matchStatus === 'ambiguous'
-              ? 'Multiple athletes possible'
-              : ev.matchStatus === 'needs_athlete'
-                ? 'Needs athlete'
-                : 'Coaching event'
+          const linkedIds = eventAthleteIds(ev)
+          const matchLine =
+            linkedIds.length > 0
+              ? linkedIds.map((id) => athleteName(id)).join(', ')
+              : ev.matchStatus === 'ambiguous'
+                ? 'Multiple athletes possible'
+                : ev.matchStatus === 'needs_athlete'
+                  ? 'Needs athlete'
+                  : 'Coaching event'
           return (
             <li key={ev.id} className="rounded-lg bg-[#121820] px-3 py-2">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -283,6 +297,7 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                     <LessonPlanCard
                       event={ev}
                       athlete={ev.matchedAthleteId ? (athletes.find((a) => a.id === ev.matchedAthleteId) ?? null) : null}
+                      athletes={linkedIds.map((id) => athletes.find((a) => a.id === id)).filter((a): a is Athlete => Boolean(a))}
                       coachId={coachId}
                       dateKey={dateKey}
                       open={true}
@@ -316,31 +331,16 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
         >
           <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
             <h4 className="font-semibold">{pickEvent.title}</h4>
-            <p className="text-sm text-[var(--muted)]">Match this event to an athlete</p>
-            <ul className="mt-3 flex flex-col gap-2">
-              {roster.map((a) => (
-                <li key={a.id}>
-                  <button
-                    type="button"
-                    className="w-full rounded-lg border border-[var(--panel-border)] px-3 py-2 text-left text-sm hover:border-[var(--accent-dim)]"
-                    onClick={() => {
-                      void matchCalendarEvent(pickEvent.id, a.id, {
-                        saveSeries: saveSeries,
-                        saveTitle: saveTitle,
-                      }).then(() => {
-                        setPickEventId(null)
-                        void refresh()
-                        // Do NOT auto-start the lesson here. The coach just
-                        // wanted to link the athlete to the event; starting
-                        // is a separate action via the Start lesson button.
-                      })
-                    }}
-                  >
-                    {a.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <p className="text-sm text-[var(--muted)]">
+              Match this event to its athletes, up to 3. Add everyone before you plan, so each athlete gets a checklist.
+            </p>
+            <div className="mt-3">
+              <EventAthletePicker
+                athletes={roster}
+                selectedIds={pickSelected}
+                onChange={setPickSelected}
+              />
+            </div>
             <label className="mt-3 flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -357,13 +357,34 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
               />
               Use for this recurring series
             </label>
-            <button
-              type="button"
-              className="mt-3 text-sm text-[var(--muted)] underline"
-              onClick={() => setPickEventId(null)}
-            >
-              Cancel
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={pickSelected.length === 0}
+                onClick={() => {
+                  void matchCalendarEvent(pickEvent.id, pickSelected, {
+                    saveSeries: saveSeries,
+                    saveTitle: saveTitle,
+                  }).then(() => {
+                    setPickEventId(null)
+                    void refresh()
+                    // Do NOT auto-start the lesson here. The coach just
+                    // wanted to link the athletes to the event; starting
+                    // is a separate action via the Start lesson button.
+                  })
+                }}
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                className="text-sm text-[var(--muted)] underline"
+                onClick={() => setPickEventId(null)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

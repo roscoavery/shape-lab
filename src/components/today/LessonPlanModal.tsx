@@ -14,15 +14,17 @@ function formatWhen(iso: string): string {
  * Plan a lesson from anywhere: the "needs a plan" banner opens this directly
  * for the calendar event, whatever day it's on. Tasks save into the
  * class-plan store under the event's date, so they're there on lesson day.
+ * Athletes are added on the event itself (Change), up to 3, so every
+ * athlete gets a checklist planned here, like a class.
  */
 export function LessonPlanModal({
   event,
-  athlete,
+  athletes,
   coachId,
   onClose,
 }: {
   event: TodayCalendarEvent
-  athlete: Athlete | null
+  athletes: Athlete[]
   coachId: string
   onClose: () => void
 }) {
@@ -41,8 +43,13 @@ export function LessonPlanModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const label = athlete?.name || event.title || 'Lesson'
-  const needsMoreAthletes = /add athlete/i.test(event.notes ?? '')
+  const label =
+    athletes.length > 0
+      ? athletes.map((a) => a.name).join(' + ')
+      : event.title || 'Lesson'
+  // Notes that mention adding an athlete, while the event still lists
+  // fewer than two, mean someone is missing from the plan.
+  const needsMoreAthletes = /add athlete/i.test(event.notes ?? '') && athletes.length < 2
 
   return (
     <div
@@ -65,7 +72,7 @@ export function LessonPlanModal({
             <p className="text-xs text-[var(--muted)]">{formatWhen(event.startAt)}</p>
             {needsMoreAthletes && (
               <p className="mt-1 text-xs font-semibold text-amber-300">
-                Notes say "add athlete" — this lesson may have multiple athletes. Add them once the lesson starts.
+                Notes say &quot;add athlete&quot; — this lesson may have more than one athlete. Add them on the event (Change) so you can plan for everyone here.
               </p>
             )}
           </div>
@@ -80,7 +87,8 @@ export function LessonPlanModal({
         </div>
         <LessonPlanCard
           event={event}
-          athlete={athlete}
+          athlete={athletes[0] ?? null}
+          athletes={athletes}
           coachId={coachId}
           dateKey={lessonPlanDateKey(event)}
           open={true}
@@ -91,7 +99,7 @@ export function LessonPlanModal({
           hideHeader={true}
         />
         <p className="mt-2 text-xs text-[var(--muted)]">
-          Tasks show in the live lesson and on the athlete checklist.
+          Tasks show in the live lesson and on each athlete's checklist.
         </p>
       </div>
     </div>

@@ -30,10 +30,21 @@ export type TodayCalendarEvent = {
   location: string
   status: string
   matchedAthleteId: string | null
+  /** Every athlete linked to this event, up to 3 for lessons. The first id is the primary and mirrors matchedAthleteId. */
+  matchedAthleteIds?: string[]
   matchStatus: string
   providerCalendarId: string
   notes?: string
   lessonLinks: { lessonId: string; athleteId: string }[]
+}
+
+/** Every athlete linked to an event, primary first. Falls back to the single matchedAthleteId on older rows. */
+export function eventAthleteIds(
+  ev: Pick<TodayCalendarEvent, 'matchedAthleteId' | 'matchedAthleteIds'>,
+): string[] {
+  const ids = (ev.matchedAthleteIds ?? []).filter(Boolean)
+  if (ids.length > 0) return [...new Set(ids)]
+  return ev.matchedAthleteId ? [ev.matchedAthleteId] : []
 }
 
 function storeToken(token: string) {
@@ -269,12 +280,12 @@ export function hasCalendarApiToken(): boolean {
 
 export async function matchCalendarEvent(
   eventId: string,
-  athleteId: string,
+  athleteIds: string[],
   opts?: { saveSeries?: boolean; saveTitle?: boolean },
 ) {
   const res = await calendarFetch(`/events/${eventId}/match`, {
     method: 'POST',
-    body: JSON.stringify({ athleteId, ...opts }),
+    body: JSON.stringify({ athleteIds, ...opts }),
   })
   if (!res.ok) throw new Error('Match failed')
 }

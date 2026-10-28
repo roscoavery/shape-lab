@@ -10,6 +10,7 @@ import {
   taskDoneFor,
   taskDoneForAll,
   taskRepsDoneFor,
+  taskAssignees,
   removePlanTask,
   reorderPlanTask,
   copyChecklistForAthlete,
@@ -30,9 +31,15 @@ function formatTime(iso: string): string {
 }
 
 /**
- * Task planning for a single lesson. Uses the class-plan store with a
- * synthetic offering id (`lesson:<eventId>`) so tasks sync, appear in the
- * athlete checklist, and show on the athlete's Today view — same as classes.
+ * Task planning for a lesson, one event, up to 3 athletes. Uses the
+ * class-plan store with a synthetic offering id (`lesson:<eventId>`) so
+ * tasks sync, appear in the athlete checklists, and show on each
+ * athlete's Today view — same as classes.
+ *
+ * With one athlete the card behaves exactly as before: tasks belong to
+ * her. With several, it works like a class plan: Everyone / athlete
+ * chips pick who a task belongs to, shared tasks carry several names,
+ * and each athlete's checklist shows her own tasks plus Everyone tasks.
  *
  * Shared by the morning brief, the calendar event detail, and the live
  * lesson workspace.
@@ -40,6 +47,7 @@ function formatTime(iso: string): string {
 export function LessonPlanCard({
   event,
   athlete,
+  athletes,
   coachId,
   dateKey,
   open,
@@ -54,6 +62,8 @@ export function LessonPlanCard({
 }: {
   event: TodayCalendarEvent
   athlete: Athlete | null
+  /** Every athlete on the event, primary first. Defaults to [athlete]. */
+  athletes?: Athlete[]
   coachId: string
   dateKey: string
   open: boolean
@@ -70,12 +80,27 @@ export function LessonPlanCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dateKey, planId, coachId, plansTick],
   )
-  // Stamp the plan with the athlete it belongs to, so this lesson's
+  const people = useMemo(
+    () => (athletes?.length ? athletes : athlete ? [athlete] : []),
+    [athletes, athlete],
+  )
+  const multi = people.length > 1
+  // Who the next task belongs to. Single-athlete lessons keep the old
+  // behavior (tasks belong to her); multi-athlete lessons start on
+  // Everyone, like a class plan.
+  const [chipIds, setChipIds] = useState<string[]>(['all'])
+  const effectiveChips = useMemo(() => {
+    if (!multi) return people.length ? [people[0]!.id] : ['all']
+    const kept = chipIds.filter((id) => id === 'all' || people.some((p) => p.id === id))
+    return kept.length > 0 ? kept : ['all']
+  }, [multi, chipIds, people])
+  // Stamp the plan with every athlete it belongs to, so this lesson's
   // checklist can be found as hers later even if its tasks were written
-  // before the lesson was linked to her.
+  // before the lesson was linked to her, and so Everyone tasks resolve
+  // to all of them.
   useEffect(() => {
-    if (athlete) stampPlanAthlete(plan.id, athlete.id)
-  }, [plan.id, athlete?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    for (const person of people) stampPlanAthlete(plan.id, person.id)
+  }, [plan.id, people])
   const [repsInput, setRepsInput] = useState('')
 
   const { handleProps, rowStyle } = useDragList((from, to) => {
@@ -83,18 +108,38 @@ export function LessonPlanCard({
     if (task) reorderPlanTask(plan.id, task.id, to)
   })
 
+  const toggleChip = (id: string) => {
+    if (id === 'all') {
+      setChipIds(['all'])
+      return
+    }
+    const withoutAll = effectiveChips.filter((x) => x !== 'all')
+    if (withoutAll.includes(id)) {
+      const next = withoutAll.filter((x) => x !== id)
+      setChipIds(next.length > 0 ? next : ['all'])
+    } else {
+      setChipIds([...withoutAll, id])
+    }
+  }
+
   const addTask = () => {
     if (!taskInput.trim()) return
     const reps = parseInt(repsInput, 10)
-    // Lesson tasks belong to the matched athlete; fall back to 'all' so the
-    // task still shows if the event isn't linked yet.
-    const athleteIds = athlete ? [athlete.id] : ['all']
-    addPlanTask(plan.id, athleteIds, taskInput, Number.isFinite(reps) && reps > 0 ? reps : undefined)
+    addPlanTask(plan.id, effectiveChips, taskInput, Number.isFinite(reps) && reps > 0 ? reps : undefined)
     onTaskInput('')
     setRepsInput('')
+    if (multi) setChipIds(['all'])
   }
 
+  // When exactly one athlete is picked in the task writer, offer that
+  // athlete's own checklist from a past session, as class plans do.
+  const soloAthlete =
+    multi && effectiveChips.length === 1 && effectiveChips[0] !== 'all'
+      ? (people.find((p) => p.id === effectiveChips[0]) ?? undefined)
+      : undefined
+
   const label = useMemo(() => {
+    if (people.length > 1) return people.map((p) => p.firstName || p.name).join(' + ')
     if (athlete?.firstName || athlete?.name) return athlete.firstName || athlete.name
     // Unmatched lesson: prefer the tumbler name from the event notes over the
     // raw title (Acuity titles carry the parent's name).
@@ -105,9 +150,9 @@ export function LessonPlanCard({
       if (marker) return marker[2] ? `${marker[1]} ${marker[2]}` : marker[1]!
     }
     return event.title || 'Lesson'
-  }, [athlete, event.notes, event.title])
+  }, [athlete, people, event.notes, event.title])
   const doneCount = plan.tasks.filter((t) =>
-    athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan),
+    multi ? taskDoneForAll(t, plan, people) : athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan),
   ).length
 
   const body = (
@@ -115,8 +160,28 @@ export function LessonPlanCard({
       {plan.tasks.length > 0 && (
         <ul className="mb-2 space-y-1">
           {plan.tasks.map((t, i) => {
-            const done = athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan)
-            const reps = athlete ? taskRepsDoneFor(t, athlete.id) : null
+            const done = multi
+              ? taskDoneForAll(t, plan, people)
+              : athlete
+                ? taskDoneFor(t, athlete.id)
+                : taskDoneForAll(t, plan)
+            // Coach view: checked when every assigned athlete has checked
+            // it off. Reps show only for a single-athlete task, where one
+            // count is meaningful.
+            const assignees = multi ? taskAssignees(t, plan, people) : []
+            const reps =
+              !multi && athlete
+                ? taskRepsDoneFor(t, athlete.id)
+                : assignees.length === 1
+                  ? taskRepsDoneFor(t, assignees[0]!)
+                  : null
+            const names = multi
+              ? t.athleteIds.includes('all')
+                ? ['Everyone']
+                : t.athleteIds.map(
+                    (id) => people.find((p) => p.id === id)?.firstName || people.find((p) => p.id === id)?.name || 'Athlete',
+                  )
+            : []
             return (
             <li
               key={t.id}
@@ -126,7 +191,7 @@ export function LessonPlanCard({
               <DragGrip {...handleProps(i)} />
               <button
                 type="button"
-                onClick={() => togglePlanTask(plan.id, t.id, athlete ? [athlete.id] : undefined)}
+                onClick={() => togglePlanTask(plan.id, t.id, multi ? undefined : athlete ? [athlete.id] : undefined)}
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                   done
                     ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]'
@@ -137,6 +202,12 @@ export function LessonPlanCard({
                 {done ? '✓' : ''}
               </button>
               <span className={`min-w-0 flex-1 ${done ? 'line-through opacity-50' : ''}`}>
+                {multi && (
+                  <span className="mr-1.5 rounded bg-white/10 px-1.5 py-0.5 text-xs">
+                    {names.slice(0, 3).join(', ')}
+                    {names.length > 3 ? ` +${names.length - 3}` : ''}
+                  </span>
+                )}
                 {t.text}
                 {t.repsTarget ? ` (${reps === null ? t.repsTarget : reps}/${t.repsTarget})` : ''}
               </span>
@@ -153,6 +224,38 @@ export function LessonPlanCard({
           })}
         </ul>
       )}
+      {multi && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => toggleChip('all')}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+              effectiveChips.includes('all')
+                ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                : 'border border-[var(--panel-border)] text-[var(--muted)]'
+            }`}
+          >
+            Everyone
+          </button>
+          {people.map((p) => {
+            const on = effectiveChips.includes(p.id)
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggleChip(p.id)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  on
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                    : 'border border-[var(--panel-border)] text-[var(--muted)]'
+                }`}
+              >
+                {p.firstName || p.name}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className="flex min-w-0 gap-2">
         <input
           type="text"
@@ -161,7 +264,7 @@ export function LessonPlanCard({
           onKeyDown={(e) => {
             if (e.key === 'Enter') addTask()
           }}
-          placeholder={`What will ${athlete?.firstName || 'they'} work on?`}
+          placeholder={`What will ${multi ? 'they' : athlete?.firstName || 'they'} work on?`}
           className="min-w-0 flex-1 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-3 py-1.5 text-sm"
         />
         <input
@@ -179,7 +282,7 @@ export function LessonPlanCard({
           Add
         </button>
       </div>
-      {athlete && (
+      {!multi && athlete && (
         <ReuseChecklist
           athlete={athlete}
           beforeDate={dateKey}
@@ -187,6 +290,16 @@ export function LessonPlanCard({
           refreshKey={plansTick}
           className="mt-2"
           onPick={(src) => copyChecklistForAthlete(src.id, plan.id, athlete.id)}
+        />
+      )}
+      {multi && soloAthlete && (
+        <ReuseChecklist
+          athlete={soloAthlete}
+          beforeDate={dateKey}
+          target={plan}
+          refreshKey={plansTick}
+          className="mt-2"
+          onPick={(src) => copyChecklistForAthlete(src.id, plan.id, soloAthlete.id)}
         />
       )}
     </>

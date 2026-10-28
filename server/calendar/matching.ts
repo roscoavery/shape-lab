@@ -155,6 +155,15 @@ export function unescapeCalendarText(input: string): string {
     .replace(/\\,/g, ',')
     .replace(/\\;/g, ';')
     .replace(/\\\\/g, '\\')
+    // Cronofy/iCloud descriptions HTML-escape ampersands, so "Berkley &
+    // Baylor" arrives as "Berkley &amp; Baylor" and renders literally.
+    // Decode the common entities so notes, names, and matching see the text.
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
 }
 
 function haystackOf(input: Pick<MatchInput, 'title' | 'description'>): string {

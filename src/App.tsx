@@ -211,7 +211,7 @@ import {
   lessonNameList,
 } from './lib/lessonStore'
 import { linkAthleteToCoach } from './lib/coachLink'
-import { linkLessonCalendarEvent, type TodayCalendarEvent } from './lib/calendarClient'
+import { eventAthleteIds, linkLessonCalendarEvent, type TodayCalendarEvent } from './lib/calendarClient'
 import { hydrateCoachContent } from './lib/coachContentStore'
 import { hydrateSkillPaths } from './lib/skillPaths'
 import { hydrateChalkboards } from './lib/chalkboard'
@@ -1640,11 +1640,9 @@ export default function App() {
           {planModalEvent && activeProfile && isCoachProfile(activeProfile) && (
             <LessonPlanModal
               event={planModalEvent}
-              athlete={
-                planModalEvent.matchedAthleteId
-                  ? (athletes.find((a) => a.id === planModalEvent.matchedAthleteId) ?? null)
-                  : null
-              }
+              athletes={eventAthleteIds(planModalEvent)
+                .map((id) => athletes.find((a) => a.id === id))
+                .filter((a): a is Athlete => Boolean(a))}
               coachId={activeProfile.id}
               onClose={() => setPlanModalEvent(null)}
             />

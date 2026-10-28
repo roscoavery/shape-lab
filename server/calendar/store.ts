@@ -189,6 +189,8 @@ export async function upsertManualMatch(opts: {
   coachId: string
   eventId: string
   athleteId: string
+  /** Every athlete on the event, up to 3. Defaults to [athleteId]. The first id is the primary: it fills matchedAthleteId and the series/title mappings. */
+  athleteIds?: string[]
   saveSeries?: boolean
   saveTitle?: boolean
   seriesKey?: string
@@ -196,11 +198,14 @@ export async function upsertManualMatch(opts: {
   title?: string
 }): Promise<CalendarDb> {
   const db = await readCalendarDb()
+  const ids = [...new Set((opts.athleteIds ?? [opts.athleteId]).filter(Boolean))].slice(0, 3)
+  const primary = ids[0] ?? opts.athleteId
   const events = db.events.map((e) =>
     e.id === opts.eventId
       ? {
           ...e,
-          matchedAthleteId: opts.athleteId,
+          matchedAthleteId: primary,
+          matchedAthleteIds: ids,
           matchStatus: 'matched' as const,
           matchConfidence: 1,
           updatedAt: new Date().toISOString(),
@@ -215,7 +220,7 @@ export async function upsertManualMatch(opts: {
       coachId: opts.coachId,
       connectionId: opts.connectionId,
       seriesKey: opts.seriesKey,
-      athleteId: opts.athleteId,
+      athleteId: primary,
       createdAt: new Date().toISOString(),
     }
     eventMappings = [
@@ -236,7 +241,7 @@ export async function upsertManualMatch(opts: {
       id: newId('ctm'),
       coachId: opts.coachId,
       normalizedTitle: norm,
-      athleteId: opts.athleteId,
+      athleteId: primary,
       createdAt: new Date().toISOString(),
     }
     titleMappings = [
