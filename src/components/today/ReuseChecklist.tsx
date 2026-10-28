@@ -5,6 +5,7 @@ import {
   checklistSourcesForAthlete,
   copiedTasksForAthlete,
   removeCopiedTasksForAthlete,
+  taskDoneFor,
   type ClassPlan,
 } from '../../lib/classPlans'
 import { getOffering } from '../../lib/coachClasses'
@@ -108,8 +109,8 @@ export function ReuseChecklist({
                         key={t.id}
                         className={`flex items-baseline gap-2 text-sm ${overlay ? 'text-white/85' : ''}`}
                       >
-                        <span className={t.done ? 'text-emerald-400' : sub}>
-                          {t.done ? '✓' : '•'}
+                        <span className={taskDoneFor(t, athlete.id) ? 'text-emerald-400' : sub}>
+                          {taskDoneFor(t, athlete.id) ? '✓' : '•'}
                         </span>
                         <span className="min-w-0 flex-1">
                           {t.text}

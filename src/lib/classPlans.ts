@@ -56,13 +56,66 @@ export type ClassPlanTask = {
   /** Athlete ids this task is for, or ['all'] for a whole-class task. */
   athleteIds: string[]
   text: string
-  done: boolean
-  /** Optional rep target. Athletes tap through repsDone toward it. */
+  /**
+   * Athlete ids who have checked this task off. Completion is per
+   * athlete: a task assigned to several athletes is a separate
+   * checklist item for each of them, never a shared team check.
+   * Checking it under one name must never check it for anyone else.
+   */
+  doneAthleteIds?: string[]
+  /** Reps completed per athlete id. Also per athlete, for the same reason. */
+  repsDoneByAthlete?: Record<string, number>
+  /** Optional rep target. Athletes tap through reps toward it. */
   repsTarget?: number
-  repsDone?: number
   /** Plan id this task was carried over from, if any. */
   carriedFromPlanId?: string
   createdAt: string
+}
+
+/** Has this athlete checked this task off? */
+export function taskDoneFor(task: ClassPlanTask, athleteId: string): boolean {
+  return (task.doneAthleteIds ?? []).includes(athleteId)
+}
+
+/** Reps this athlete has logged on this task. */
+export function taskRepsDoneFor(task: ClassPlanTask, athleteId: string): number {
+  return task.repsDoneByAthlete?.[athleteId] ?? 0
+}
+
+/**
+ * Athletes a task applies to, concretely resolved. 'all' class tasks
+ * resolve to the class members; 'all' lesson tasks resolve to the
+ * lesson's athletes. Falls back to the task's explicit ids.
+ */
+export function taskAssignees(
+  task: ClassPlanTask,
+  plan: ClassPlan,
+  roster?: Athlete[],
+): string[] {
+  const explicit = task.athleteIds.filter((id) => id !== 'all')
+  if (!task.athleteIds.includes('all')) return [...new Set(explicit)]
+  const out = new Set<string>(explicit)
+  if (plan.offeringId.startsWith('lesson:')) {
+    for (const id of lessonPlanAthleteIds(plan)) out.add(id)
+  } else {
+    for (const id of classMemberIds(plan.offeringId, roster ?? loadAthletes())) out.add(id)
+  }
+  return [...out]
+}
+
+/**
+ * Done for every athlete the task applies to. This is the coach's
+ * group view of a task (morning brief, everyone view): checked only
+ * when every assigned athlete has checked it off.
+ */
+export function taskDoneForAll(
+  task: ClassPlanTask,
+  plan: ClassPlan,
+  roster?: Athlete[],
+): boolean {
+  const assignees = taskAssignees(task, plan, roster)
+  if (assignees.length === 0) return false
+  return assignees.every((id) => taskDoneFor(task, id))
 }
 
 export type ClassPlan = {
@@ -127,13 +180,35 @@ export function loadClassPlans(): ClassPlan[] {
         t.athleteIds = ['all']
         dirty = true
       }
+      // Migrate the old shared completion flags to per-athlete state.
+      // A stored check can only be attributed when exactly one athlete
+      // could have made it. A shared check on a multi-athlete task
+      // cannot be attributed to anyone, so it is dropped rather than
+      // credited to every athlete (that drop is the bug being fixed).
+      const legacy = t as ClassPlanTask & {
+        athleteId?: string
+        done?: unknown
+        repsDone?: unknown
+      }
+      if (typeof legacy.done === 'boolean' || typeof legacy.repsDone === 'number') {
+        const sole =
+          !t.athleteIds.includes('all') && t.athleteIds.length === 1 ? t.athleteIds[0] : undefined
+        if (sole) {
+          if (legacy.done === true) t.doneAthleteIds = [sole]
+          if (typeof legacy.repsDone === 'number' && legacy.repsDone > 0) {
+            t.repsDoneByAthlete = { [sole]: legacy.repsDone }
+          }
+        }
+        delete legacy.done
+        delete legacy.repsDone
+        dirty = true
+      }
       // Pull rep counts out of titles the coach already wrote ("5 ro hs tuck reps").
       if (t.repsTarget === undefined) {
         const parsed = parseLeadingReps(t.text)
         if (parsed.reps !== undefined && parsed.text !== t.text) {
           t.text = parsed.text
           t.repsTarget = parsed.reps
-          t.repsDone = 0
           dirty = true
         }
       }
@@ -330,29 +405,74 @@ export function addPlanTask(
         id: createId('ctask'),
         athleteIds: ids,
         text: finalText,
-        done: false,
-        ...(target ? { repsTarget: target, repsDone: 0 } : {}),
+        ...(target ? { repsTarget: target } : {}),
         createdAt: new Date().toISOString(),
       },
     ],
   }))
 }
 
-export function togglePlanTask(planId: string, taskId: string): ClassPlan | null {
+/**
+ * Flip a task's check-off for the given athletes. Athlete surfaces pass
+ * exactly one id (the athlete whose checklist this is). Coach surfaces
+ * omit the list, which resolves to every athlete the task applies to —
+ * the coach marking the group done. A tap never touches an athlete
+ * outside the list.
+ */
+export function togglePlanTask(
+  planId: string,
+  taskId: string,
+  athleteIds?: string[],
+): ClassPlan | null {
   return updatePlan(planId, (p) => ({
     ...p,
-    tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)),
+    tasks: p.tasks.map((t) => {
+      if (t.id !== taskId) return t
+      const targets =
+        athleteIds && athleteIds.length > 0 ? [...new Set(athleteIds)] : taskAssignees(t, p)
+      if (targets.length === 0) return t
+      const done = new Set(t.doneAthleteIds ?? [])
+      // Group tap: checked only when every named athlete is already
+      // checked, otherwise check them all. A single athlete's tap flips
+      // only hers.
+      const allDone = targets.every((id) => done.has(id))
+      for (const id of targets) {
+        if (allDone) done.delete(id)
+        else done.add(id)
+      }
+      return { ...t, doneAthleteIds: [...done] }
+    }),
   }))
 }
 
-/** Bump repsDone on a task. Auto-marks done when the target is reached. */
-export function bumpTaskReps(planId: string, taskId: string, delta: number): ClassPlan | null {
+/**
+ * Bump reps on a task for the given athletes. Auto-marks done for an
+ * athlete when her own reps reach the target, and un-marks her if they
+ * drop back below it. Athlete surfaces pass exactly one id; coach
+ * surfaces omit the list and resolve to every assignee.
+ */
+export function bumpTaskReps(
+  planId: string,
+  taskId: string,
+  delta: number,
+  athleteIds?: string[],
+): ClassPlan | null {
   return updatePlan(planId, (p) => ({
     ...p,
     tasks: p.tasks.map((t) => {
       if (t.id !== taskId || !t.repsTarget) return t
-      const repsDone = Math.max(0, Math.min(t.repsTarget, (t.repsDone ?? 0) + delta))
-      return { ...t, repsDone, done: repsDone >= t.repsTarget }
+      const targets =
+        athleteIds && athleteIds.length > 0 ? [...new Set(athleteIds)] : taskAssignees(t, p)
+      if (targets.length === 0) return t
+      const reps = { ...(t.repsDoneByAthlete ?? {}) }
+      const done = new Set(t.doneAthleteIds ?? [])
+      for (const id of targets) {
+        const next = Math.max(0, Math.min(t.repsTarget, (reps[id] ?? 0) + delta))
+        reps[id] = next
+        if (next >= t.repsTarget) done.add(id)
+        else done.delete(id)
+      }
+      return { ...t, repsDoneByAthlete: reps, doneAthleteIds: [...done] }
     }),
   }))
 }
@@ -433,8 +553,11 @@ export function tasksForAthleteOnDate(
 
 /**
  * Carry incomplete tasks forward from an earlier class plan to a later one.
- * Only tasks touching the given athlete ids are carried. Rep progress comes
- * along so athletes pick up where they left off.
+ * Only tasks touching the given athlete ids are carried, and only for the
+ * athletes who have not checked them off yet: a task Kate finished does
+ * not come back for her, but still carries for an athlete who has not
+ * done it. Rep progress comes along per athlete so each picks up where
+ * she left off.
  */
 export function carryOverTasks(
   fromPlanId: string,
@@ -444,14 +567,12 @@ export function carryOverTasks(
   const plans = loadClassPlans()
   const from = plans.find((p) => p.id === fromPlanId)
   if (!from) return null
-  const wanted = new Set(athleteIds)
   const carried: ClassPlanTask[] = []
   for (const task of from.tasks) {
-    if (task.done) continue
-    const overlap = task.athleteIds.filter(
-      (id) => id === 'all' || wanted.has(id),
-    )
-    if (overlap.length === 0) continue
+    const appliesTo = (id: string) =>
+      task.athleteIds.includes(id) || task.athleteIds.includes('all')
+    const incomplete = athleteIds.filter((id) => appliesTo(id) && !taskDoneFor(task, id))
+    if (incomplete.length === 0) continue
     // Skip if this exact task was already carried over.
     const toPlan = plans.find((p) => p.id === toPlanId)
     if (toPlan?.tasks.some((t) => t.carriedFromPlanId === from.id && t.text === task.text)) {
@@ -459,11 +580,15 @@ export function carryOverTasks(
     }
     carried.push({
       id: createId('ctask'),
-      athleteIds: task.athleteIds.includes('all') ? ['all'] : overlap,
+      athleteIds: incomplete,
       text: task.text,
-      done: false,
       ...(task.repsTarget
-        ? { repsTarget: task.repsTarget, repsDone: task.repsDone ?? 0 }
+        ? {
+            repsTarget: task.repsTarget,
+            repsDoneByAthlete: Object.fromEntries(
+              incomplete.map((id) => [id, taskRepsDoneFor(task, id)]),
+            ),
+          }
         : {}),
       carriedFromPlanId: from.id,
       createdAt: new Date().toISOString(),
@@ -616,8 +741,7 @@ export function copyChecklistForAthlete(
       id: createId('ctask'),
       athleteIds: [athleteId],
       text: task.text,
-      done: false,
-      ...(task.repsTarget ? { repsTarget: task.repsTarget, repsDone: 0 } : {}),
+      ...(task.repsTarget ? { repsTarget: task.repsTarget } : {}),
       carriedFromPlanId: from.id,
       createdAt: new Date().toISOString(),
     })
@@ -690,8 +814,7 @@ export function copyPlanTasksFresh(
       id: createId('ctask'),
       athleteIds: [...task.athleteIds],
       text: task.text,
-      done: false,
-      ...(task.repsTarget ? { repsTarget: task.repsTarget, repsDone: 0 } : {}),
+      ...(task.repsTarget ? { repsTarget: task.repsTarget } : {}),
       carriedFromPlanId: from.id,
       createdAt: new Date().toISOString(),
     })

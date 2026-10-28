@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Athlete, AthleteCoachNote } from '../../types'
 import { isShapelabAdmin } from '../../lib/profileRole'
-import { getClassPlan } from '../../lib/classPlans'
+import { getClassPlan, taskDoneFor, taskRepsDoneFor } from '../../lib/classPlans'
 import {
   addCoachNotesToAthletes,
   applyCoachNoteRemove,
@@ -431,7 +431,7 @@ function AthleteRecap({
   const plan = getClassPlan(planDate, meeting.offeringId)
   const checkedTasks = (plan?.tasks ?? []).filter(
     (t) =>
-      t.done &&
+      taskDoneFor(t, athlete.id) &&
       (t.athleteIds.includes(athlete.id) || t.athleteIds.includes('all')),
   )
 
@@ -492,7 +492,7 @@ function AthleteRecap({
                     {task.text}
                     {task.repsTarget ? (
                       <span className="ml-1.5 text-xs text-[var(--muted)]">
-                        {task.repsDone ?? task.repsTarget}/{task.repsTarget} reps
+                        {taskRepsDoneFor(task, athlete.id) || task.repsTarget}/{task.repsTarget} reps
                       </span>
                     ) : null}
                   </span>

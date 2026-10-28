@@ -12,6 +12,11 @@ import {
 import {
   getOrCreateClassPlan,
   togglePlanTask,
+  taskDoneFor,
+  taskDoneForAll,
+  taskRepsDoneFor,
+  type ClassPlan,
+  type ClassPlanTask,
 } from '../../lib/classPlans'
 import { lessonBlockLabel, lessonDisplayEnd, lessonDisplayStart } from '../../lib/lessonPlan'
 import { noteAudienceLabel, noteVisibleToAthlete } from '../../lib/noteAudience'
@@ -53,17 +58,22 @@ function RecapLessonTasks({ session }: { session: LessonSession }) {
   const [, setTick] = useState(0)
   const date = (session.endedAt ?? session.startedAt).slice(0, 10)
 
-  let tasks: { id: string; text: string; done?: boolean; repsDone?: number; repsTarget?: number }[] = []
+  let tasks: ClassPlanTask[] = []
   let planId: string | null = null
+  let plan: ClassPlan | null = null
   if (session.calendarEventId) {
     const p = getOrCreateClassPlan(date, `lesson:${session.calendarEventId}`, session.coachId)
     if (p.tasks.length > 0) {
       tasks = p.tasks
       planId = p.id
+      plan = p
     }
   }
 
   if (tasks.length === 0) return null
+
+  // The athletes in this lesson: a check here counts for them.
+  const sessionAthletes = lessonAthleteIds(session)
 
   return (
     <div className="mt-2 rounded-lg bg-[#121820] px-3 py-2">
@@ -71,31 +81,44 @@ function RecapLessonTasks({ session }: { session: LessonSession }) {
         Lesson checklist
       </p>
       <ul className="mt-1 space-y-1">
-        {tasks.map((t) => (
+        {tasks.map((t) => {
+          const done =
+            sessionAthletes.length > 0
+              ? sessionAthletes.every((id) => taskDoneFor(t, id))
+              : plan
+                ? taskDoneForAll(t, plan)
+                : false
+          const reps = sessionAthletes.length === 1 ? taskRepsDoneFor(t, sessionAthletes[0]) : null
+          return (
           <li key={t.id} className="flex items-center gap-1.5 text-sm">
             <button
               type="button"
               onClick={() => {
                 if (planId) {
-                  togglePlanTask(planId, t.id)
+                  togglePlanTask(planId, t.id, sessionAthletes.length > 0 ? sessionAthletes : undefined)
                   setTick((n) => n + 1)
                 }
               }}
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                t.done
+                done
                   ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]'
                   : 'border-white/30'
               }`}
-              aria-label={t.done ? 'Mark not done' : 'Mark done'}
+              aria-label={done ? 'Mark not done' : 'Mark done'}
             >
-              {t.done ? '✓' : ''}
+              {done ? '✓' : ''}
             </button>
-            <span className={`min-w-0 flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
+            <span className={`min-w-0 flex-1 ${done ? 'line-through opacity-50' : ''}`}>
               {t.text}
-              {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
+              {t.repsTarget
+                ? reps === null
+                  ? ` (${t.repsTarget} reps)`
+                  : ` (${reps}/${t.repsTarget})`
+                : ''}
             </span>
           </li>
-        ))}
+          )
+        })}
       </ul>
     </div>
   )

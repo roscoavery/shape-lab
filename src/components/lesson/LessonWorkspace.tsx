@@ -34,6 +34,8 @@ import {
   getOrCreateClassPlan,
   plansForDate,
   togglePlanTask,
+  taskDoneFor,
+  taskRepsDoneFor,
   reorderPlanTask,
   subscribeClassPlans,
   pullClassPlans,
@@ -214,7 +216,12 @@ export function LessonWorkspace({
               Today's plan
             </p>
             <ul className="mt-1 space-y-1">
-              {lessonTasks.map((t, i) => (
+              {lessonTasks.map((t, i) => {
+                // Done means done for every athlete in this lesson.
+                const done =
+                  peopleIds.length > 0 ? peopleIds.every((id) => taskDoneFor(t, id)) : false
+                const reps = peopleIds.length === 1 ? taskRepsDoneFor(t, peopleIds[0]) : null
+                return (
                 <li
                   key={t.id}
                   style={rowStyle(i)}
@@ -225,23 +232,28 @@ export function LessonWorkspace({
                     type="button"
                     onClick={() => {
                       const p = findTaskPlan()
-                      if (p) togglePlanTask(p.id, t.id)
+                      if (p) togglePlanTask(p.id, t.id, peopleIds.length > 0 ? peopleIds : undefined)
                     }}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                      t.done
+                      done
                         ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]'
                         : 'border-white/30'
                     }`}
-                    aria-label={t.done ? 'Mark not done' : 'Mark done'}
+                    aria-label={done ? 'Mark not done' : 'Mark done'}
                   >
-                    {t.done ? '✓' : ''}
+                    {done ? '✓' : ''}
                   </button>
-                  <span className={`min-w-0 flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
+                  <span className={`min-w-0 flex-1 ${done ? 'line-through opacity-50' : ''}`}>
                     {t.text}
-                    {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
+                    {t.repsTarget
+                      ? reps === null
+                        ? ` (${t.repsTarget} reps)`
+                        : ` (${reps}/${t.repsTarget})`
+                      : ''}
                   </span>
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </div>
         )}

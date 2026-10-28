@@ -6,11 +6,18 @@ export type DiskClassPlanTask = {
   id: string
   athleteIds: string[]
   text: string
-  done: boolean
+  /** Per-athlete check-offs: a shared task is a separate checklist item
+   *  for each athlete, never a shared team check. */
+  doneAthleteIds?: string[]
+  /** Reps completed per athlete id. */
+  repsDoneByAthlete?: Record<string, number>
   repsTarget?: number
-  repsDone?: number
   carriedFromPlanId?: string
   createdAt: string
+  /** Legacy shared flags from plans stored before per-athlete
+   *  completion. The client migration reads and drops them. */
+  done?: boolean
+  repsDone?: number
 }
 
 export type DiskClassPlan = {

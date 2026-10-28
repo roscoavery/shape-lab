@@ -4,6 +4,8 @@ import {
   tasksForAthleteOnDate,
   togglePlanTask,
   bumpTaskReps,
+  taskDoneFor,
+  taskRepsDoneFor,
   subscribeClassPlans,
   todayKey,
 } from '../../lib/classPlans'
@@ -26,7 +28,7 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
 
   if (!athlete || items.length === 0) return null
 
-  const open = items.filter((i) => !i.task.done)
+  const open = items.filter((i) => !taskDoneFor(i.task, athlete.id))
 
   return (
     <section className="rounded-xl border border-amber-300/30 bg-amber-300/5 p-5">
@@ -44,11 +46,12 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
         <ul className="mt-3 space-y-2">
           {items.map(({ plan, task }) => {
             const offering = getOffering(plan.offeringId)
+            const done = taskDoneFor(task, athlete.id)
             return (
               <li
                 key={task.id}
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 ${
-                  task.done
+                  done
                     ? 'border-[var(--accent)]/30 bg-[var(--accent)]/5'
                     : 'border-[var(--panel-border)] bg-[var(--panel)]'
                 }`}
@@ -58,7 +61,7 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
                     <span className="min-w-0 flex-1">
                       <span
                         className={`block text-sm font-medium ${
-                          task.done
+                          done
                             ? 'text-[var(--muted)] line-through'
                             : 'text-[var(--text)]'
                         }`}
@@ -74,19 +77,19 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
                     <div className="flex shrink-0 items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => bumpTaskReps(plan.id, task.id, -1)}
+                        onClick={() => bumpTaskReps(plan.id, task.id, -1, [athlete.id])}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--panel-border)] text-lg text-[var(--text)]"
                         aria-label="Remove a rep"
                       >
                         −
                       </button>
                       <span className="min-w-[2.75rem] text-center text-sm font-bold tabular-nums text-[var(--text)]">
-                        {task.repsDone ?? 0}
+                        {taskRepsDoneFor(task, athlete.id)}
                         <span className="text-[var(--muted)]">/{task.repsTarget}</span>
                       </span>
                       <button
                         type="button"
-                        onClick={() => bumpTaskReps(plan.id, task.id, 1)}
+                        onClick={() => bumpTaskReps(plan.id, task.id, 1, [athlete.id])}
                         className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)]"
                         aria-label="Add a rep"
                       >
@@ -97,12 +100,12 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => togglePlanTask(plan.id, task.id)}
+                    onClick={() => togglePlanTask(plan.id, task.id, [athlete.id])}
                     className="flex w-full items-center gap-3 text-left"
                   >
                     <span
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-lg ${
-                        task.done
+                        done
                           ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
                           : 'border-[var(--panel-border)] text-transparent'
                       }`}
@@ -112,7 +115,7 @@ export function AthleteTodayTasks({ athlete }: { athlete: Athlete | null }) {
                     <span className="min-w-0">
                       <span
                         className={`block text-sm font-medium ${
-                          task.done
+                          done
                             ? 'text-[var(--muted)] line-through'
                             : 'text-[var(--text)]'
                         }`}

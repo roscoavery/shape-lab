@@ -7,6 +7,9 @@ import {
   plansForDate,
   togglePlanTask,
   bumpTaskReps,
+  taskDoneFor,
+  taskDoneForAll,
+  taskRepsDoneFor,
   subscribeClassPlans,
   pullClassPlans,
   loadClassPlans,
@@ -187,7 +190,17 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
     )
   }, [rows, selectedId, athletes])
 
-  const doneCount = visible.filter((r) => r.task.done).length
+  // In an athlete's own view, done means done for her. In the coach's
+  // everyone view, done means done for every athlete the task applies
+  // to. A check under one name never counts for anyone else.
+  const rowDone = (r: TaskRow): boolean =>
+    selectedId === 'all'
+      ? taskDoneForAll(r.task, r.plan, athletes)
+      : selectedId
+        ? taskDoneFor(r.task, selectedId)
+        : false
+
+  const doneCount = visible.filter(rowDone).length
 
   const selectedAthlete =
     selectedId && selectedId !== 'all' ? athleteById(athletes, selectedId) : null
@@ -235,7 +248,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                 (r.task.athleteIds.includes('all') &&
                   classMemberIds(r.plan.offeringId, athletes).has(a.id)),
             )
-            const myDone = myRows.filter((r) => r.task.done).length
+            const myDone = myRows.filter((r) => taskDoneFor(r.task, a.id)).length
             return (
               <button
                 key={a.id}
@@ -319,11 +332,19 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
               )}
             </div>
           ) : (
-            visible.map(({ plan, task, offeringName, time }) => (
+            visible.map(({ plan, task, offeringName, time }) => {
+              const done = rowDone({ plan, task, offeringName, time })
+              // Reps are hers in her own view. In the coach's everyone
+              // view there is no single count, so only the target shows.
+              const reps =
+                selectedId && selectedId !== 'all' ? taskRepsDoneFor(task, selectedId) : null
+              const actingAthlete =
+                selectedId && selectedId !== 'all' ? [selectedId] : undefined
+              return (
               <div
                 key={`${plan.id}:${task.id}`}
                 className={`rounded-2xl border p-5 ${
-                  task.done
+                  done
                     ? 'border-green-500/40 bg-green-500/10'
                     : 'border-white/10 bg-[#111418]'
                 }`}
@@ -346,7 +367,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                   <div className="mt-2 flex items-center gap-4">
                     <span
                       className={`min-w-0 flex-1 text-xl ${
-                        task.done ? 'text-white/40 line-through' : 'text-white'
+                        done ? 'text-white/40 line-through' : 'text-white'
                       }`}
                     >
                       {task.text}
@@ -354,19 +375,25 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => bumpTaskReps(plan.id, task.id, -1)}
+                        onClick={() => bumpTaskReps(plan.id, task.id, -1, actingAthlete)}
                         className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 text-2xl text-white"
                         aria-label="Remove a rep"
                       >
                         −
                       </button>
                       <span className="min-w-[4rem] text-center text-xl font-bold tabular-nums text-white">
-                        {task.repsDone ?? 0}
-                        <span className="text-white/50">/{task.repsTarget}</span>
+                        {reps === null ? (
+                          <span className="text-white/50">{task.repsTarget} reps</span>
+                        ) : (
+                          <>
+                            {reps}
+                            <span className="text-white/50">/{task.repsTarget}</span>
+                          </>
+                        )}
                       </span>
                       <button
                         type="button"
-                        onClick={() => bumpTaskReps(plan.id, task.id, 1)}
+                        onClick={() => bumpTaskReps(plan.id, task.id, 1, actingAthlete)}
                         className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-2xl font-bold text-[var(--on-accent)]"
                         aria-label="Add a rep"
                       >
@@ -377,12 +404,12 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => togglePlanTask(plan.id, task.id)}
+                    onClick={() => togglePlanTask(plan.id, task.id, actingAthlete)}
                     className="mt-2 flex w-full items-center gap-4 text-left"
                   >
                     <span
                       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 text-3xl ${
-                        task.done
+                        done
                           ? 'border-green-400 bg-green-400 text-black'
                           : 'border-white/30 text-transparent'
                       }`}
@@ -391,7 +418,7 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                     </span>
                     <span
                       className={`text-xl ${
-                        task.done ? 'text-white/40 line-through' : 'text-white'
+                        done ? 'text-white/40 line-through' : 'text-white'
                       }`}
                     >
                       {task.text}
@@ -399,7 +426,8 @@ export function AthleteChecklistView({ coach, athletes, onBack }: Props) {
                   </button>
                 )}
               </div>
-            ))
+              )
+            })
           )}
         </div>
       )}

@@ -12,6 +12,10 @@ import {
   setPlanNotes,
   addPlanTask,
   togglePlanTask,
+  taskDoneFor,
+  taskDoneForAll,
+  taskAssignees,
+  taskRepsDoneFor,
   removePlanTask,
   reorderPlanTask,
   carryOverTasks,
@@ -177,7 +181,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
               const p = getOrCreateClassPlan(dateKey, o.id, coach.id)
               return { plan: p, offering: o }
             })
-            .filter(({ plan }) => plan.tasks.some((t) => !t.done))
+            .filter(({ plan }) => plan.tasks.some((t) => !taskDoneForAll(t, plan, athletes)))
           return (
             <ClassPlanCard
               key={offering.id}
@@ -345,12 +349,18 @@ function ClassPlanCard({
     const expectedIds = new Set(expected.map((a) => a.id))
     const out: { plan: ClassPlan; offering: CoachClassOffering; count: number }[] = []
     for (const { plan: ep, offering: eo } of earlierPlans) {
-      const n = ep.tasks.filter(
-        (t) =>
-          !t.done &&
-          t.athleteIds.some((id) => id === 'all' || expectedIds.has(id)) &&
-          !plan.tasks.some((mine) => mine.carriedFromPlanId === ep.id && mine.text === t.text),
-      ).length
+      const n = ep.tasks.filter((t) => {
+        if (!t.athleteIds.some((id) => id === 'all' || expectedIds.has(id))) return false
+        // Incomplete if any expected athlete it applies to has not
+        // checked it off yet.
+        const owed = [...expectedIds].some(
+          (id) => (t.athleteIds.includes(id) || t.athleteIds.includes('all')) && !taskDoneFor(t, id),
+        )
+        if (!owed) return false
+        return !plan.tasks.some(
+          (mine) => mine.carriedFromPlanId === ep.id && mine.text === t.text,
+        )
+      }).length
       if (n > 0) out.push({ plan: ep, offering: eo, count: n })
     }
     return out
@@ -392,7 +402,7 @@ function ClassPlanCard({
           )}
           {plan.tasks.length > 0 && (
             <p className="mt-0.5 text-xs text-[var(--muted)]">
-              {plan.tasks.filter((t) => !t.done).length} tasks open
+              {plan.tasks.filter((t) => !taskDoneForAll(t, plan, athletes)).length} tasks open
             </p>
           )}
         </div>
@@ -455,6 +465,12 @@ function ClassPlanCard({
                   : task.athleteIds.map(
                       (id) => athleteById(athletes, id)?.firstName || athleteById(athletes, id)?.name || 'Athlete',
                     )
+                // Coach view: checked when every assigned athlete has
+                // checked it off. Reps show only for a single-athlete
+                // task, where one count is meaningful.
+                const done = taskDoneForAll(task, plan, athletes)
+                const assignees = taskAssignees(task, plan, athletes)
+                const reps = assignees.length === 1 ? taskRepsDoneFor(task, assignees[0]) : null
                 return (
                   <li
                     key={task.id}
@@ -466,17 +482,17 @@ function ClassPlanCard({
                       type="button"
                       onClick={() => togglePlanTask(plan.id, task.id)}
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
-                        task.done
+                        done
                           ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
                           : 'border-[var(--panel-border)]'
                       }`}
-                      aria-label={task.done ? 'Mark not done' : 'Mark done'}
+                      aria-label={done ? 'Mark not done' : 'Mark done'}
                     >
-                      {task.done ? '✓' : ''}
+                      {done ? '✓' : ''}
                     </button>
                     <span
                       className={`min-w-0 flex-1 break-words text-sm ${
-                        task.done ? 'text-[var(--muted)] line-through' : 'text-[var(--text)]'
+                        done ? 'text-[var(--muted)] line-through' : 'text-[var(--text)]'
                       }`}
                     >
                       <span className="mr-1.5 rounded bg-white/10 px-1.5 py-0.5 text-xs">
@@ -486,7 +502,7 @@ function ClassPlanCard({
                       {task.text}
                       {task.repsTarget ? (
                         <span className="ml-1.5 text-xs text-[var(--muted)]">
-                          {task.repsDone ?? 0}/{task.repsTarget} reps
+                          {reps === null ? `${task.repsTarget} reps` : `${reps}/${task.repsTarget} reps`}
                         </span>
                       ) : null}
                       {task.carriedFromPlanId && (

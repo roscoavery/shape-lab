@@ -7,6 +7,9 @@ import {
   getOrCreateClassPlan,
   addPlanTask,
   togglePlanTask,
+  taskDoneFor,
+  taskDoneForAll,
+  taskRepsDoneFor,
   removePlanTask,
   reorderPlanTask,
   copyChecklistForAthlete,
@@ -103,13 +106,18 @@ export function LessonPlanCard({
     }
     return event.title || 'Lesson'
   }, [athlete, event.notes, event.title])
-  const doneCount = plan.tasks.filter((t) => t.done).length
+  const doneCount = plan.tasks.filter((t) =>
+    athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan),
+  ).length
 
   const body = (
     <>
       {plan.tasks.length > 0 && (
         <ul className="mb-2 space-y-1">
-          {plan.tasks.map((t, i) => (
+          {plan.tasks.map((t, i) => {
+            const done = athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan)
+            const reps = athlete ? taskRepsDoneFor(t, athlete.id) : null
+            return (
             <li
               key={t.id}
               style={rowStyle(i)}
@@ -118,19 +126,19 @@ export function LessonPlanCard({
               <DragGrip {...handleProps(i)} />
               <button
                 type="button"
-                onClick={() => togglePlanTask(plan.id, t.id)}
+                onClick={() => togglePlanTask(plan.id, t.id, athlete ? [athlete.id] : undefined)}
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  t.done
+                  done
                     ? 'border-[var(--accent)] bg-[var(--accent)] text-[#06281f]'
                     : 'border-white/30'
                 }`}
-                aria-label={t.done ? 'Mark not done' : 'Mark done'}
+                aria-label={done ? 'Mark not done' : 'Mark done'}
               >
-                {t.done ? '✓' : ''}
+                {done ? '✓' : ''}
               </button>
-              <span className={`min-w-0 flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>
+              <span className={`min-w-0 flex-1 ${done ? 'line-through opacity-50' : ''}`}>
                 {t.text}
-                {t.repsTarget ? ` (${t.repsDone ?? 0}/${t.repsTarget})` : ''}
+                {t.repsTarget ? ` (${reps === null ? t.repsTarget : reps}/${t.repsTarget})` : ''}
               </span>
               <button
                 type="button"
@@ -141,7 +149,8 @@ export function LessonPlanCard({
                 ✕
               </button>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
       <div className="flex min-w-0 gap-2">
