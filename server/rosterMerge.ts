@@ -336,10 +336,20 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
   const newer = incomingNewer ? incoming : keep
   const older = incomingNewer ? keep : incoming
   const role: Athlete['role'] = newer.role || older.role
+  const firstName = newer.firstName ?? older.firstName
+  const lastName = newer.lastName ?? older.lastName
+  // The display name is composed from the name parts everywhere it is
+  // written (profile editor, quick-add, calendar creation), so recompose
+  // it from the merged parts instead of taking either row's copy
+  // wholesale. Otherwise a row whose name was saved before its last name
+  // (or with an older stamp than a rewrite) shows first-name-only at the
+  // top of the profile forever, even though the last name field holds it.
+  const composedName = `${(firstName ?? '').trim()} ${(lastName ?? '').trim()}`.trim()
   return {
     ...older,
     ...newer,
     id: keep.id,
+    name: composedName || newer.name || older.name,
     passcodeHash: newer.passcodeHash || older.passcodeHash,
     gymName: newer.gymName || older.gymName || 'Tumble Smart Athletics',
     classGyms: mergeIdList(newer.classGyms, older.classGyms),
@@ -354,8 +364,8 @@ export function combineAthletes(keep: Athlete, incoming: Athlete): Athlete {
     role,
     hasBackPain: newer.hasBackPain ?? older.hasBackPain,
     injuryActive: newer.injuryActive ?? older.injuryActive,
-    firstName: newer.firstName ?? older.firstName,
-    lastName: newer.lastName ?? older.lastName,
+    firstName,
+    lastName,
     email: newer.email || older.email,
     phone: newer.phone || older.phone,
     parentPhone: newer.parentPhone || older.parentPhone,

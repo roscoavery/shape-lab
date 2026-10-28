@@ -70,6 +70,48 @@ describe('combineAthletes name fields', () => {
     assert.equal(merged.lastName, 'Glenville')
   })
 
+  it('recomposes the display name when the last name arrives on the older-stamped row', () => {
+    // Berkley: the stored row showed first-name-only at the top while the
+    // last-name field held "Weaver", because the merge took the name from
+    // whichever row had the newer stamp instead of from the name parts.
+    const disk = row({
+      id: 'ath_berkley',
+      name: 'Berkley',
+      firstName: 'Berkley',
+      updatedAt: '2026-10-28T16:00:00.000Z',
+    })
+    delete (disk as Partial<Athlete>).lastName
+    const edited = row({
+      id: 'ath_berkley',
+      name: 'Berkley',
+      firstName: 'Berkley',
+      lastName: 'Weaver ',
+      updatedAt: '2026-10-28T15:30:00.000Z',
+    })
+    const merged = combineAthletes(disk, edited)
+    assert.equal(merged.name, 'Berkley Weaver')
+    assert.equal(merged.lastName, 'Weaver ')
+  })
+
+  it('keeps a name-only row’s display name when no name parts exist', () => {
+    const older = row({
+      id: 'ath_parent',
+      name: 'Kimber Weaver',
+      updatedAt: '2026-10-28T15:30:00.000Z',
+    })
+    const newer = row({
+      id: 'ath_parent',
+      name: 'Kimber Weaver',
+      updatedAt: '2026-10-28T15:35:00.000Z',
+    })
+    delete (older as Partial<Athlete>).firstName
+    delete (older as Partial<Athlete>).lastName
+    delete (newer as Partial<Athlete>).firstName
+    delete (newer as Partial<Athlete>).lastName
+    const merged = combineAthletes(older, newer)
+    assert.equal(merged.name, 'Kimber Weaver')
+  })
+
   it('an older intermediate spelling never beats a newer finished one through mergeAthleteLists', () => {
     const local = [
       row({
