@@ -29,6 +29,7 @@ import {
   answeredQuestionIds,
   isValidDateOfBirth,
 } from '../src/lib/intakeQuestions.ts'
+import { readSkillPathsFile } from './skillPathStore.ts'
 
 export type ShareLinkType = 'intake' | 'intake-open' | 'intake-group' | 'library'
 
@@ -205,6 +206,11 @@ export async function handleShareIntake(
   // page is opened with an intake token. Hand over the coach's long-lived
   // library token so those buttons do not hit "invalid or expired".
   const libraryToken = await getOrCreateShareToken('library', rec.coachId)
+  // The working-towards maps shine prerequisite paths from the gym's
+  // skill-path file, which public pages never hydrate (only the
+  // signed-in shell does). Hand it over with the response so the maps
+  // shine the same paths as in the app.
+  const skillPaths = await readSkillPathsFile()
 
   if (rec.type === 'intake' && rec.athleteId) {
     const athlete = athletes.find((a: any) => a.id === rec.athleteId)
@@ -224,6 +230,7 @@ export async function handleShareIntake(
       answeredIds: answered,
       stillData,
       libraryToken,
+      skillPaths,
     })
     return
   }
@@ -247,6 +254,7 @@ export async function handleShareIntake(
     groupName,
     stillData,
     libraryToken,
+    skillPaths,
   })
 }
 

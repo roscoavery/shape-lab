@@ -260,7 +260,95 @@ function mergeShipped(file: SkillPathFile): SkillPathFile {
 }
 
 function read(): SkillPathFile {
-  return mergeShipped(readRaw())
+  const local = readRaw()
+  return mergeShipped(shareFile ? mergeShareFile(local, shareFile) : local)
+}
+
+/**
+ * Skill-path data handed to a public share page (the intake link) inside
+ * its own response, so the maps there shine the same paths as the
+ * signed-in app. The signed-in shell hydrates this file into localStorage;
+ * a public page never runs that shell, so without this the maps only see
+ * the small shipped seed and every shine path comes back empty (target
+ * lit, everything else faded). Read-only: every write path uses
+ * readRaw(), so share data can never flow back into the gym file.
+ */
+let shareFile: SkillPathFile | null = null
+
+function asShareFile(raw: unknown): SkillPathFile | null {
+  if (!raw || typeof raw !== 'object') return null
+  const data = raw as Partial<SkillPathFile>
+  if (data.kind !== 'shape-lab-skill-paths') return null
+  const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+  const ids = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  return {
+    ...emptyFile(),
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : '',
+    skills: list(data.skills) as SkillDef[],
+    needs: list(data.needs) as SkillNeed[],
+    conditioning: list(data.conditioning) as ConditioningNeed[],
+    drills: list(data.drills) as SkillDrill[],
+    versions: list(data.versions) as SkillVersion[],
+    removedSkillIds: ids(data.removedSkillIds),
+    removedNeedIds: ids(data.removedNeedIds),
+    removedConditioningIds: ids(data.removedConditioningIds),
+    removedDrillIds: ids(data.removedDrillIds),
+    removedVersionIds: ids(data.removedVersionIds),
+  }
+}
+
+/** Merge the share payload over the device file, hydrate-style. */
+function mergeShareFile(local: SkillPathFile, data: SkillPathFile): SkillPathFile {
+  const skills = new Map(local.skills.map((s) => [s.id, s]))
+  for (const row of data.skills ?? []) {
+    if (!row?.id || !row.name) continue
+    const keep = skills.get(row.id)
+    if (!keep || (row.updatedAt || row.createdAt || '') >= (keep.updatedAt || keep.createdAt || '')) {
+      skills.set(row.id, row)
+    }
+  }
+  const mergeRows = <T extends { id: string }>(rows: T[], incoming: T[], removed: Set<string>) => {
+    const map = new Map(rows.map((r) => [r.id, r]))
+    for (const row of incoming) {
+      if (!row?.id || removed.has(row.id)) continue
+      map.set(row.id, row)
+    }
+    return [...map.values()]
+  }
+  const removedNeedIds = new Set([...(local.removedNeedIds ?? []), ...(data.removedNeedIds ?? [])])
+  const removedCondIds = new Set([
+    ...(local.removedConditioningIds ?? []),
+    ...(data.removedConditioningIds ?? []),
+  ])
+  const removedDrillIds = new Set([...(local.removedDrillIds ?? []), ...(data.removedDrillIds ?? [])])
+  const removedVersionIds = new Set([
+    ...(local.removedVersionIds ?? []),
+    ...(data.removedVersionIds ?? []),
+  ])
+  return {
+    kind: 'shape-lab-skill-paths',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    skills: [...skills.values()],
+    needs: mergeRows(local.needs, data.needs ?? [], removedNeedIds),
+    conditioning: mergeRows(local.conditioning, data.conditioning ?? [], removedCondIds),
+    drills: mergeRows(local.drills, data.drills ?? [], removedDrillIds),
+    versions: mergeRows(local.versions, data.versions ?? [], removedVersionIds),
+    removedSkillIds: [...new Set([...(local.removedSkillIds ?? []), ...(data.removedSkillIds ?? [])])],
+    removedNeedIds: [...removedNeedIds],
+    removedConditioningIds: [...removedCondIds],
+    removedDrillIds: [...removedDrillIds],
+    removedVersionIds: [...removedVersionIds],
+  }
+}
+
+/** Hand a share response's skill-path file to the map stores on public pages. */
+export function setShareSkillPaths(raw: unknown): void {
+  const file = asShareFile(raw)
+  if (!file) return
+  shareFile = file
+  for (const cb of listeners) cb()
 }
 
 function write(file: SkillPathFile) {

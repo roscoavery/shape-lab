@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { isValidDateOfBirth, publicIntakeQuestions, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
+import { setShareSkillPaths } from '../../lib/skillPaths'
 import {
   publicShapeStillPairs,
   publicShapeStillUrl,
@@ -429,6 +430,9 @@ export function PublicIntakePage({ token }: { token: string }) {
         if (typeof data.libraryToken === 'string' && data.libraryToken) {
           setLibraryToken(data.libraryToken)
         }
+        // Skill-path needs ride along so the working-towards maps shine
+        // the same prerequisite paths as the signed-in app.
+        if (data.skillPaths) setShareSkillPaths(data.skillPaths)
         if (data.mode === 'open' || data.mode === 'group') setStep('name')
       })
       .catch(() => {
