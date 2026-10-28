@@ -100,6 +100,15 @@ function useProfileDraft(onCommit?: (next: Athlete) => void) {
   const baseRef = useRef<Athlete | null>(null)
   const commitRef = useRef(onCommit)
   commitRef.current = onCommit
+  // A committed edit must carry a fresh stamp. The server re-stamps every
+  // row on each roster write, so an unstamped edit always looks older
+  // than the gym file and the 4s poll merge throws it away before the
+  // push lands — the edit button worked, the save lost a race it was
+  // never stamped to win. The Role switch already stamps its own writes;
+  // drafts go through here so both editor sites and the leave-mid-edit
+  // path are covered.
+  const commitDraft = (d: Athlete) =>
+    commitRef.current?.({ ...d, updatedAt: new Date().toISOString() })
   const setDraft = (next: Athlete) => {
     draftRef.current = next
     setDraftState(next)
@@ -115,7 +124,7 @@ function useProfileDraft(onCommit?: (next: Athlete) => void) {
     baseRef.current = null
     setDraftState(null)
     if (d && base && d.id === base.id && JSON.stringify(d) !== JSON.stringify(base)) {
-      commitRef.current?.(d)
+      commitDraft(d)
     }
   }
   // Leaving the card mid-edit keeps what was typed instead of dropping it.
@@ -124,7 +133,7 @@ function useProfileDraft(onCommit?: (next: Athlete) => void) {
       const d = draftRef.current
       const base = baseRef.current
       if (d && base && d.id === base.id && JSON.stringify(d) !== JSON.stringify(base)) {
-        commitRef.current?.(d)
+        commitDraft(d)
       }
     },
     [],
