@@ -27,6 +27,8 @@ type Props = {
   value?: string
   onChange: (iso: string) => void
   size?: 'station' | 'compact'
+  /** Hint shown until month, day, and year are all picked. */
+  hint?: string
 }
 
 function yearWindow(thisYear: number, page: number): number[] {
@@ -37,7 +39,12 @@ function yearWindow(thisYear: number, page: number): number[] {
 /**
  * Month / day / year tap grids — faster on iPad than the native date spinner.
  */
-export function BirthdayQuickPick({ value, onChange, size = 'compact' }: Props) {
+export function BirthdayQuickPick({
+  value,
+  onChange,
+  size = 'compact',
+  hint = 'Tap month, day, then year. Skip if the line is moving.',
+}: Props) {
   const parsed = splitDateOfBirth(value)
   const thisYear = new Date().getFullYear()
   const [month, setMonth] = useState(parsed?.month ?? 0)
@@ -167,7 +174,7 @@ export function BirthdayQuickPick({ value, onChange, size = 'compact' }: Props) 
           {age != null ? ` · age ${age}` : ''}
         </p>
       ) : (
-        <p className="text-sm text-[var(--muted)]">Tap month, day, then year. Skip if the line is moving.</p>
+        <p className="text-sm text-[var(--muted)]">{hint}</p>
       )}
     </div>
   )

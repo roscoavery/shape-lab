@@ -19,6 +19,7 @@ import { CORE_INTAKE, isValidDateOfBirth, type IntakeQuestion } from '../../lib/
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
 import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
+import { BirthdayQuickPick } from '../today/BirthdayQuickPick'
 import { SkillMapView } from '../learn/SkillMapView'
 import { AcroMapView } from '../learn/AcroMapView'
 import PublicLibraryPage from './PublicLibraryPage'
@@ -100,13 +101,14 @@ function QuestionView({
       )}
       <p className="text-base font-semibold text-white">{q.prompt}</p>
       {q.kind === 'date' ? (
-        <input
-          type="date"
-          value={value}
-          max={new Date().toISOString().slice(0, 10)}
-          onChange={(e) => onChange(e.target.value)}
-          className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
-        />
+        <div className="mt-3">
+          <BirthdayQuickPick
+            key={q.id}
+            value={value}
+            onChange={onChange}
+            hint="Tap month, day, then year."
+          />
+        </div>
       ) : q.kind === 'color' ? (
         <div className="mt-4 grid grid-cols-4 gap-2">
           {q.options!.map((o) => {
