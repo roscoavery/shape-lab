@@ -81,7 +81,7 @@ import { FollowButton } from './network/FollowButton'
 import { DeleteProfileAsk } from './DeleteProfileAsk'
 import { playGestureBurst } from '../lib/gestureBurst'
 import { isRyanAthlete } from '../lib/ryanProfile'
-import { birthdayNeeded } from '../lib/age'
+import { birthdayNeeded, getAgeFromDateOfBirth } from '../lib/age'
 import { CoachHoldEntry } from './family/CoachHoldEntry'
 import { TourOfferButton } from './tour/TourOfferButton'
 
@@ -355,6 +355,14 @@ export function AthleteProfileCard({
     openStories()
   }
 
+  // Age from the stored birthday, shown to the coaching side (and parents)
+  // under the name — same gate as the "Birthday needed" notice. No birthday
+  // on file means no age line, never a guess.
+  const age = getAgeFromDateOfBirth(athlete.dateOfBirth)
+  const showAge =
+    age !== null &&
+    (isCoachProfile(viewer) || isShapelabAdmin(viewer) || profileRole(viewer) === 'parent')
+
   const body = (
     <div className="flex flex-col gap-5">
       <header id="tour-profile-header" className="flex items-start gap-4">
@@ -389,6 +397,7 @@ export function AthleteProfileCard({
           {athlete.instagramHandle && profileHandle(athlete) !== athlete.instagramHandle && (
             <p className="text-xs text-[var(--muted)]">IG @{athlete.instagramHandle}</p>
           )}
+          {showAge && <p className="text-xs text-[var(--muted)]">Age {age}</p>}
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <Stat n={minePosts.length} label="Posts" onClick={() => setTab('posts')} />
             <Stat n={minePasses.length} label="Passes" onClick={() => setTab('passes')} />
