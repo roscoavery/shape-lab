@@ -198,6 +198,9 @@ export async function handleShareIntake(
   const roster = await readRosterFile()
   const athletes = roster.athletes as any[]
   const coach = athletes.find((a: any) => a.id === rec.coachId)
+  // Same still data as the study link, so question pictures honor Ryan's
+  // main-still picks and deletions instead of the raw shipped files.
+  const stillData = await loadShareStillData()
 
   if (rec.type === 'intake' && rec.athleteId) {
     const athlete = athletes.find((a: any) => a.id === rec.athleteId)
@@ -215,6 +218,7 @@ export async function handleShareIntake(
       coachName: coach?.name ?? 'Your coach',
       athleteName: athlete.name ?? '',
       answeredIds: answered,
+      stillData,
     })
     return
   }
@@ -236,6 +240,7 @@ export async function handleShareIntake(
     mode: rec.type === 'intake-group' ? 'group' : 'open',
     coachName: coach?.name ?? 'Your coach',
     groupName,
+    stillData,
   })
 }
 
@@ -408,6 +413,189 @@ function saveAnswersToAthlete(athlete: any, answers: any[]): void {
   }
 }
 
+/**
+ * Still data for the public pages: crops, deletions, main-still picks,
+ * coach/IG uploads, gym shapes. Built once here so the study link and
+ * the intake link honor exactly the same picks and deletions. Every
+ * section is best-effort: a missing file never fails the request.
+ * Uploaded still files are copied to dist/references/ so they serve as
+ * static files just like the shipped ones.
+ */
+export async function loadShareStillData(): Promise<{
+  crops: Record<string, unknown>
+  removedStillIds: string[]
+  mainStills: Record<string, string>
+  coachStills: { shapeId: string; stillId: string; file: string }[]
+  igStills: { shapeId: string; stillId: string; file: string }[]
+  removedCoachStillIds: string[]
+  gymShapes: { id: string; name: string }[]
+}> {
+// Shape definitions + still file lists ship in the client bundle; the
+// public page imports them directly. This endpoint validates the token
+// and returns the still crops so Ryan's framing applies here too.
+let crops: Record<string, unknown> = {}
+let removedStillIds: string[] = []
+try {
+  const { readStillCropFile } = await import('./stillCropStore.ts')
+  const file = await readStillCropFile()
+  crops = (file as any)?.crops ?? {}
+} catch {
+  // crops are best-effort
+}
+try {
+  const { readIgStillMeta } = await import('./igStillDisk.ts')
+  const meta = await readIgStillMeta()
+  const ids = (meta as any)?.removedStillIds
+  if (Array.isArray(ids)) {
+    removedStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  }
+} catch {
+  // removed stills are best-effort
+}
+let mainStills: Record<string, string> = {}
+try {
+  const { readMainStillFile } = await import('./mainStillStore.ts')
+  const file = await readMainStillFile()
+  mainStills = (file as any)?.picks ?? {}
+} catch {
+  // main stills are best-effort
+}
+// Coach-uploaded stills: copy the image files to dist/references/ so they
+// serve as static files just like the shipped ones.
+let coachStills: { shapeId: string; stillId: string; file: string }[] = []
+try {
+  const { readCoachStillsFile } = await import('./coachStillStore.ts')
+  const { readBin } = await import('./persist.ts')
+  const fs = await import('fs')
+  const path = await import('path')
+  const file = await readCoachStillsFile()
+  const extras = (file as any)?.extras
+  if (Array.isArray(extras)) {
+    const pubDir = path.join(process.cwd(), 'dist', 'references')
+    try {
+      fs.mkdirSync(pubDir, { recursive: true })
+    } catch {
+      // ignore
+    }
+    for (const e of extras) {
+      if (!e?.shapeId || !e?.id) continue
+      const shapeId = String(e.shapeId)
+      const stillId = String(e.id)
+      let publicFile: string | null = null
+      if (e.file) {
+        try {
+          const srcBuf = await readBin(`data/coach-blobs/${e.file}`)
+          if (srcBuf) {
+            const ext = e.file.includes('.') ? e.file.slice(e.file.lastIndexOf('.')) : '.jpg'
+            publicFile = `coach_${stillId}${ext}`
+            const dest = path.join(pubDir, publicFile)
+            fs.writeFileSync(dest, srcBuf)
+          }
+        } catch {
+          // skip
+        }
+      } else if (e.dataUrl && String(e.dataUrl).startsWith('data:image')) {
+        try {
+          const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(e.dataUrl).trim())
+          if (m) {
+            const ext = m[1].includes('png') ? '.png' : '.jpg'
+            publicFile = `coach_${stillId}${ext}`
+            const dest = path.join(pubDir, publicFile)
+            fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
+          }
+        } catch {
+          // skip
+        }
+      }
+      if (publicFile) {
+        coachStills.push({ shapeId, stillId, file: publicFile })
+      }
+    }
+  }
+} catch {
+  // coach stills are best-effort
+}
+// IG stills: also include them (Ryan: "allow any ig stills that show inside of any shapes")
+let igStills: { shapeId: string; stillId: string; file: string }[] = []
+try {
+  const { readIgStillMeta } = await import('./igStillDisk.ts')
+  const { readBin } = await import('./persist.ts')
+  const fs = await import('fs')
+  const path = await import('path')
+  const meta = await readIgStillMeta()
+  const stills = (meta as any)?.stills
+  if (Array.isArray(stills)) {
+    const pubDir = path.join(process.cwd(), 'dist', 'references')
+    for (const s of stills) {
+      if (!s?.shapeId || !s?.id) continue
+      const shapeId = String(s.shapeId)
+      const stillId = String(s.id)
+      let publicFile: string | null = null
+      // IG stills may have file or dataUrl
+      if (s.file) {
+        try {
+          const srcBuf = await readBin(`data/ig-blobs/${s.file}`)
+          if (srcBuf) {
+            const ext = s.file.includes('.') ? s.file.slice(s.file.lastIndexOf('.')) : '.jpg'
+            publicFile = `ig_${stillId}${ext}`
+            const dest = path.join(pubDir, publicFile)
+            fs.writeFileSync(dest, srcBuf)
+          }
+        } catch {
+          // skip
+        }
+      } else if (s.dataUrl && String(s.dataUrl).startsWith('data:image')) {
+        try {
+          const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(s.dataUrl).trim())
+          if (m) {
+            const ext = m[1].includes('png') ? '.png' : '.jpg'
+            publicFile = `ig_${stillId}${ext}`
+            const dest = path.join(pubDir, publicFile)
+            fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
+          }
+        } catch {
+          // skip
+        }
+      }
+      if (publicFile) {
+        igStills.push({ shapeId, stillId, file: publicFile })
+      }
+    }
+  }
+} catch {
+  // IG stills are best-effort
+}
+// Coach-still tombstones (deleted extras and hidden shipped originals).
+let removedCoachStillIds: string[] = []
+try {
+  const { readCoachStillsFile } = await import('./coachStillStore.ts')
+  const file = await readCoachStillsFile()
+  const ids = (file as any)?.removedCoachStillIds
+  if (Array.isArray(ids)) {
+    removedCoachStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  }
+} catch {
+  // tombstones are best-effort
+}
+// Gym shapes (custom shapes like lightning bolt, curl up) with their names.
+let gymShapes: { id: string; name: string }[] = []
+try {
+  const { readCoachContentFile } = await import('./coachContentStore.ts')
+  const file = await readCoachContentFile()
+  const lib = (file as any)?.gymLibrary
+  if (Array.isArray(lib)) {
+    for (const g of lib) {
+      if (g?.id && g?.name) {
+        gymShapes.push({ id: String(g.id), name: String(g.name) })
+      }
+    }
+  }
+} catch {
+  // gym shapes are best-effort
+}
+  return { crops, removedStillIds, mainStills, coachStills, igStills, removedCoachStillIds, gymShapes }
+}
+
 /** GET /api/share/library?token= — read-only shape library. */
 export async function handleShareLibrary(
   _req: IncomingMessage,
@@ -419,170 +607,12 @@ export async function handleShareLibrary(
     sendJson(res, 404, { error: 'Invalid or expired link.' })
     return
   }
+
   // Shape definitions + still file lists ship in the client bundle; the
   // public page imports them directly. This endpoint validates the token
-  // and returns the still crops so Ryan's framing applies here too.
-  let crops: Record<string, unknown> = {}
-  let removedStillIds: string[] = []
-  try {
-    const { readStillCropFile } = await import('./stillCropStore.ts')
-    const file = await readStillCropFile()
-    crops = (file as any)?.crops ?? {}
-  } catch {
-    // crops are best-effort
-  }
-  try {
-    const { readIgStillMeta } = await import('./igStillDisk.ts')
-    const meta = await readIgStillMeta()
-    const ids = (meta as any)?.removedStillIds
-    if (Array.isArray(ids)) {
-      removedStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
-    }
-  } catch {
-    // removed stills are best-effort
-  }
-  let mainStills: Record<string, string> = {}
-  try {
-    const { readMainStillFile } = await import('./mainStillStore.ts')
-    const file = await readMainStillFile()
-    mainStills = (file as any)?.picks ?? {}
-  } catch {
-    // main stills are best-effort
-  }
-  // Coach-uploaded stills: copy the image files to dist/references/ so they
-  // serve as static files just like the shipped ones.
-  let coachStills: { shapeId: string; stillId: string; file: string }[] = []
-  try {
-    const { readCoachStillsFile } = await import('./coachStillStore.ts')
-    const { readBin } = await import('./persist.ts')
-    const fs = await import('fs')
-    const path = await import('path')
-    const file = await readCoachStillsFile()
-    const extras = (file as any)?.extras
-    if (Array.isArray(extras)) {
-      const pubDir = path.join(process.cwd(), 'dist', 'references')
-      try {
-        fs.mkdirSync(pubDir, { recursive: true })
-      } catch {
-        // ignore
-      }
-      for (const e of extras) {
-        if (!e?.shapeId || !e?.id) continue
-        const shapeId = String(e.shapeId)
-        const stillId = String(e.id)
-        let publicFile: string | null = null
-        if (e.file) {
-          try {
-            const srcBuf = await readBin(`data/coach-blobs/${e.file}`)
-            if (srcBuf) {
-              const ext = e.file.includes('.') ? e.file.slice(e.file.lastIndexOf('.')) : '.jpg'
-              publicFile = `coach_${stillId}${ext}`
-              const dest = path.join(pubDir, publicFile)
-              fs.writeFileSync(dest, srcBuf)
-            }
-          } catch {
-            // skip
-          }
-        } else if (e.dataUrl && String(e.dataUrl).startsWith('data:image')) {
-          try {
-            const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(e.dataUrl).trim())
-            if (m) {
-              const ext = m[1].includes('png') ? '.png' : '.jpg'
-              publicFile = `coach_${stillId}${ext}`
-              const dest = path.join(pubDir, publicFile)
-              fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
-            }
-          } catch {
-            // skip
-          }
-        }
-        if (publicFile) {
-          coachStills.push({ shapeId, stillId, file: publicFile })
-        }
-      }
-    }
-  } catch {
-    // coach stills are best-effort
-  }
-  // IG stills: also include them (Ryan: "allow any ig stills that show inside of any shapes")
-  let igStills: { shapeId: string; stillId: string; file: string }[] = []
-  try {
-    const { readIgStillMeta } = await import('./igStillDisk.ts')
-    const { readBin } = await import('./persist.ts')
-    const fs = await import('fs')
-    const path = await import('path')
-    const meta = await readIgStillMeta()
-    const stills = (meta as any)?.stills
-    if (Array.isArray(stills)) {
-      const pubDir = path.join(process.cwd(), 'dist', 'references')
-      for (const s of stills) {
-        if (!s?.shapeId || !s?.id) continue
-        const shapeId = String(s.shapeId)
-        const stillId = String(s.id)
-        let publicFile: string | null = null
-        // IG stills may have file or dataUrl
-        if (s.file) {
-          try {
-            const srcBuf = await readBin(`data/ig-blobs/${s.file}`)
-            if (srcBuf) {
-              const ext = s.file.includes('.') ? s.file.slice(s.file.lastIndexOf('.')) : '.jpg'
-              publicFile = `ig_${stillId}${ext}`
-              const dest = path.join(pubDir, publicFile)
-              fs.writeFileSync(dest, srcBuf)
-            }
-          } catch {
-            // skip
-          }
-        } else if (s.dataUrl && String(s.dataUrl).startsWith('data:image')) {
-          try {
-            const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(String(s.dataUrl).trim())
-            if (m) {
-              const ext = m[1].includes('png') ? '.png' : '.jpg'
-              publicFile = `ig_${stillId}${ext}`
-              const dest = path.join(pubDir, publicFile)
-              fs.writeFileSync(dest, Buffer.from(m[2], 'base64'))
-            }
-          } catch {
-            // skip
-          }
-        }
-        if (publicFile) {
-          igStills.push({ shapeId, stillId, file: publicFile })
-        }
-      }
-    }
-  } catch {
-    // IG stills are best-effort
-  }
-  // Coach-still tombstones (deleted extras and hidden shipped originals).
-  let removedCoachStillIds: string[] = []
-  try {
-    const { readCoachStillsFile } = await import('./coachStillStore.ts')
-    const file = await readCoachStillsFile()
-    const ids = (file as any)?.removedCoachStillIds
-    if (Array.isArray(ids)) {
-      removedCoachStillIds = ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
-    }
-  } catch {
-    // tombstones are best-effort
-  }
-  // Gym shapes (custom shapes like lightning bolt, curl up) with their names.
-  let gymShapes: { id: string; name: string }[] = []
-  try {
-    const { readCoachContentFile } = await import('./coachContentStore.ts')
-    const file = await readCoachContentFile()
-    const lib = (file as any)?.gymLibrary
-    if (Array.isArray(lib)) {
-      for (const g of lib) {
-        if (g?.id && g?.name) {
-          gymShapes.push({ id: String(g.id), name: String(g.name) })
-        }
-      }
-    }
-  } catch {
-    // gym shapes are best-effort
-  }
-  sendJson(res, 200, { ok: true, crops, removedStillIds, mainStills, coachStills, igStills, removedCoachStillIds, gymShapes })
+  // and returns the still data so Ryan's picks and deletions apply here too.
+  const still = await loadShareStillData()
+  sendJson(res, 200, { ok: true, ...still })
 }
 
 /**

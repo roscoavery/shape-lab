@@ -18,6 +18,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CORE_INTAKE, isValidDateOfBirth, type IntakeQuestion } from '../../lib/intakeQuestions'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
 import { shippedFileList } from '../../lib/shippedRefs'
+import {
+  publicShapeStillPairs,
+  publicShapeStillUrl,
+  type PublicStillData,
+} from '../../lib/publicStills'
 import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
 import { BirthdayQuickPick } from '../today/BirthdayQuickPick'
 import { SkillMapView } from '../learn/SkillMapView'
@@ -29,22 +34,26 @@ import { ACRO_SKILLS } from '../../lib/acroSkills'
 
 type Mode = 'athlete' | 'open' | 'group'
 
-function stillUrl(q: IntakeQuestion): string | null {
+function stillUrl(q: IntakeQuestion, stillData: PublicStillData | null): string | null {
   if (q.stillFile) return `/references/${q.stillFile}`
   if (q.stillShapeId) {
-    const files = shippedFileList(q.stillShapeId)
-    if (files.length > 0) return `/references/${files[0]}`
+    // No still until the server's picks/deletions arrive: the raw shipped
+    // list is what kept showing a deleted still here.
+    if (!stillData) return null
+    return publicShapeStillUrl(q.stillShapeId, shippedFileList(q.stillShapeId), stillData)
   }
   return null
 }
 
-function stillUrls(q: IntakeQuestion): string[] {
+function stillUrls(q: IntakeQuestion, stillData: PublicStillData | null): string[] {
   if (q.stillShapeIds) {
+    if (!stillData) return []
     return q.stillShapeIds
-      .flatMap((id) => shippedFileList(id).map((f) => `/references/${f}`))
+      .flatMap((id) => publicShapeStillPairs(id, shippedFileList(id), stillData))
       .slice(0, 2)
+      .map((p) => p.url)
   }
-  const one = stillUrl(q)
+  const one = stillUrl(q, stillData)
   return one ? [one] : []
 }
 
@@ -54,15 +63,17 @@ function QuestionView({
   onChange,
   photoDataUrl,
   onPhoto,
+  stillData,
 }: {
   q: IntakeQuestion
   value: string
   onChange: (v: string) => void
   photoDataUrl: string | null
   onPhoto: (dataUrl: string | null) => void
+  stillData: PublicStillData | null
 }) {
-  const still = stillUrl(q)
-  const stills = stillUrls(q)
+  const still = stillUrl(q, stillData)
+  const stills = stillUrls(q, stillData)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
 
@@ -230,8 +241,10 @@ function WorkingTowardsPicker({
     [],
   )
 
-  // Single tap selects in the intake picker only. The map components are
-  // untouched — they still shine/open cards everywhere else.
+  // The maps shine a skill's path on the first tap and only call this on
+  // a second tap on the same skill, so in map view a pick takes two taps.
+  // The list view calls toggle directly: one tap picks. The map
+  // components are untouched — they behave exactly as everywhere else.
   const toggle = (skill: UnifiedSkill) => {
     const id = skill.name
     if (value.includes(id)) onChange(value.filter((v) => v !== id))
@@ -248,10 +261,16 @@ function WorkingTowardsPicker({
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
       <p className="text-center text-xl font-black uppercase tracking-wide text-amber-300">
-        Tap a skill to select it
+        Select up to 3 you can reasonably work towards now.
       </p>
       <p className="mt-1 text-center text-sm text-white/50">
-        Up to 3. Skip this if you're not sure.
+        These become the goals on your profile, so your coach knows what to work on with you.
+        Skip this step if you&apos;re not sure.
+      </p>
+      <p className="mt-1 text-center text-sm text-white/70">
+        {view === 'map'
+          ? 'Tap a skill once to see the steps to get there. Tap it again to pick it.'
+          : 'Tap a skill to pick it. Tap it again to take it off your list.'}
       </p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -355,6 +374,7 @@ function WorkingTowardsPicker({
 export function PublicIntakePage({ token }: { token: string }) {
   const [loading, setLoading] = useState(true)
   const [invalid, setInvalid] = useState(false)
+  const [stillData, setStillData] = useState<PublicStillData | null>(null)
   const [mode, setMode] = useState<Mode>('athlete')
   const [coachName, setCoachName] = useState('')
   const [athleteName, setAthleteName] = useState('')
@@ -384,6 +404,19 @@ export function PublicIntakePage({ token }: { token: string }) {
         setAthleteName(data.athleteName ?? '')
         setGroupName(data.groupName ?? null)
         setAnsweredIds(data.answeredIds ?? [])
+        const sd = data.stillData
+        if (
+          sd &&
+          typeof sd === 'object' &&
+          sd.mainStills &&
+          typeof sd.mainStills === 'object' &&
+          Array.isArray(sd.removedStillIds) &&
+          Array.isArray(sd.removedCoachStillIds) &&
+          Array.isArray(sd.coachStills) &&
+          Array.isArray(sd.igStills)
+        ) {
+          setStillData(sd as PublicStillData)
+        }
         if (data.mode === 'open' || data.mode === 'group') setStep('name')
       })
       .catch(() => {
@@ -660,6 +693,7 @@ export function PublicIntakePage({ token }: { token: string }) {
                 onChange={(v) => setAnswers((s) => ({ ...s, [q.id]: v }))}
                 photoDataUrl={photoDataUrl}
                 onPhoto={setPhotoDataUrl}
+                stillData={stillData}
               />
               {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
               <div className="mt-4 flex gap-2">
