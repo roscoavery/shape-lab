@@ -18,6 +18,7 @@ import {
   type ClassPlan,
 } from '../../lib/classPlans'
 import { ReuseChecklist } from './ReuseChecklist'
+import { QuizResultBlock } from '../QuizResultBlock'
 import { useDragList, DragGrip } from './useDragList'
 
 function formatTime(iso: string): string {
@@ -256,6 +257,9 @@ export function LessonPlanCard({
           })}
         </div>
       )}
+      {people.map((p) => (
+        <QuizResultBlock key={p.id} athlete={p} showName={multi} />
+      ))}
       <div className="flex min-w-0 gap-2">
         <input
           type="text"

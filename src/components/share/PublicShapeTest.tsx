@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { stillCropLookupIds } from '../../lib/shippedRefs'
+import { SHIPPED_STILL_CROPS, mergeStillCrops } from '../../lib/shippedStillCrops'
+import {
+  buildPublicLibraryShapes,
+  type PublicLibraryShape,
+} from '../../lib/publicLibraryShapes'
 import { cropSourcePixels, type StillCropRect } from '../../lib/stillCrop'
 
 type LibraryShape = {
@@ -117,9 +122,9 @@ export default function PublicShapeTest({
   libraryShapes?: LibraryShape[]
   crops?: Record<string, StillCropRect>
 }) {
-  const [step, setStep] = useState<'who' | 'length' | 'test' | 'done'>(
-    presetName ? 'length' : 'who'
-  )
+  // The who's-taking-it step always runs: the grade is only saved when a
+  // profile is picked. presetName only prefills the search text.
+  const [step, setStep] = useState<'who' | 'length' | 'test' | 'done'>('who')
   const [search, setSearch] = useState(
     presetName ? `${presetName.firstName} ${presetName.lastName}`.trim() : ''
   )
@@ -131,7 +136,51 @@ export default function PublicShapeTest({
   const [picked, setPicked] = useState<string | null>(null)
   const [answers, setAnswers] = useState<string[]>([])
 
-  const cropMap = crops ?? {}
+  // When the caller does not hand over the shapes (the intake link), load
+  // them here with the same builder the study page uses. Without this the
+  // question list stays empty and the test never leaves "Loading".
+  const [loadedShapes, setLoadedShapes] = useState<PublicLibraryShape[] | null>(null)
+  const [loadedCrops, setLoadedCrops] = useState<Record<string, StillCropRect> | null>(null)
+  const [shapesFailed, setShapesFailed] = useState(false)
+  useEffect(() => {
+    if (libraryShapes !== undefined || !token) return
+    let cancelled = false
+    fetch(`/api/share/library?token=<redacted>`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error('library fetch failed')
+        return r.json()
+      })
+      .then((data) => {
+        if (cancelled) return
+        setLoadedShapes(
+          buildPublicLibraryShapes({
+            removedStillIds: Array.isArray(data?.removedStillIds) ? data.removedStillIds : [],
+            removedCoachStillIds: Array.isArray(data?.removedCoachStillIds)
+              ? data.removedCoachStillIds
+              : [],
+            mainStills:
+              data?.mainStills && typeof data.mainStills === 'object' ? data.mainStills : {},
+            coachStills: Array.isArray(data?.coachStills) ? data.coachStills : [],
+            igStills: Array.isArray(data?.igStills) ? data.igStills : [],
+            gymShapes: Array.isArray(data?.gymShapes) ? data.gymShapes : [],
+          }),
+        )
+        setLoadedCrops(
+          data?.crops && typeof data.crops === 'object'
+            ? mergeStillCrops(SHIPPED_STILL_CROPS, data.crops)
+            : { ...SHIPPED_STILL_CROPS },
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setShapesFailed(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [libraryShapes, token])
+
+  const effectiveShapes: LibraryShape[] = libraryShapes ?? loadedShapes ?? []
+  const cropMap = crops ?? loadedCrops ?? {}
 
   // Search for matching profiles as the user types (debounced).
   useEffect(() => {
@@ -166,7 +215,7 @@ export default function PublicShapeTest({
   // NOTE: step is NOT in deps — questions must stay stable during the test.
   const questions: Question[] = useMemo(() => {
     try {
-      const shapes = (libraryShapes ?? []).filter(
+      const shapes = effectiveShapes.filter(
         (s) =>
           s &&
           s.id &&
@@ -196,7 +245,7 @@ export default function PublicShapeTest({
     } catch {
       return []
     }
-  }, [libraryShapes, questionCount])
+  }, [effectiveShapes, questionCount])
 
   const q = questions[index]
   const score = answers.filter((a, i) => a === questions[i]?.shapeName).length
@@ -220,6 +269,7 @@ export default function PublicShapeTest({
               score: next.filter((a, i) => a === questions[i]?.shapeName).length,
               total: questions.length,
               answers: next,
+              questions: questions.map((q) => ({ shapeId: q.shapeId, shapeName: q.shapeName })),
             }),
           }).catch(() => {})
         } catch {
@@ -314,7 +364,7 @@ export default function PublicShapeTest({
 
   // How many questions?
   if (step === 'length') {
-    const totalShapes = (libraryShapes ?? []).filter((s) => s.urls.length > 0).length
+    const totalShapes = effectiveShapes.filter((s) => s.urls.length > 0).length
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
         <h1 className="text-2xl font-bold">How many questions?</h1>
@@ -378,6 +428,18 @@ export default function PublicShapeTest({
 
   // Loading.
   if (!q) {
+    if (shapesFailed) {
+      return (
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
+          <p className="text-center text-white/60">
+            Couldn't load the shapes. Check the link and try again, or ask your coach for a fresh link.
+          </p>
+          <button type="button" onClick={onExit} className="mt-4 text-sm text-white/60">
+            ‹ Back
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center bg-black px-6 text-white">
         <p className="text-white/60">Loading the test…</p>

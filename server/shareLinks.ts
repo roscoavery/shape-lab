@@ -662,20 +662,37 @@ export async function handleShareQuizSubmit(
     sendJson(res, 400, { error: 'Name and score are required.' })
     return
   }
+  const athleteId = typeof body.athleteId === 'string' ? body.athleteId.trim() : ''
+  const answers = Array.isArray(body.answers) ? body.answers : []
+  // The questions the test showed, in order, so the coach can see what
+  // was missed. Sanitized to id + name only, capped at the test length.
+  const questions = (
+    Array.isArray(body.questions) ? body.questions.slice(0, Math.min(total, 200)) : []
+  )
+    .filter((q: unknown): q is Record<string, unknown> => Boolean(q) && typeof q === 'object')
+    .map((q: Record<string, unknown>) => ({
+      shapeId: typeof q.shapeId === 'string' ? q.shapeId : '',
+      shapeName: typeof q.shapeName === 'string' ? q.shapeName : '',
+    }))
+    .filter((q: { shapeId: string; shapeName: string }) => q.shapeId && q.shapeName)
   const record = {
     id: `quiz_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    athleteId: athleteId || null,
     firstName,
     lastName,
     score,
     total,
-    answers: Array.isArray(body.answers) ? body.answers : [],
+    answers,
+    questions,
     takenAt: new Date().toISOString(),
   }
   try {
-    const { readQuizResultsFile, writeQuizResultsFile } = await import('./quizResultsStore.ts')
+    const { readQuizResultsFile, writeQuizResultsFile, deriveQuizMisses } = await import(
+      './quizResultsStore.ts'
+    )
     const file = await readQuizResultsFile()
     const results = Array.isArray((file as any)?.results) ? (file as any).results : []
-    results.push(record)
+    results.push({ ...record, missed: deriveQuizMisses(questions, answers) })
     await writeQuizResultsFile({ kind: 'shape-lab-quiz-results', version: 1, results })
   } catch {
     // best-effort

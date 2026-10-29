@@ -42,6 +42,7 @@ import { WinComposer } from './feed/WinComposer'
 import { videoFileAccept } from '../lib/saveMedia'
 import { profileThemeStyle } from '../lib/profileTheme'
 import { handstandContest, intakeAnswerLines } from '../lib/intakeQuestions'
+import { QuizResultBlock } from './QuizResultBlock'
 import { createId } from '../lib/storage'
 import { pushNotice } from '../lib/notify'
 import { givenName } from '../lib/classStation'
@@ -505,6 +506,7 @@ export function AthleteProfileCard({
           </div>
         </details>
       )}
+      {privateOk && <QuizResultBlock athlete={athlete} />}
       {theirCoaches.length > 0 &&
         isAthleteProfile(athlete) &&
         (showsCoachesOnProfile(athlete) || own || privateOk) && (

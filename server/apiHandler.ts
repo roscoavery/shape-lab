@@ -283,6 +283,7 @@ const API_PATHS = new Set([
   '/api/discuss',
   '/api/coach-library',
   '/api/lessons',
+  '/api/quiz-results',
   '/api/coach-classes',
   '/api/coach-hours',
   '/api/training-events',
@@ -2310,6 +2311,49 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 200, { revoked: true })
+    return true
+  }
+  if (path === '/api/quiz-results') {
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { error: 'Use GET' })
+      return true
+    }
+    const athleteId = url.searchParams.get('athleteId') ?? ''
+    const firstName = (url.searchParams.get('firstName') ?? '').trim().toLowerCase()
+    const lastName = (url.searchParams.get('lastName') ?? '').trim().toLowerCase()
+    if (!athleteId && !firstName) {
+      sendJson(res, 400, { error: 'Send an athleteId.' })
+      return true
+    }
+    const { readQuizResultsFile } = await import('./quizResultsStore.ts')
+    const file = await readQuizResultsFile()
+    const staff = canWriteCoachTools(viewer)
+    const allowed = new Set(
+      [...viewer.linkedAthleteIds, viewer.rosterProfileId].filter(
+        (id): id is string => typeof id === 'string' && Boolean(id),
+      ),
+    )
+    const results = (Array.isArray(file.results) ? file.results : []).filter((raw) => {
+      if (!raw || typeof raw !== 'object') return false
+      const r = raw as Record<string, unknown>
+      const idMatch = athleteId !== '' && r.athleteId === athleteId
+      // Records saved before athlete ids were stored match by name.
+      const nameMatch =
+        !r.athleteId &&
+        firstName !== '' &&
+        lastName !== '' &&
+        typeof r.firstName === 'string' &&
+        typeof r.lastName === 'string' &&
+        r.firstName.toLowerCase() === firstName &&
+        r.lastName.toLowerCase() === lastName
+      if (!idMatch && !nameMatch) return false
+      if (staff) return true
+      // Anyone else only sees results tied to an athlete id linked to
+      // their account. Name-only records stay staff-only: without an id
+      // they cannot be tied to a linked athlete.
+      return typeof r.athleteId === 'string' && allowed.has(r.athleteId)
+    })
+    sendJson(res, 200, { results })
     return true
   }
   if (path === '/api/lessons') {
