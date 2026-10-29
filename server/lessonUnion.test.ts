@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { union } from './lessonStore.ts'
+import { union, addAthleteToSessionRow } from './lessonStore.ts'
 
 function session(
   id: string,
@@ -72,5 +72,32 @@ describe('lesson union athleteIds', () => {
     const withIds = session('les_1', { athleteIds: ['ath_berkley', 'ath_baylor'] })
     const [merged] = union([bare], [withIds]) as Record<string, unknown>[]
     assert.deepEqual(merged.athleteIds, ['ath_berkley', 'ath_baylor'])
+  })
+})
+
+describe('addAthleteToSessionRow', () => {
+  it('adds a missing athlete after the existing ids', () => {
+    const row = session('les_1', { athleteIds: ['ath_berkley'] })
+    const { row: next, changed } = addAthleteToSessionRow(row, 'ath_baylor')
+    assert.equal(changed, true)
+    assert.deepEqual(next.athleteIds, ['ath_berkley', 'ath_baylor'])
+    assert.equal(next.startedAt, '2026-10-28T20:00:00.000Z')
+  })
+
+  it('is a no-op when the athlete is already in the lesson', () => {
+    const row = session('les_1', {
+      athleteIds: ['ath_berkley', 'ath_baylor'],
+      endedAt: '2026-10-28T22:22:03.000Z',
+    })
+    const { row: next, changed } = addAthleteToSessionRow(row, 'ath_baylor')
+    assert.equal(changed, false)
+    assert.equal(next, row)
+  })
+
+  it('creates the array from the primary id when the row has none', () => {
+    const row = session('les_1', {})
+    const { row: next, changed } = addAthleteToSessionRow(row, 'ath_baylor')
+    assert.equal(changed, true)
+    assert.deepEqual(next.athleteIds, ['ath_berkley', 'ath_baylor'])
   })
 })

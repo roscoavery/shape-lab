@@ -36,6 +36,7 @@ import { readCoachContentFile, writeCoachContentFile } from './coachContentStore
 import { readCoachClassesFile, writeCoachClassesFile } from './coachClassStore.ts'
 import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { mergeChalkboardBoards, readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
+import { addAthleteToSessionRow, readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { appendHoldLog, HOLD_LOG_SHAPES, roundHoldSecondsUp } from './holdLog.ts'
 
 const WINDOW_DAYS = 30
@@ -1209,6 +1210,109 @@ async function handleChalkboardDeleteItem(
   return true
 }
 
+type LessonSessionRow = Record<string, unknown>
+
+function lessonAthleteIdsOf(row: LessonSessionRow): string[] {
+  const ids = [row.athleteId, ...(Array.isArray(row.athleteIds) ? row.athleteIds : [])].filter(
+    (id): id is string => typeof id === 'string' && Boolean(id),
+  )
+  return [...new Set(ids)]
+}
+
+function lessonSummary(row: LessonSessionRow, names: Map<string, string>) {
+  const ids = lessonAthleteIdsOf(row)
+  return {
+    id: row.id,
+    athleteIds: ids,
+    athleteNames: ids.map((id) => names.get(id) ?? id),
+    coachId: row.coachId ?? null,
+    startedAt: row.startedAt ?? null,
+    endedAt: row.endedAt ?? null,
+    calendarEventId: row.calendarEventId ?? null,
+    calendarTitle: row.calendarTitle ?? null,
+  }
+}
+
+async function handleLessonsList(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'Use GET' })
+    return true
+  }
+  const verified = await authed(req, res, 'lessons:write')
+  if (!verified) return true
+  let date = ''
+  try {
+    date = new URL(req.url ?? '', 'http://localhost').searchParams.get('date') ?? ''
+  } catch {
+    date = ''
+  }
+  const file = await readLessonsFile()
+  const roster = await readRosterFile()
+  const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []) as AthleteSummary[]
+  const names = new Map(athletes.filter((a) => a && a.id).map((a) => [a.id, a.name]))
+  const cutoff = Date.now() - WINDOW_DAYS * 86400000
+  const sessions = (Array.isArray(file.sessions) ? file.sessions : [])
+    .filter((s): s is LessonSessionRow => Boolean(s) && typeof s === 'object')
+    .filter((s) => {
+      const start = Date.parse(typeof s.startedAt === 'string' ? s.startedAt : '')
+      if (Number.isFinite(start) && start < cutoff) return false
+      // ?date= matches the UTC date prefix of startedAt.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date) && typeof s.startedAt === 'string') {
+        return s.startedAt.startsWith(date)
+      }
+      return true
+    })
+    .sort((a, b) => String(b.startedAt ?? '').localeCompare(String(a.startedAt ?? '')))
+    .map((s) => lessonSummary(s, names))
+  sendJson(res, 200, { sessions })
+  await verified.touch()
+  return true
+}
+
+async function handleLessonAddAthlete(
+  req: IncomingMessage,
+  res: ServerResponse,
+  sessionId: string,
+): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'lessons:write')
+  if (!verified) return true
+  const body = await readJsonBody(req)
+  const athleteId = body && typeof body.athleteId === 'string' ? body.athleteId.trim() : ''
+  if (!athleteId) {
+    sendJson(res, 400, { error: 'Send JSON with an athleteId to add to this lesson.' })
+    return true
+  }
+  const roster = await readRosterFile()
+  const athletes = (Array.isArray(roster.athletes) ? roster.athletes : []) as AthleteSummary[]
+  const athlete = athletes.find((a) => a && a.id === athleteId)
+  if (!athlete) {
+    sendJson(res, 404, { error: 'Athlete not found.' })
+    return true
+  }
+  const file = await readLessonsFile()
+  const sessions = (Array.isArray(file.sessions) ? file.sessions : []) as LessonSessionRow[]
+  const idx = sessions.findIndex((s) => s && typeof s === 'object' && s.id === sessionId)
+  const current = sessions[idx]
+  if (idx < 0 || !current) {
+    sendJson(res, 404, { error: 'Lesson not found.' })
+    return true
+  }
+  const { row, changed } = addAthleteToSessionRow(current, athleteId)
+  if (changed) {
+    const next = [...sessions]
+    next[idx] = row
+    await writeLessonsFile({ ...file, sessions: next })
+  }
+  await verified.touch()
+  const names = new Map(athletes.filter((a) => a && a.id).map((a) => [a.id, a.name]))
+  sendJson(res, 200, { added: changed, session: lessonSummary(row, names) })
+  return true
+}
+
 async function handleChalkboardMerge(
   req: IncomingMessage,
   res: ServerResponse,
@@ -1288,6 +1392,11 @@ export async function handleMuseApi(  req: IncomingMessage,
     return req.method === 'GET' ? handleSkillMapsGet(req, res) : handleSkillMapsPost(req, res)
   }
   if (path === '/api/muse/chalkboards') return handleChalkboardsList(req, res)
+  if (path === '/api/muse/lessons') return handleLessonsList(req, res)
+  const lessonAddAthleteMatch = /^\/api\/muse\/lessons\/([^/]+)\/add-athlete$/.exec(path)
+  if (lessonAddAthleteMatch) {
+    return handleLessonAddAthlete(req, res, decodeURIComponent(lessonAddAthleteMatch[1]))
+  }
   const chalkboardMergeMatch = /^\/api\/muse\/chalkboards\/([^/]+)\/merge$/.exec(path)
   if (chalkboardMergeMatch) {
     return handleChalkboardMerge(req, res, decodeURIComponent(chalkboardMergeMatch[1]))

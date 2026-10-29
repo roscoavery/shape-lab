@@ -87,6 +87,25 @@ function stamp(row: Record<string, unknown>): string {
   return ''
 }
 
+/** Add an athlete id to a stored lesson session row (union, idempotent).
+ * The row keeps its own stamp; the file write merges it in. Used by the
+ * Muse lessons repair endpoint so a past lesson can gain an athlete
+ * who was in it without rewriting anything else about the session. */
+export function addAthleteToSessionRow(
+  row: Record<string, unknown>,
+  athleteId: string,
+): { row: Record<string, unknown>; changed: boolean } {
+  const ids = [
+    ...new Set(
+      [row.athleteId, ...(Array.isArray(row.athleteIds) ? row.athleteIds : [])].filter(
+        (id): id is string => typeof id === 'string' && Boolean(id),
+      ),
+    ),
+  ]
+  if (ids.includes(athleteId)) return { row, changed: false }
+  return { row: { ...row, athleteIds: [...ids, athleteId] }, changed: true }
+}
+
 /**
  * Newer-stamped row wins, except athleteIds on lesson sessions, which
  * only ever grow (there is no remove-athlete path): the merged row
