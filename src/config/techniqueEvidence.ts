@@ -141,6 +141,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Front 2.5 (Randi) on tumble track, another angle.',
     },
   ],
+  skl_fhs_front_tuck: [
+    {
+      who: 'Kyoko Negishi',
+      url: 'https://www.instagram.com/p/DfCkMe2mopA/',
+      creator: 'kyoko_negishi',
+      watchFor: 'Watch for the tight arch before the connection.',
+    },
+  ],
   skl_side_aerial: [
     {
       who: 'Sadie (athlete)',
