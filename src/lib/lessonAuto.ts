@@ -2,6 +2,7 @@ import {
   fetchTodayEvents,
   hasCalendarApiToken,
   authorizeCalendarFromSession,
+  eventAthleteIds,
   type TodayCalendarEvent,
 } from './calendarClient'
 import { getSessionGlow } from './sessionGlow'
@@ -19,8 +20,9 @@ import { getActiveMeeting } from './coachClasses'
  * works no matter which tab is open (the old check lived in the Today view
  * and never ran while he was on the calendar).
  *
- * - Auto-start: a 1-on-1 lesson with a matched athlete starts at its calendar
- *   time, exactly like classes. Manual linking in the calendar never starts
+ * - Auto-start: a lesson with matched athletes starts at its calendar
+ *   time, exactly like classes, with every athlete the event is
+ *   linked to — not just the first. Manual linking in the calendar never starts
  *   one; the clock does.
  * - Auto-end: a live calendar-linked lesson ends at its calendar end time.
  *   Notes and wins can be added afterward from the recap.
@@ -59,7 +61,9 @@ export async function checkLessonAutoStart(
   }
   const glow = getSessionGlow(events, now)
   const lessonEvent = glow.closest.lesson
-  if (!glow.glowing.has('lesson') || !lessonEvent?.matchedAthleteId) return null
+  if (!glow.glowing.has('lesson') || !lessonEvent) return null
+  const autoIds = eventAthleteIds(lessonEvent)
+  if (autoIds.length === 0) return null
   const startMs = Date.parse(lessonEvent.startAt)
   // Start at the scheduled time, not 5 minutes early: the glow leads by 5
   // minutes so he sees it coming, but the clock starts the lesson on time.
@@ -68,7 +72,7 @@ export async function checkLessonAutoStart(
   if (getActiveMeeting(coachId) || findLiveLesson(coachId)) return null
   return {
     kind: 'start',
-    athleteIds: [lessonEvent.matchedAthleteId],
+    athleteIds: autoIds,
     calendar: {
       eventId: lessonEvent.id,
       title: lessonEvent.title,

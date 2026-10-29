@@ -87,14 +87,40 @@ function stamp(row: Record<string, unknown>): string {
   return ''
 }
 
-function union(existing: unknown[], incoming: unknown[]): unknown[] {
+/**
+ * Newer-stamped row wins, except athleteIds on lesson sessions, which
+ * only ever grow (there is no remove-athlete path): the merged row
+ * carries the union, so an athlete added mid-lesson on one device
+ * survives an end or save made from a stale copy on another device.
+ * Plan rows carry no athleteIds array and are untouched.
+ */
+export function union(existing: unknown[], incoming: unknown[]): unknown[] {
   const map = byId(existing)
   for (const raw of incoming) {
     if (!raw || typeof raw !== 'object') continue
     const row = raw as Record<string, unknown>
     if (typeof row.id !== 'string' || !row.id) continue
     const keep = map.get(row.id)
-    if (!keep || stamp(row).localeCompare(stamp(keep)) >= 0) map.set(row.id, row)
+    if (!keep) {
+      map.set(row.id, row)
+      continue
+    }
+    const winner = stamp(row).localeCompare(stamp(keep)) >= 0 ? row : keep
+    const loser = winner === row ? keep : row
+    const winnerIds = Array.isArray(winner.athleteIds) ? (winner.athleteIds as unknown[]) : []
+    const loserIds = Array.isArray(loser.athleteIds) ? (loser.athleteIds as unknown[]) : []
+    if (winnerIds.length === 0 && loserIds.length === 0) {
+      map.set(row.id, winner)
+      continue
+    }
+    const mergedIds = [
+      ...new Set(
+        [winner.athleteId, ...winnerIds, ...loserIds].filter(
+          (id): id is string => typeof id === 'string' && Boolean(id),
+        ),
+      ),
+    ]
+    map.set(row.id, { ...winner, athleteIds: mergedIds })
   }
   return [...map.values()]
 }

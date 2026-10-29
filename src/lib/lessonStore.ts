@@ -169,7 +169,7 @@ export async function hydrateLessons(): Promise<void> {
     const plans = mergeById(localPlans, data.plans ?? [], (p) => p.updatedAt).filter(
       (p) => p?.id && !gonePlans.has(p.id),
     )
-    const sessions = mergeById(localSessions, data.sessions ?? [], sessionStamp).filter(
+    const sessions = mergeLessonSessionCopies(localSessions, data.sessions ?? []).filter(
       (s) => s?.id && !goneSessions.has(s.id),
     )
     persist(plans, sessions)
@@ -196,6 +196,39 @@ function mergeById<T extends { id: string }>(
     if (!row?.id) continue
     const keep = map.get(row.id)
     if (!keep || stamp(row).localeCompare(stamp(keep)) >= 0) map.set(row.id, row)
+  }
+  return [...map.values()]
+}
+
+/**
+ * Merge two copies of the same sessions. The newer-stamped row wins
+ * every field, except athleteIds, which only ever grow (there is no
+ * remove-athlete path): the merged row carries the union, so an
+ * athlete added mid-lesson on one device survives an end or save made
+ * from a stale copy on another device.
+ */
+export function mergeLessonSessionCopies(
+  local: LessonSession[],
+  remote: LessonSession[],
+): LessonSession[] {
+  const map = new Map<string, LessonSession>()
+  for (const row of [...local, ...remote]) {
+    if (!row?.id) continue
+    const keep = map.get(row.id)
+    if (!keep) {
+      map.set(row.id, row)
+      continue
+    }
+    const winner = sessionStamp(row).localeCompare(sessionStamp(keep)) >= 0 ? row : keep
+    const loser = winner === row ? keep : row
+    const winnerIds = Array.isArray(winner.athleteIds) ? winner.athleteIds : []
+    const loserIds = Array.isArray(loser.athleteIds) ? loser.athleteIds : []
+    if (winnerIds.length === 0 && loserIds.length === 0) {
+      map.set(row.id, winner)
+      continue
+    }
+    const mergedIds = [...new Set([winner.athleteId, ...winnerIds, ...loserIds].filter(Boolean))]
+    map.set(row.id, { ...winner, athleteIds: mergedIds })
   }
   return [...map.values()]
 }
@@ -357,8 +390,19 @@ export function startLessonSession(opts: {
   const existing = findLiveLesson(opts.coachId, athleteIds)
   if (existing) {
     const calendarNotes = existing.calendarNotes || opts.calendar?.notes?.trim() || null
+    // Starting (or resuming) must never drop an athlete who is already
+    // in the live session, and must pick up athletes the event link
+    // gained since the session started: same calendar event, or an
+    // overlapping athlete list, means one lesson — merge the ids.
+    // An unrelated live lesson keeps its own athletes.
+    const existingIds = lessonAthleteIds(existing)
+    const sameEvent =
+      Boolean(opts.calendar?.eventId) && existing.calendarEventId === opts.calendar?.eventId
+    const overlaps = athleteIds.some((id) => existingIds.includes(id))
     const next = {
       ...existing,
+      athleteIds:
+        sameEvent || overlaps ? [...new Set([...existingIds, ...athleteIds])] : existingIds,
       planId: opts.planId ?? existing.planId,
       planSnapshot: incomingPlan
         ? snapshotPlan(incomingPlan)

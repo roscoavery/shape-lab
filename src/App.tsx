@@ -1152,19 +1152,11 @@ export default function App() {
     if (ids.length === 0) return
     // Pull the latest first: if another device just started a lesson for these
     // athletes, join that session instead of creating a duplicate.
+    // startLessonSession merges the athletes into the live session when
+    // it is the same calendar event, so a Start tap never silently
+    // drops an athlete the event link gained since the session began.
     await hydrateLessons()
     const primaryId = ids[0]!
-    const existing = getLessonSession(loadActiveLessonId())
-    if (
-      existing &&
-      !existing.endedAt &&
-      calendar?.eventId &&
-      existing.calendarEventId === calendar.eventId &&
-      ids.some((id) => lessonAthleteIds(existing).includes(id))
-    ) {
-      setLessonTick((n) => n + 1)
-      return
-    }
     const session = startLessonSession({
       athleteIds: ids,
       coachId: coach.id,
