@@ -149,6 +149,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Watch for the tight arch before the connection.',
     },
   ],
+  skl_front_handspring: [
+    {
+      who: 'Coach Jade',
+      url: 'https://www.instagram.com/reel/DezLasTIqFy/',
+      creator: 'coach__jade',
+    },
+  ],
   skl_side_aerial: [
     {
       who: 'Sadie (athlete)',
