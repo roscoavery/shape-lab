@@ -1259,6 +1259,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Leg swing drill for helicopter cartwheel, keeping the swing leg low.',
       creator: 'gatonegro_acro',
     },
+    {
+      who: 'Giacomello Tutorials',
+      url: 'https://www.instagram.com/reel/DeTsKUOMXwG/',
+      creator: 'giacomellotutorials',
+    },
   ],
   'acro_side_aerial': [
     {
