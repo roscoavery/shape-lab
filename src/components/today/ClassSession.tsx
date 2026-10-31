@@ -81,6 +81,7 @@ type Props = {
   onOpenStation: () => void
   onOpenShapeTest: () => void
   onOpenNamesTest?: () => void
+  onOpenSkillPathGuide?: () => void
   onClose: () => void
   onAthletesChange: (next: Athlete[]) => void
   onViewProfile?: (id: string) => void
@@ -97,6 +98,7 @@ export function ClassSession({
   onOpenStation,
   onOpenShapeTest,
   onOpenNamesTest,
+  onOpenSkillPathGuide,
   onClose,
   onAthletesChange,
   onViewProfile,
@@ -165,6 +167,18 @@ export function ClassSession({
       )}
 
       <div className="mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col overflow-y-auto px-4 pb-10">
+        {live && onOpenSkillPathGuide && (
+          <button
+            type="button"
+            onClick={onOpenSkillPathGuide}
+            className="sl-skill-glow sl-left mt-2 w-full px-4 py-4"
+          >
+            <span className="block text-left text-sm font-bold text-white">Skill path guide</span>
+            <span className="block text-left text-xs text-white/70">
+              What each skill needs, what can bend, what to ask your coach
+            </span>
+          </button>
+        )}
         {screen === 'schedule' && (
           <ScheduleEditor
             coachId={coach.id}

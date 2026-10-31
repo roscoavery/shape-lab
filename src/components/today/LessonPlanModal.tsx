@@ -3,6 +3,7 @@ import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
 import { lessonPlanDateKey, subscribeClassPlans, pullClassPlans } from '../../lib/classPlans'
 import { LessonPlanCard } from './LessonPlanCard'
+import { AthleteAvatar } from '../AthleteAvatar'
 
 function formatWhen(iso: string): string {
   const d = new Date(iso)
@@ -22,11 +23,13 @@ export function LessonPlanModal({
   athletes,
   coachId,
   onClose,
+  onViewProfile,
 }: {
   event: TodayCalendarEvent
   athletes: Athlete[]
   coachId: string
   onClose: () => void
+  onViewProfile?: (id: string) => void
 }) {
   const [plansTick, setPlansTick] = useState(0)
   const [taskInput, setTaskInput] = useState('')
@@ -68,7 +71,24 @@ export function LessonPlanModal({
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
               Lesson plan
             </p>
-            <p className="mt-0.5 truncate text-base font-bold text-[var(--text)]">{label}</p>
+            <div className="mt-0.5 flex min-w-0 items-center gap-2">
+              {athletes.map((a) =>
+                onViewProfile ? (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => onViewProfile(a.id)}
+                    aria-label={`View ${a.name}'s profile`}
+                    className="shrink-0 rounded-full"
+                  >
+                    <AthleteAvatar athlete={a} size="md" />
+                  </button>
+                ) : (
+                  <AthleteAvatar key={a.id} athlete={a} size="md" />
+                ),
+              )}
+              <p className="truncate text-base font-bold text-[var(--text)]">{label}</p>
+            </div>
             <p className="text-xs text-[var(--muted)]">{formatWhen(event.startAt)}</p>
             {needsMoreAthletes && (
               <p className="mt-1 text-xs font-semibold text-amber-300">

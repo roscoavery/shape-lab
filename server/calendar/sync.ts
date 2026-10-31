@@ -157,7 +157,7 @@ export async function syncConnectionForCoach(
             createdByCoachId: connection.coachId,
             ...(contact.email ? { email: contact.email } : {}),
             ...(contact.phone ? { phone: contact.phone } : {}),
-            ...(note ? { notes: note.slice(0, 800) } : {}),
+            ...(note ? { notes: note } : {}),
           })
           const stub = {
             id: saved.id,

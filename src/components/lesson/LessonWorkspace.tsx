@@ -203,6 +203,18 @@ export function LessonWorkspace({
           {athleteName}
           <span className="font-normal text-[var(--muted)]"> with {coachName}</span>
         </h2>
+        {onOpenSkillPathGuide && (
+          <button
+            type="button"
+            onClick={onOpenSkillPathGuide}
+            className="sl-skill-glow sl-left mt-2 w-full px-4 py-4"
+          >
+            <span className="block text-left text-sm font-bold text-white">Skill path guide</span>
+            <span className="block text-left text-xs text-white/70">
+              What each skill needs, what can bend, what to ask your coach
+            </span>
+          </button>
+        )}
         {(athlete?.needsOnboarding || athlete?.createdFromCalendar) && (
           <div className="mt-2 rounded-lg bg-[#102820] px-3 py-2">
             <p className="break-words text-xs text-[var(--accent)]">
@@ -339,15 +351,6 @@ export function LessonWorkspace({
           >
             Open Compare
           </button>
-          {onOpenSkillPathGuide && (
-            <button
-              type="button"
-              onClick={onOpenSkillPathGuide}
-              className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white"
-            >
-              Skill path guide
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setShowAddAthlete((v) => !v)}

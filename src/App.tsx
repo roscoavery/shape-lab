@@ -1637,6 +1637,7 @@ export default function App() {
                 .filter((a): a is Athlete => Boolean(a))}
               coachId={activeProfile.id}
               onClose={() => setPlanModalEvent(null)}
+              onViewProfile={openProfile}
             />
           )}
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
@@ -3059,6 +3060,11 @@ export default function App() {
         onOpenNamesTest={() => {
           setNamesQuizGroupId('live')
           setNamesQuizOpen(true)
+        }}
+        onOpenSkillPathGuide={() => {
+          setClassSessionOpen(false)
+          stashMobileSearchJump({ kind: 'skillPath' })
+          goTab('learn')
         }}
         onCompareItem={(payload) => openCompareWithReference(payload)}
       />
