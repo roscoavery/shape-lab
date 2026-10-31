@@ -236,9 +236,18 @@ export default function PublicLibraryPage({
     }
   }
 
+  // The intake link sends families here with ?name= so the test can
+  // prefill who's taking it instead of asking them to type it.
+  const presetName = useMemo(() => {
+    const raw = new URLSearchParams(window.location.search).get('name')?.trim() ?? ''
+    if (!raw) return undefined
+    const [firstName, ...rest] = raw.split(/\s+/)
+    return { firstName: firstName ?? '', lastName: rest.join(' ') }
+  }, [])
+
   // Show the shape test instead of the library (after all hooks).
   if (showTest) {
-    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} crops={crops} />
+    return <PublicShapeTest token={token} onExit={() => setShowTest(false)} libraryShapes={shapes} crops={crops} presetName={presetName} />
   }
 
   return (

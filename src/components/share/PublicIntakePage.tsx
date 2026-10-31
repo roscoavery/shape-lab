@@ -28,8 +28,6 @@ import { ProfilePhotoCropper } from '../today/ProfilePhotoCropper'
 import { BirthdayQuickPick } from '../today/BirthdayQuickPick'
 import { SkillMapView } from '../learn/SkillMapView'
 import { AcroMapView } from '../learn/AcroMapView'
-import PublicLibraryPage from './PublicLibraryPage'
-import PublicShapeTest from './PublicShapeTest'
 import { guideSkillsInOrder, type UnifiedSkill } from '../../lib/skillRegistry'
 import { ACRO_SKILLS } from '../../lib/acroSkills'
 
@@ -399,7 +397,20 @@ export function PublicIntakePage({ token }: { token: string }) {
   const [step, setStep] = useState<'name' | 'questions' | 'towards'>('questions')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
-  const [postStep, setPostStep] = useState<'none' | 'study' | 'test'>('none')
+  // The in-page study/test broke on the intake link (the test's shape load
+  // fails there), while the standalone study link works. Send families to
+  // the study page instead, on the same library token the server handed
+  // this page, so the study link itself never changes. The name rides
+  // along so the study page's test can prefill who's taking it.
+  const intakeDisplayName =
+    mode !== 'athlete'
+      ? `${firstName.trim()} ${lastName.trim()}`.trim()
+      : (athleteName ?? '')
+  const studyLinkFor = (displayName: string) => {
+    const base = `/studylib/${libraryToken}`
+    const name = displayName.trim()
+    return name ? `${base}?name=${encodeURIComponent(name)}` : base
+  }
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -535,45 +546,26 @@ export function PublicIntakePage({ token }: { token: string }) {
         </p>
 
         {done ? (
-          postStep === 'study' ? (
-            <PublicLibraryPage
-              token={libraryToken}
-              onExit={() => setPostStep('none')}
-              hideTestButton
-            />
-          ) : postStep === 'test' ? (
-            <PublicShapeTest
-              token={libraryToken}
-              onExit={() => setPostStep('none')}
-              presetName={{
-                firstName: mode !== 'athlete' ? firstName.trim() : (athleteName?.split(' ')[0] ?? ''),
-                lastName: mode !== 'athlete' ? lastName.trim() : (athleteName?.split(' ').slice(1).join(' ') ?? ''),
-              }}
-            />
-          ) : (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
               <h1 className="text-xl font-bold text-white">You're all set!</h1>
               <p className="mt-2 text-sm text-white/60">
                 Your answers are saved. Want to study the shapes or take the shape test?
               </p>
               <div className="mt-5 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setPostStep('study')}
-                  className="h-12 w-full rounded-xl bg-sky-500 text-base font-bold text-white"
+                <a
+                  href={studyLinkFor(intakeDisplayName)}
+                  className="flex h-12 w-full items-center justify-center rounded-xl bg-sky-500 text-base font-bold text-white"
                 >
                   Study the shapes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostStep('test')}
-                  className="h-12 w-full rounded-xl border border-white/15 text-base font-bold text-white"
+                </a>
+                <a
+                  href={studyLinkFor(intakeDisplayName)}
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-white/15 text-base font-bold text-white"
                 >
                   Take the shape test
-                </button>
+                </a>
               </div>
             </div>
-          )
         ) : isNew && step === 'name' ? (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
             {heading && (
@@ -644,22 +636,6 @@ export function PublicIntakePage({ token }: { token: string }) {
             </div>
           </div>
         ) : questions.length === 0 ? (
-          postStep === 'study' ? (
-            <PublicLibraryPage
-              token={libraryToken}
-              onExit={() => setPostStep('none')}
-              hideTestButton
-            />
-          ) : postStep === 'test' ? (
-            <PublicShapeTest
-              token={libraryToken}
-              onExit={() => setPostStep('none')}
-              presetName={{
-                firstName: athleteName?.split(' ')[0] ?? '',
-                lastName: athleteName?.split(' ').slice(1).join(' ') ?? '',
-              }}
-            />
-          ) : (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
               <h1 className="text-xl font-bold text-white">
                 Hi{athleteName ? ` ${athleteName.split(' ')[0]}` : ''}!
@@ -668,23 +644,20 @@ export function PublicIntakePage({ token }: { token: string }) {
                 You've already answered everything. Want to study the shapes or take the shape test?
               </p>
               <div className="mt-5 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setPostStep('study')}
-                  className="h-12 w-full rounded-xl bg-sky-500 text-base font-bold text-white"
+                <a
+                  href={studyLinkFor(intakeDisplayName)}
+                  className="flex h-12 w-full items-center justify-center rounded-xl bg-sky-500 text-base font-bold text-white"
                 >
                   Study the shapes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostStep('test')}
-                  className="h-12 w-full rounded-xl border border-white/15 text-base font-bold text-white"
+                </a>
+                <a
+                  href={studyLinkFor(intakeDisplayName)}
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-white/15 text-base font-bold text-white"
                 >
                   Take the shape test
-                </button>
+                </a>
               </div>
             </div>
-          )
         ) : (
           q && (
             <div className="mt-6">
