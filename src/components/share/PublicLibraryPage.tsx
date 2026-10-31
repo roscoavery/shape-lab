@@ -167,6 +167,19 @@ export default function PublicLibraryPage({
 
   // shapes with deletions applied is defined above
 
+  // The intake link sends families here with ?name= so the test can
+  // prefill who's taking it instead of asking them to type it.
+  // NOTE: this must stay above every conditional return. Hooks run in
+  // order on every render; putting this after the Loading return made
+  // the page run one more hook after the data loaded than on mount,
+  // which unmounted the whole page (build 1195 regression).
+  const presetName = useMemo(() => {
+    const raw = new URLSearchParams(window.location.search).get('name')?.trim() ?? ''
+    if (!raw) return undefined
+    const [firstName, ...rest] = raw.split(/\s+/)
+    return { firstName: firstName ?? '', lastName: rest.join(' ') }
+  }, [])
+
   const go = useCallback(
     (next: number) => {
       if (shapes.length === 0) return
@@ -235,15 +248,6 @@ export default function PublicLibraryPage({
       go(index - 1)
     }
   }
-
-  // The intake link sends families here with ?name= so the test can
-  // prefill who's taking it instead of asking them to type it.
-  const presetName = useMemo(() => {
-    const raw = new URLSearchParams(window.location.search).get('name')?.trim() ?? ''
-    if (!raw) return undefined
-    const [firstName, ...rest] = raw.split(/\s+/)
-    return { firstName: firstName ?? '', lastName: rest.join(' ') }
-  }, [])
 
   // Show the shape test instead of the library (after all hooks).
   if (showTest) {
