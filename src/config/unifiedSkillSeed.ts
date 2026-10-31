@@ -234,7 +234,7 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Build it as round off 2, then round off 3, a strong 2 leads to a strong 3"
     ],
     "canBend": [
-      "Athletes can show a useful round off while the cartwheel is still rough. Ryan has watched athletes build a decent series while still spending five minutes on cartwheels at the start of the lesson."
+      "Sometimes, an athlete may show a useful round off while the cartwheel is still rough. Ryan has watched athletes build a decent series while still spending five minutes on cartwheels at the start of the lesson."
     ],
     "ask": "Ask your coach what your round off series is missing. Feet in front, acceleration, or the hollow rebound shape, name the piece.",
     "ryanNote": "After an athlete gets a series, we start looking forward and finishing with open shoulder angle."
