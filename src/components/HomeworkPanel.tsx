@@ -258,7 +258,7 @@ function HomeworkProgressStrip({
     trained.length === 0
       ? 'Your first logged hold starts the story. Tap Train and put time on the mat.'
       : bestJump
-        ? `${bestJump.name}: ${formatSeconds(bestJump.total)} total across ${bestJump.count} hold${bestJump.count === 1 ? '' : 's'}. Longest single hold ${formatSeconds(bestJump.best)}. That is real progress.`
+        ? `${bestJump.name}: ${formatSeconds(bestJump.total)} total across ${bestJump.count} hold${bestJump.count === 1 ? '' : 's'}. Longest single hold ${formatSeconds(bestJump.best)}.`
         : `${trained.length} drill${trained.length === 1 ? '' : 's'} with logged time. Keep stacking holds.`
 
   return (
