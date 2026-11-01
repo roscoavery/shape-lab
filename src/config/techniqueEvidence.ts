@@ -871,6 +871,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Bounce backhandspring, the shapes, angles, and timing of the round off back handspring connection.',
       creator: 'coachwithpatience',
     },
+    {
+      who: 'Coach Lain',
+      url: 'https://www.instagram.com/reel/DfKvcupyEwj/',
+      creator: 'coachlain',
+    },
   ],
   'standing-tuck': [
     {
