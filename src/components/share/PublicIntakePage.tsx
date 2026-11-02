@@ -397,6 +397,9 @@ export function PublicIntakePage({ token }: { token: string }) {
   const [step, setStep] = useState<'name' | 'questions' | 'towards'>('questions')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  // Build 1200 dedupe: set when the server reused an existing profile
+  // instead of creating a duplicate from the new-athlete link.
+  const [matchedExisting, setMatchedExisting] = useState(false)
   // The in-page study/test broke on the intake link (the test's shape load
   // fails there), while the standalone study link works. Send families to
   // the study page instead, on the same library token the server handed
@@ -496,10 +499,11 @@ export function PublicIntakePage({ token }: { token: string }) {
           body: JSON.stringify(payload),
         },
       )
+      const data = await r.json().catch(() => ({}))
       if (!r.ok) {
-        const data = await r.json().catch(() => ({}))
         throw new Error(data.error ?? 'Could not save. Try again.')
       }
+      setMatchedExisting(data?.matchedExisting === true)
       setDone(true)
     } catch (e: any) {
       setError(e?.message ?? 'Could not save. Try again.')
@@ -548,6 +552,11 @@ export function PublicIntakePage({ token }: { token: string }) {
         {done ? (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
               <h1 className="text-xl font-bold text-white">You're all set!</h1>
+              {matchedExisting && (
+                <p className="mt-2 text-sm text-sky-300">
+                  We found your existing profile, so no duplicate was created.
+                </p>
+              )}
               <p className="mt-2 text-sm text-white/60">
                 Your answers are saved. Want to study the shapes or take the shape test?
               </p>

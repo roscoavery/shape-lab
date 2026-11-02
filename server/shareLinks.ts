@@ -311,7 +311,9 @@ export async function handleShareIntakeSubmit(
     return
   }
 
-  // Open / group mode: create a new profile.
+  // Open / group mode: create a new profile, unless this athlete already
+  // has one (build 1200 dedupe, Ryan's rule: an existing athlete who opens
+  // the new-athlete link reuses their profile, never a duplicate).
   const firstName = String(body.firstName ?? '').trim()
   const lastName = String(body.lastName ?? '').trim()
   // Back-compat: older clients send a single name field.
@@ -320,6 +322,47 @@ export async function handleShareIntakeSubmit(
   const resolvedLast = lastName || legacyName.split(/\s+/).slice(1).join(' ') || ''
   if (!resolvedFirst) {
     sendJson(res, 400, { error: 'Please enter your first name.' })
+    return
+  }
+  const matched = findExistingAthleteForIntake(athletes, resolvedFirst, resolvedLast, answers)
+  if (matched) {
+    // Matching only adds missing answers, it never overwrites what is
+    // already on the profile (saveAnswersToAthlete skips answered rows).
+    saveAnswersToAthlete(matched, answers)
+    if (workingTowards.length > 0) {
+      matched.acroWorkingTowards = workingTowards.slice(0, 3)
+      const now = new Date().toISOString()
+      const existingGoals = new Set(
+        (matched.skillGoals ?? []).map((g: any) => g.label?.toLowerCase()),
+      )
+      const freshGoals = workingTowards
+        .slice(0, 3)
+        .filter((label) => !existingGoals.has(label.toLowerCase()))
+        .map((label) => ({
+          id: `sg_${randomBytes(6).toString('hex')}`,
+          label,
+          setAt: now,
+          source: 'intake',
+        }))
+      matched.skillGoals = [...(matched.skillGoals ?? []), ...freshGoals]
+    }
+    if (photoDataUrl) matched.photoDataUrl = photoDataUrl
+    if (rec.type === 'intake-group' && rec.groupId) {
+      try {
+        const { readTrainingEventsFile, writeTrainingEventsFile } = await import('./trainingEventStore.ts')
+        const file = await readTrainingEventsFile()
+        const events = file.events as any[]
+        const group = events.find((e: any) => e.id === rec.groupId)
+        if (group && !group.athleteIds.includes(matched.id)) {
+          group.athleteIds.push(matched.id)
+          await writeTrainingEventsFile({ ...file, events })
+        }
+      } catch {
+        // group join is best-effort
+      }
+    }
+    await writeRosterFile({ ...roster, athletes })
+    sendJson(res, 200, { ok: true, athleteId: matched.id, matchedExisting: true })
     return
   }
   const id = `ath_${randomBytes(8).toString('hex')}`
@@ -364,6 +407,104 @@ export async function handleShareIntakeSubmit(
 
   await writeRosterFile({ ...roster, athletes })
   sendJson(res, 200, { ok: true, athleteId: id })
+}
+
+function normalizePersonName(first: string, last: string): string {
+  return `${first} ${last}`.toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+function digitsOnly(s: string): string {
+  return s.replace(/\D/g, '')
+}
+
+function splitFullName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/)
+  return { first: parts[0] ?? '', last: parts.slice(1).join(' ') }
+}
+
+/**
+ * Build 1200 dedupe for open/group intake: find the existing athlete
+ * profile this submission belongs to, or null. Match requires the exact
+ * normalized full name PLUS a strong key: the same birthday, or the same
+ * parent phone (digits only). Name alone never merges, so two athletes
+ * who share a name stay separate. Only role 'athlete' profiles match.
+ * On a strong-key tie (a duplicate already on file), the most recently
+ * updated profile wins rather than making a third one.
+ */
+function findExistingAthleteForIntake(
+  athletes: any[],
+  firstName: string,
+  lastName: string,
+  answers: any[],
+): any | null {
+  const name = normalizePersonName(firstName, lastName)
+  if (!name) return null
+  const birthday =
+    answers.find((a: any) => a?.questionId === 'birthday' && typeof a.answer === 'string')
+      ?.answer?.trim() ?? ''
+  const phoneDigits = digitsOnly(
+    answers.find((a: any) => a?.questionId === 'parentPhone' && typeof a.answer === 'string')
+      ?.answer ?? '',
+  )
+  if (!birthday && !phoneDigits) return null
+  const matches = athletes.filter((a: any) => {
+    if (a?.role !== 'athlete') return false
+    const aFirst = String(a.firstName ?? '')
+    const aLast = String(a.lastName ?? '')
+    const aName =
+      aFirst || aLast
+        ? normalizePersonName(aFirst, aLast)
+        : normalizePersonName(splitFullName(String(a.name ?? '')).first, splitFullName(String(a.name ?? '')).last)
+    if (!aName || aName !== name) return false
+    if (birthday && a.dateOfBirth && String(a.dateOfBirth).trim() === birthday) return true
+    if (phoneDigits && a.parentPhone && digitsOnly(String(a.parentPhone)) === phoneDigits) {
+      return true
+    }
+    return false
+  })
+  if (matches.length === 0) return null
+  matches.sort((x: any, y: any) =>
+    String(y.updatedAt ?? y.createdAt ?? '').localeCompare(
+      String(x.updatedAt ?? x.createdAt ?? ''),
+    ),
+  )
+  return matches[0]
+}
+
+/**
+ * GET /api/share/start-links — public hub link set for /start. Returns the
+ * gym's long-lived study, parent Learn, and new-athlete paths, and nothing
+ * else: no names, no roster, no enumeration. The coach is the one who
+ * already owns share tokens, else the gym's admin or coach profile.
+ */
+export async function handleShareStartLinks(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  _url: URL,
+): Promise<void> {
+  const { readRosterFile } = await import('./rosterStore.ts')
+  const roster = await readRosterFile()
+  const athletes = (roster as any)?.athletes ?? []
+  const file = await readTokens()
+  const tokenCoach = file.tokens.find(
+    (t) => t.type === 'library' || t.type === 'parent-learn' || t.type === 'intake-open',
+  )?.coachId
+  const admin = athletes.find((a: any) => a?.role === 'admin')
+  const coach = athletes.find((a: any) => a?.role === 'coach')
+  const coachId = tokenCoach ?? admin?.id ?? coach?.id ?? null
+  if (!coachId) {
+    sendJson(res, 404, { error: 'Not set up yet.' })
+    return
+  }
+  const libraryToken = await getOrCreateShareToken('library', coachId)
+  const learnToken = await getOrCreateShareToken('parent-learn', coachId)
+  const openToken = await getOrCreateOpenIntakeToken(coachId)
+  sendJson(res, 200, {
+    ok: true,
+    studyPath: `/studylib/${libraryToken}`,
+    learnPath: `/share/learn/${learnToken}`,
+    newAthletePath: `/intake/${openToken}`,
+  })
 }
 
 /** Save fresh (non-not_sure) answers to an athlete's intakeAnswers + profile fields. */

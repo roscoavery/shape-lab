@@ -8,6 +8,7 @@ import PublicFolderPage from './components/share/PublicFolderPage.tsx'
 import PublicLearnPage from './components/share/PublicLearnPage.tsx'
 import PublicIntakePage from './components/share/PublicIntakePage.tsx'
 import PublicLibraryPage from './components/share/PublicLibraryPage.tsx'
+import PublicStartHubPage from './components/share/PublicStartHubPage.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
 
 installLegacySafariShims()
@@ -32,7 +33,9 @@ applyAndroidShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {shareFolderTokenFromPath() ? (
+    {isStartHubPath() ? (
+      <PublicStartHubPage />
+    ) : shareFolderTokenFromPath() ? (
       <PublicFolderPage token={shareFolderTokenFromPath()!} />
     ) : parentLearnTokenFromPath() ? (
       <PublicLearnPage token={parentLearnTokenFromPath()!} />
@@ -47,6 +50,15 @@ createRoot(document.getElementById('root')!).render(
     )}
   </StrictMode>,
 )
+
+/** /start renders the public no-account front-door hub. Exact path only. */
+function isStartHubPath(): boolean {
+  try {
+    return window.location.pathname === '/start'
+  } catch {
+    return false
+  }
+}
 
 /** /share/folder/<token> renders the public no-account athlete video folder. */
 function shareFolderTokenFromPath(): string | null {

@@ -143,6 +143,7 @@ import {
   handleShareFindAthlete,
   handleShareQuizSubmit,
   handleShareStillFile,
+  handleShareStartLinks,
 } from './shareLinks.ts'
 import {
   handleShareFolder,
@@ -300,6 +301,7 @@ const API_PATHS = new Set([
   '/api/share/intake',
   '/api/share/intake-submit',
   '/api/share/library',
+  '/api/share/start-links',
   '/api/share/find-athlete',
   '/api/athlete-videos/folder-token',
   '/api/athlete-videos/file-class',
@@ -462,6 +464,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/library') {
     await handleShareLibrary(req, res, url)
+    return true
+  }
+  if (path === '/api/share/start-links') {
+    await handleShareStartLinks(req, res, url)
     return true
   }
   if (path === '/api/share/learn') {

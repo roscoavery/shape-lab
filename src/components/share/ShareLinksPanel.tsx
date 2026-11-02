@@ -51,7 +51,9 @@ function LinkRow({
   const copy = async () => {
     if (!url) return
     try {
-      await navigator.clipboard.writeText(url)
+      // Labeled copy (build 1200): a bare gym URL looks identical to every
+      // other ShapeLab link in a chat. The label says what it is for.
+      await navigator.clipboard.writeText(`${label}: ${url}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -128,7 +130,7 @@ export function ShareLinksPanel() {
   const copyGroup = async () => {
     if (!groupUrl) return
     try {
-      await navigator.clipboard.writeText(groupUrl)
+      await navigator.clipboard.writeText(`Group sign-up link: ${groupUrl}`)
       setGroupCopied(true)
       setTimeout(() => setGroupCopied(false), 2000)
     } catch {

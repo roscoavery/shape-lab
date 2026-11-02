@@ -12,7 +12,7 @@ import { execSync } from 'node:child_process'
 import http from 'node:http'
 import http2 from 'node:http2'
 import net from 'node:net'
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -214,6 +214,83 @@ function servePages(req, res) {
   serveBoot(res)
 }
 
+/**
+ * Build 1200 labeled links. Preview crawlers (iMessage, Messenger) fetch a
+ * shared URL without running JS, so a shared link only shows what it is
+ * for when the served HTML itself carries per-page preview tags. The SPA
+ * shell alone shows every link as the same bare app title.
+ *
+ * serveIndexWithPreview injects those tags into the SPA fallback copy for
+ * known public paths. Titles and descriptions are constants, never user
+ * input. Any failure, a non-GET method, or a range request falls back to
+ * the plain file, so app serving never changes for real browsers.
+ */
+const PREVIEW_META = [
+  {
+    match: (p) => p === '/start',
+    title: 'ShapeLab | Start here',
+    description:
+      'New to ShapeLab? Start here, book a lesson, study the shapes, and learn how training works.',
+  },
+  {
+    match: (p) => p.startsWith('/studylib/'),
+    title: 'ShapeLab | Shape library and test',
+    description: 'Study the shapes and take the shape test. No account needed.',
+  },
+  {
+    match: (p) => p.startsWith('/intake/'),
+    title: 'ShapeLab | Athlete intake',
+    description: 'Answer the intake questions so your coach can set up your profile.',
+  },
+  {
+    match: (p) => p.startsWith('/share/learn/'),
+    title: 'ShapeLab | For parents',
+    description:
+      'The parent guide, progression levels, coaching concepts, and nutrition. No account needed.',
+  },
+  {
+    match: (p) => p.startsWith('/share/'),
+    title: 'ShapeLab | Skill card',
+    description: 'A skill card from ShapeLab.',
+  },
+]
+
+function serveIndexWithPreview(req, res, pathname) {
+  try {
+    if (req.method !== 'GET' || typeof req?.headers?.range === 'string') {
+      return sendFile(req, res, join(DIST, 'index.html'))
+    }
+    const meta = PREVIEW_META.find((m) => m.match(pathname))
+    if (!meta) return sendFile(req, res, join(DIST, 'index.html'))
+    const html = readFileSync(join(DIST, 'index.html'), 'utf8')
+    const host =
+      typeof req.headers.host === 'string' && req.headers.host
+        ? req.headers.host
+        : '127.0.0.1'
+    const proto =
+      typeof req.headers['x-forwarded-proto'] === 'string'
+        ? req.headers['x-forwarded-proto']
+        : 'http'
+    const abs = `${proto}://${host}${pathname}`.replace(/["<>]/g, '')
+    const tags =
+      `<meta property="og:title" content="${meta.title}" />` +
+      `<meta property="og:description" content="${meta.description}" />` +
+      `<meta property="og:type" content="website" />` +
+      `<meta property="og:url" content="${abs}" />`
+    const out = html.includes('</head>') ? html.replace('</head>', `${tags}</head>`) : html
+    const buf = Buffer.from(out, 'utf8')
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Length': buf.length,
+      'Cache-Control': 'no-store',
+    })
+    res.end(buf)
+    return true
+  } catch {
+    return sendFile(req, res, join(DIST, 'index.html'))
+  }
+}
+
 function serveStatic(req, res) {
   const raw = requestUrl(req).split('?')[0]
   let pathname = '/'
@@ -237,7 +314,7 @@ function serveStatic(req, res) {
     res.end('Not found')
     return
   }
-  sendFile(req, res, join(DIST, 'index.html'))
+  serveIndexWithPreview(req, res, pathname)
 }
 
 function onRequest(req, res) {
