@@ -51,9 +51,11 @@ function LinkRow({
   const copy = async () => {
     if (!url) return
     try {
-      // Labeled copy (build 1200): a bare gym URL looks identical to every
-      // other ShapeLab link in a chat. The label says what it is for.
-      await navigator.clipboard.writeText(`${label}: ${url}`)
+      // Bare URL only (build 1201 reverts the 1200 "Label: URL" copy: a
+      // browser address bar treats "Label: https://..." as a search, not
+      // a link, so the labeled copy broke opening a copied link. The
+      // preview card the server injects is what labels the link in chats.
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -130,7 +132,8 @@ export function ShareLinksPanel() {
   const copyGroup = async () => {
     if (!groupUrl) return
     try {
-      await navigator.clipboard.writeText(`Group sign-up link: ${groupUrl}`)
+      // Bare URL only (build 1201): see the LinkRow copy note.
+      await navigator.clipboard.writeText(groupUrl)
       setGroupCopied(true)
       setTimeout(() => setGroupCopied(false), 2000)
     } catch {

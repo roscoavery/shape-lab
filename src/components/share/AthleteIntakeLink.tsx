@@ -40,9 +40,8 @@ export function AthleteIntakeLink({
   const copy = async () => {
     if (!url) return
     try {
-      // Labeled copy (build 1200): a bare gym URL looks identical to every
-      // other ShapeLab link in a chat. The label says what it is for.
-      await navigator.clipboard.writeText(`Intake link for ${athleteName}: ${url}`)
+      // Bare URL only (build 1201): see the ShareLinksPanel copy note.
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
