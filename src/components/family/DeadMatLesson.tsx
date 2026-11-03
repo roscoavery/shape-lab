@@ -9,11 +9,12 @@
  * when that marker is set, so the interview Q&A renderer stays untouched.
  *
  * Interactives are all local state: expandable stage cards, an expandable
- * surface comparison, a schematic momentum diagram (arrows only, never an
- * athlete figure, so no position can read as ideal), and a knowledge
- * check with explanations. No athlete data, no roster access, no new
- * permissions. External links open out (Instagram, Baylor, research);
- * nothing is scraped, downloaded, cached, or rehosted.
+ * surface comparison, a blocking schematic (hands plant, feet behind
+ * them, trajectory redirected; lines and arrows only, never an athlete
+ * figure, so no position can read as ideal), and a knowledge check with
+ * explanations. No athlete data, no roster access, no new permissions.
+ * External links open out (Instagram, Baylor, research); nothing is
+ * scraped, downloaded, cached, or rehosted.
  */
 
 import { useState } from 'react'
@@ -22,14 +23,28 @@ import { DEAD_MAT_LESSON } from '../../config/deadMatLesson'
 
 const L = DEAD_MAT_LESSON
 
-function MomentumSchematic() {
+/**
+ * BlockingSchematic — a block, not an acceleration diagram (build 1203).
+ *
+ * Ryan's correction, owned: the 1202 arrows showed run-up speed continuing
+ * forward and up, which reads as a positive angle for acceleration into a
+ * handspring. A block is the opposite shape. The hands plant while the feet
+ * are still BEHIND them, and the push redirects momentum into the next
+ * skill instead of an extra jump. This diagram shows exactly that: the
+ * body line slanting back from the hands at contact, the blocking angle
+ * between body and floor, and the trajectory redirected back over the
+ * hands. Lines and arrows only, never an athlete figure, so no position
+ * can read as ideal. Labels are short and zoned so none overlap or run
+ * off the viewBox (the 1202 labels collided on a phone screen).
+ */
+function BlockingSchematic() {
   return (
     <figure className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
       <svg
-        viewBox="0 0 320 130"
+        viewBox="0 0 340 190"
         className="w-full"
         role="img"
-        aria-label="Schematic of run-up speed, block, and resulting trajectory"
+        aria-label="Schematic of a block: hands plant, feet behind the hands, momentum redirected into the next skill"
       >
         <defs>
           <marker
@@ -43,37 +58,35 @@ function MomentumSchematic() {
             <path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)" />
           </marker>
         </defs>
-        <line x1="10" y1="108" x2="310" y2="108" stroke="var(--muted)" strokeWidth="1" />
+        <line x1="10" y1="160" x2="330" y2="160" stroke="var(--muted)" strokeWidth="1" />
         <line
-          x1="20" y1="88" x2="130" y2="88"
-          stroke="var(--accent)" strokeWidth="3" markerEnd="url(#dm-arrow)"
+          x1="170" y1="160" x2="218" y2="62"
+          stroke="var(--accent)" strokeWidth="3"
         />
-        <text x="20" y="74" fill="var(--muted)" fontSize="11">
-          Run-up speed
-        </text>
-        <line
-          x1="150" y1="108" x2="196" y2="52"
-          stroke="var(--accent)" strokeWidth="3" markerEnd="url(#dm-arrow)"
-        />
-        <text x="150" y="30" fill="var(--muted)" fontSize="11">
-          Block: contact angle and force
-        </text>
+        <circle cx="218" cy="62" r="4" fill="var(--accent)" />
+        <circle cx="170" cy="160" r="4" fill="var(--accent)" />
         <path
-          d="M 196 52 Q 250 12 300 26"
+          d="M 170 160 Q 108 118 48 78"
           fill="none" stroke="var(--accent)" strokeWidth="3" markerEnd="url(#dm-arrow)"
         />
-        <text x="212" y="16" fill="var(--muted)" fontSize="11">
-          Resulting trajectory
+        <text x="222" y="48" fill="var(--muted)" fontSize="11">
+          Feet behind hands
         </text>
-        <circle cx="150" cy="108" r="4" fill="var(--accent)" />
-        <text x="138" y="124" fill="var(--muted)" fontSize="11">
-          Contact
+        <text x="12" y="62" fill="var(--muted)" fontSize="11">
+          Blocked trajectory
+        </text>
+        <text x="196" y="146" fill="var(--muted)" fontSize="11">
+          Blocking angle
+        </text>
+        <text x="120" y="178" fill="var(--muted)" fontSize="11">
+          Contact: hands
         </text>
       </svg>
       <figcaption className="mt-2 text-xs leading-relaxed text-white/55">
-        Schematic. The arrows show how run-up speed is redirected by the
-        block into trajectory. They are not a tumbling position, and the
-        diagram does not show an ideal body shape.
+        A block, not an extra jump. The hands plant while the feet are
+        still behind them, and the push redirects momentum into the next
+        skill. The angle between the body and the floor at contact is the
+        blocking angle.
       </figcaption>
     </figure>
   )
@@ -216,7 +229,7 @@ export function DeadMatLesson() {
 
           {section.id === 'power' && (
             <div className="mt-4">
-              <MomentumSchematic />
+              <BlockingSchematic />
               <a
                 href={L.reel.url}
                 target="_blank"

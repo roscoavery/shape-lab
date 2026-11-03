@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeParentGuideAnswers } from './shareLearn.ts'
+import { mergeParentGuideAnswers, publicLearnArticles } from './shareLearn.ts'
 import { PARENT_EDUCATION } from '../src/config/parentEducation.ts'
 
 describe('mergeParentGuideAnswers', () => {
@@ -33,5 +33,22 @@ describe('mergeParentGuideAnswers', () => {
   it('unknown answer keys change nothing', () => {
     const { articles } = mergeParentGuideAnswers({ 'no-such-key': 'hello' })
     assert.deepEqual(articles, PARENT_EDUCATION)
+  })
+})
+
+describe('publicLearnArticles', () => {
+  it('withholds the dead mat lesson from the public desk, keeps the rest', () => {
+    const { articles } = mergeParentGuideAnswers({})
+    const pub = publicLearnArticles(articles)
+    assert.equal(pub.find((a) => a.id === 'training-for-dead-mat'), undefined)
+    assert.equal(pub.length, articles.length - 1)
+    assert.ok(pub.every((a) => a.publicLink !== false))
+  })
+
+  it('an article without the flag stays public', () => {
+    const pub = publicLearnArticles([
+      { id: 'g', category: 'guide', title: 'G', summary: '', intro: [], qa: [] },
+    ])
+    assert.equal(pub.length, 1)
   })
 })

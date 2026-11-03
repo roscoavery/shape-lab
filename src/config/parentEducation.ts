@@ -50,6 +50,14 @@ export type ParentEducationArticle = {
    * shareLearn passes the marker through untouched.
    */
   lesson?: string
+  /**
+   * Public share desk visibility (build 1203). When false, the article is
+   * kept out of the public parent Learn desk (server/shareLearn.ts) until
+   * Ryan approves it. Signed-in parent desks and the admin preview still
+   * show it, so he can review it before it goes public. Omitted means
+   * public, which is the behavior every guide article already had.
+   */
+  publicLink?: boolean
 }
 
 export const PARENT_EDUCATION: ParentEducationArticle[] = [
@@ -370,5 +378,8 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
     ],
     qa: [],
     lesson: 'dead-mat',
+    // Build 1203: withheld from the public share desk until Ryan approves
+    // the lesson. Signed-in desks and the admin preview still show it.
+    publicLink: false,
   },
 ]

@@ -7,6 +7,8 @@
  * sees on the Learn tab: the Parent Guide articles (Ryan's words, with the
  * live coach-interview answers merged in the same way useParentGuide does
  * it), plus the section titles the page renders from its own bundle.
+ * Articles with publicLink: false (build 1203) are withheld here until
+ * Ryan approves them, even though signed-in desks still show them.
  * Nothing else: no athlete data, no roster, no notes, no edit paths.
  * The unguessable token is the only secret; every request validates it.
  */
@@ -53,6 +55,19 @@ export function mergeParentGuideAnswers(
   return { articles, live: hasLive }
 }
 
+/**
+ * Public desk filter (build 1203). Articles with publicLink: false are
+ * withheld from the shareable parent Learn desk until Ryan approves them.
+ * The merge above still carries them, so signed-in desks and the admin
+ * preview keep showing them for review. Filtering here, server side, is
+ * the gate: the public page only renders what this endpoint returns.
+ */
+export function publicLearnArticles(
+  articles: ParentEducationArticle[],
+): ParentEducationArticle[] {
+  return articles.filter((a) => a.publicLink !== false)
+}
+
 export async function handleShareLearn(
   req: IncomingMessage,
   res: ServerResponse,
@@ -70,5 +85,5 @@ export async function handleShareLearn(
   const file = await readCoachInterviewFile()
   const { articles, live } = mergeParentGuideAnswers(file?.answers ?? {})
   res.setHeader('Cache-Control', 'public, max-age=60')
-  sendJson(res, 200, { ok: true, live, articles })
+  sendJson(res, 200, { ok: true, live, articles: publicLearnArticles(articles) })
 }

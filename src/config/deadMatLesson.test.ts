@@ -36,6 +36,15 @@ describe('dead mat lesson', () => {
     assert.equal(article?.title, 'Training for Dead Mat')
   })
 
+  it('is withheld from the public share desk until Ryan approves it', () => {
+    const article = PARENT_EDUCATION.find((a) => a.id === 'training-for-dead-mat')
+    assert.equal(article?.publicLink, false)
+    // Every guide article keeps the old behavior: public unless flagged.
+    for (const a of PARENT_EDUCATION.filter((x) => x.category === 'guide')) {
+      assert.notEqual(a.publicLink, false, a.id)
+    }
+  })
+
   it('uses the four established stage names in order', () => {
     assert.deepEqual(
       DEAD_MAT_LESSON.stages.map((s) => s.name),
