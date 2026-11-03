@@ -107,6 +107,7 @@ export const DEAD_MAT_LESSON = {
       paragraphs: [
         'Different equipment offers different learning opportunities. The value of equipment comes from the coach\u2019s ability to use it appropriately.',
         'Additional bounce changes timing, forces, and movement demands. Athletes must learn how to control those differences. More bounce is not automatically safer or better for every skill.',
+        'Trampoline and tumble track are useful tools for maximizing reps without extra strain on the body. Ten hard floor tucks take a bigger toll on the body than twenty tucks on a trampoline or tumble track. With more air time, it is easier to make adjustments and go deeper on corrections without the extra strain. After refining a skill there, hitting it a few times on spring or dead gives a way more productive session than a million dead mat or spring floor reps could. You maximize air time, make adjustments easy, minimize strain on the body, and get way more out of the impacts athletes are exposed to.',
       ],
     },
     {
@@ -195,14 +196,14 @@ export const DEAD_MAT_LESSON = {
     {
       name: 'Trampoline',
       purposes: 'Develop spatial awareness, body positioning, rotational control, and understanding of movement.',
-      advantages: 'Greater airtime gives athletes more time to feel a position and complete a rotation while learning.',
+      advantages: 'Greater airtime gives athletes more time to feel a position and complete a rotation while learning. More air time also means more reps and deeper corrections without the extra strain of hard floor impacts.',
       limitations: 'Timing and forces differ greatly from a floor. Skills learned here still need to transfer to firmer surfaces.',
       deadMatSupport: 'Builds the air awareness and body control that dead mat tumbling later demands without the floor\u2019s help.',
     },
     {
       name: 'Tumble Track',
       purposes: 'Practice connected movements, body shapes, and timing with repeated rebound.',
-      advantages: 'Athletes can repeat connections many times in a row and feel how one skill feeds the next.',
+      advantages: 'Athletes can repeat connections many times in a row and feel how one skill feeds the next. That means more reps and deeper corrections without the extra strain of hard floor impacts.',
       limitations: 'The rebound assists the connection, so timing learned here must be re-learned for a less responsive surface.',
       deadMatSupport: 'Teaches connection rhythm and shape discipline that carries into dead mat passes.',
     },
