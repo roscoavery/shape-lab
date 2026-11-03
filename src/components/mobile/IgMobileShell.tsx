@@ -313,7 +313,13 @@ export function IgMobileShell({
         children
       )}
 
-      <MobileDiscoverSheet open={discoverOpen} onClose={() => setDiscoverOpen(false)} onPick={pickDiscover} athlete={athlete} />
+      <MobileDiscoverSheet
+        open={discoverOpen}
+        onClose={() => setDiscoverOpen(false)}
+        onPick={pickDiscover}
+        athlete={athlete}
+        parentView={navRole === 'parent' || deskPreview === 'parent' || deskPreview === 'testParent'}
+      />
 
       <nav
         className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-lg items-center justify-between border-t border-white/10 bg-[#0a1014] px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 md:hidden"

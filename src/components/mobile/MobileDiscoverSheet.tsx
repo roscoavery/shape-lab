@@ -10,6 +10,14 @@ type Props = {
   onClose: () => void
   onPick: (tab: AppTab, target: DiscoverTarget) => void
   athlete: Athlete | null
+  /**
+   * The viewer is a parent account, or an admin previewing the parent
+   * desk (build 1206). The sheet used to decide rows from the `athlete`
+   * profile alone, so a parent preview still showed Spotting and My
+   * system because the underlying profile was Ryan's coach profile.
+   * Parent view hides both, same as the athlete rule below.
+   */
+  parentView?: boolean
 }
 
 type Row = {
@@ -34,7 +42,7 @@ const ROWS: Row[] = [
   { target: 'skillpath', tab: 'learn', title: 'Skill path guide', hint: 'Skill progressions and guides', athleteOnly: true },
 ]
 
-export function MobileDiscoverSheet({ open, onClose, onPick, athlete }: Props) {
+export function MobileDiscoverSheet({ open, onClose, onPick, athlete, parentView = false }: Props) {
   if (!open) return null
   const coach = isCoachProfile(athlete)
   const isAthlete = isAthleteProfile(athlete)
@@ -43,6 +51,8 @@ export function MobileDiscoverSheet({ open, onClose, onPick, athlete }: Props) {
     if (r.athleteOnly && coach) return false
     // Athletes never see spotting or my system, even if role detection is off.
     if (isAthlete && (r.target === 'spotting' || r.target === 'mysystem')) return false
+    // Parents never see spotting or my system either, including in preview.
+    if (parentView && (r.target === 'spotting' || r.target === 'mysystem')) return false
     return true
   })
   const learnHint = isAthlete ? 'Shapes, skills, and drills' : 'Shapes, skills, drills, and spotting'
