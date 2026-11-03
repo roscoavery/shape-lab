@@ -13,10 +13,11 @@
  * in the Coach Interview updates the parent view automatically — no build step.
  */
 
-export type ParentEducationCategory = 'guide'
+export type ParentEducationCategory = 'guide' | 'lesson'
 
 export const PARENT_EDUCATION_CATEGORIES: { id: ParentEducationCategory; label: string }[] = [
   { id: 'guide', label: 'Parent Guide' },
+  { id: 'lesson', label: 'Parent Education' },
 ]
 
 export type ParentEducationQA = {
@@ -40,6 +41,15 @@ export type ParentEducationArticle = {
   /** Ryan's opening words for the article (not tied to a question). */
   intro: string[]
   qa: ParentEducationQA[]
+  /**
+   * Lesson marker (build 1202). When set, ParentGuideArticle renders the
+   * lesson component instead of the interview Q&A. The lesson copy lives
+   * in its own config module (deadMatLesson.ts), not in qa, because it is
+   * a structured lesson with interactives rather than interview answers.
+   * qa stays empty for lesson articles; the merge in useParentGuide and
+   * shareLearn passes the marker through untouched.
+   */
+  lesson?: string
 }
 
 export const PARENT_EDUCATION: ParentEducationArticle[] = [
@@ -349,5 +359,16 @@ export const PARENT_EDUCATION: ParentEducationArticle[] = [
         ],
       },
     ],
+  },
+  {
+    id: "training-for-dead-mat",
+    category: 'lesson',
+    title: "Training for Dead Mat",
+    summary: "Why spring floors, mats, and proper progressions can help develop excellent dead mat tumbling.",
+    intro: [
+      "Why spring floors, mats, and proper progressions can help develop excellent dead mat tumbling.",
+    ],
+    qa: [],
+    lesson: 'dead-mat',
   },
 ]

@@ -10,10 +10,18 @@
 import type { ParentEducationArticle } from '../../config/parentEducation'
 import { CONCEPT_CARDS } from '../../config/conceptCards'
 import { ConceptCardBody } from '../learn/ConceptCards'
+import { DeadMatLesson } from './DeadMatLesson'
 
 const FOUR_STAGES_CARD = CONCEPT_CARDS.find((c) => c.id === 'four-stages')
 
 export function ParentGuideArticle({ article }: { article: ParentEducationArticle }) {
+  // Lesson articles (build 1202) render their own component instead of the
+  // interview Q&A. This keeps the Q&A renderer, and the "coach's own
+  // words" banner, away from a structured lesson that is mostly
+  // educational content with one labeled first-person section.
+  if (article.lesson === 'dead-mat') {
+    return <DeadMatLesson />
+  }
   return (
     <article className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <p className="rounded-lg bg-[#102028] px-3 py-2 text-xs leading-relaxed text-[var(--accent)]">
