@@ -103,7 +103,7 @@ export function DeadMatLesson() {
   ).length
 
   return (
-    <article className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
+    <article className="min-w-0 rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
       <p className="text-xs uppercase tracking-wider text-[var(--accent)]">
         {L.categoryLabel}
       </p>
@@ -141,7 +141,7 @@ export function DeadMatLesson() {
 
           {section.id === 'stages' && (
             <div className="mt-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
+              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                 <span aria-hidden>Introduction</span>
                 <span aria-hidden className="text-[var(--muted)]">→</span>
                 <span aria-hidden>Approximation</span>
