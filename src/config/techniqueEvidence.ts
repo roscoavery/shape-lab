@@ -826,6 +826,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor:
         'Same takeoff as a layout with enough contact twist to hit a quarter turn on the way up. At the quarter turn at the highest point, both arms drop through the twist plane and wrap in with straight arms. Not pure tilt twist mechanics. Head stays in, shaping stays the same as a layout.',
     },
+    {
+      who: 'Anastazia Hartsell',
+      url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
+      creator: 'anastaziahartsell.cheer',
+    },
   ],
   basics: [
     {
@@ -1006,6 +1011,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'TumbleSmart athlete',
       url: '/videos/standing-full-arabian-triple.mp4',
       watchFor: 'Standing full through to arabian through to triple full.',
+    },
+    {
+      who: 'Anastazia Hartsell',
+      url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
+      creator: 'anastaziahartsell.cheer',
     },
   ],
   'front-walkover': [
@@ -1340,6 +1350,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DehsJBiPEwX/',
       watchFor: 'Kaden Brown whip series. Notice how much he gets his feet in front on each punch.',
       creator: 'cirque_coach_elliot',
+    },
+    {
+      who: 'Anastazia Hartsell',
+      url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
+      creator: 'anastaziahartsell.cheer',
     },
   ],
 }
