@@ -80,6 +80,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_front_full: 'front-full',
   skl_front_15: 'front-15',
   skl_whips: 'whips',
+  skl_miller: 'miller',
 }
 
 /**
@@ -1355,6 +1356,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Anastazia Hartsell',
       url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
       creator: 'anastaziahartsell.cheer',
+    },
+  ],
+  'miller': [
+    {
+      who: 'Jake Jarman',
+      url: 'https://www.instagram.com/reel/DfXhUHvM_2i/',
+      creator: 'gymgermanschool',
     },
   ],
 }
