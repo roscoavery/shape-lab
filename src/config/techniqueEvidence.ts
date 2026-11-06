@@ -1023,6 +1023,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
       creator: 'anastaziahartsell.cheer',
     },
+    {
+      who: 'Scott McDonald',
+      url: 'https://www.instagram.com/reel/DfZ-WHAOsOd/',
+      creator: 'scottamcdonald',
+    },
   ],
   'front-walkover': [
     {
