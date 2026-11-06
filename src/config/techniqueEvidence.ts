@@ -411,6 +411,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/back-tuck-tramp-quick-process.mp4',
       watchFor: 'Fairly quick and easy trampoline back tuck process.',
     },
+    {
+      who: 'Jayy Simmons',
+      url: 'https://www.instagram.com/reel/DfCfq3tD42c/',
+      creator: 'nashcampofficial',
+    },
   ],
   'barani': [
     {
