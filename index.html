@@ -16,21 +16,44 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx?boot=38"></script>
     <script>
-      window.setTimeout(function () {
+      // If the app never paints (bundle failed, or React mounted then threw
+      // and left an empty root), offer a one-tap fresh copy instead of a
+      // black screen. The 10s check fires on an empty root only, boot text
+      // means it is still starting. The 45s check also fires when still
+      // stuck on the loading text. React mounting later replaces this card,
+      // so a slow first load is safe, and the error boundary screen has
+      // visible text, so this never fires over it.
+      function shapelabNeedsRecovery(allowLoading) {
+        var root = document.getElementById('root')
+        if (!root) return false
+        var text = (root.textContent || '').trim()
+        if (text.indexOf('Try again') !== -1) return false
+        if (text === '') return true
+        return allowLoading && text.indexOf('Loading this gym') !== -1
+      }
+      function shapelabRecoveryCard() {
         var root = document.getElementById('root')
         if (!root) return
-        var text = root.textContent || ''
-        if (text.indexOf('Loading this gym') === -1) return
-        if (text.indexOf('Try again') !== -1) return
-        var href = location.protocol + '//' + location.host + '/?fresh=' + Date.now()
+        var path = location.pathname + location.search
+        var fresh =
+          path + (path.indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now().toString(36)
+        var href = location.protocol + '//' + location.host + fresh
         root.innerHTML =
           '<div style="max-width:32rem;margin:20vh auto;padding:1.25rem;font-family:system-ui;color:#e8eef4">' +
           '<div style="background:#6ec8d6;color:#061418;font-weight:900;padding:12px 16px;border-radius:12px;margin-bottom:1rem">LACE BUILD</div>' +
           '<p style="letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:#8b99a3">shapelab</p>' +
-          '<h1 style="font-size:1.6rem">Still loading — use a fresh copy</h1>' +
-          '<p>On the Mac Terminal run <b>npm run gym:mac</b>. Then open:</p>' +
-          '<p><a href="' + href + '" style="color:#7ee0c2">' + href + '</a></p>' +
+          '<h1 style="font-size:1.6rem">ShapeLab did not finish loading</h1>' +
+          '<p>This screen is empty, so the app did not finish starting. Tap below for a fresh copy.</p>' +
+          '<p><a href="' +
+          href +
+          '" style="display:inline-block;background:#6ec8d6;color:#061418;font-weight:700;padding:10px 16px;border-radius:10px;text-decoration:none">Reload a fresh copy</a></p>' +
           '</div>'
+      }
+      window.setTimeout(function () {
+        if (shapelabNeedsRecovery(false)) shapelabRecoveryCard()
+      }, 10000)
+      window.setTimeout(function () {
+        if (shapelabNeedsRecovery(true)) shapelabRecoveryCard()
       }, 45000)
     </script>
   </body>

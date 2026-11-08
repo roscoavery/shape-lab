@@ -836,13 +836,13 @@ export default function App() {
       }
       settle(
         'error',
-        'Could not load the gym file from this URL. On the Mac run git pull and npm run gym:mac, then refresh.',
+        'Could not load the gym file from this URL. On the Mac run npm run gym:mac, then refresh.',
       )
     }
     watchdog = window.setTimeout(() => {
       settle(
         'error',
-        'This Wi-Fi link reached the Mac but the name list did not finish. On the Mac: git pull, then npm run gym:mac. Then refresh this page.',
+        'This Wi-Fi link reached the Mac but the name list did not finish. On the Mac, run npm run gym:mac. Then refresh this page.',
       )
     }, 12_000)
     void run()

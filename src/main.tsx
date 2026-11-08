@@ -9,6 +9,7 @@ import PublicLearnPage from './components/share/PublicLearnPage.tsx'
 import PublicIntakePage from './components/share/PublicIntakePage.tsx'
 import PublicLibraryPage from './components/share/PublicLibraryPage.tsx'
 import PublicStartHubPage from './components/share/PublicStartHubPage.tsx'
+import { RootErrorBoundary } from './components/RootErrorBoundary.tsx'
 import { isAndroid } from './lib/delayCameraPipeline'
 
 installLegacySafariShims()
@@ -33,21 +34,23 @@ applyAndroidShell()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isStartHubPath() ? (
-      <PublicStartHubPage />
-    ) : shareFolderTokenFromPath() ? (
-      <PublicFolderPage token={shareFolderTokenFromPath()!} />
-    ) : parentLearnTokenFromPath() ? (
-      <PublicLearnPage token={parentLearnTokenFromPath()!} />
-    ) : shareCardIdFromPath() ? (
-      <PublicSharePage cardId={shareCardIdFromPath()!} />
-    ) : intakeTokenFromPath() ? (
-      <PublicIntakePage token={intakeTokenFromPath()!} />
-    ) : studyLibTokenFromPath() ? (
-      <PublicLibraryPage token={studyLibTokenFromPath()!} />
-    ) : (
-      <App />
-    )}
+    <RootErrorBoundary>
+      {isStartHubPath() ? (
+        <PublicStartHubPage />
+      ) : shareFolderTokenFromPath() ? (
+        <PublicFolderPage token={shareFolderTokenFromPath()!} />
+      ) : parentLearnTokenFromPath() ? (
+        <PublicLearnPage token={parentLearnTokenFromPath()!} />
+      ) : shareCardIdFromPath() ? (
+        <PublicSharePage cardId={shareCardIdFromPath()!} />
+      ) : intakeTokenFromPath() ? (
+        <PublicIntakePage token={intakeTokenFromPath()!} />
+      ) : studyLibTokenFromPath() ? (
+        <PublicLibraryPage token={studyLibTokenFromPath()!} />
+      ) : (
+        <App />
+      )}
+    </RootErrorBoundary>
   </StrictMode>,
 )
 
