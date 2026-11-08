@@ -4,6 +4,7 @@ import { createId } from '../../lib/storage'
 import { displayPersonName, namesMatch } from '../../lib/classStation'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
+import { BirthdayQuickPick } from './BirthdayQuickPick'
 import type { UnifiedSkill } from '../../config/unifiedSkillSeed'
 import { SkillMapView } from '../learn/SkillMapView'
 import { AcroMapView } from '../learn/AcroMapView'
@@ -16,20 +17,23 @@ type Props = {
   onAdded?: (athlete: Athlete) => void
 }
 
-type Step = 'name' | 'snapshot' | 'skills'
+type Step = 'name' | 'details' | 'snapshot' | 'skills'
 
 type Pick = { id: string; name: string }
 
 /**
  * Fast athlete profile creation for clinics. Stepped flow:
  * 1. Name (quick)
- * 2. Snapshot (optional, can skip)
- * 3. Working towards: main or acro skill map, be quick, pick up to 3, Done — or skip.
+ * 2. Birthday and parent phone (optional, can skip)
+ * 3. Snapshot (optional, can skip)
+ * 4. Working towards: main or acro skill map, be quick, pick up to 3, Done or skip.
  */
 export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, onAdded }: Props) {
   const [step, setStep] = useState<Step>('name')
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
+  const [birthday, setBirthday] = useState('')
+  const [parentPhone, setParentPhone] = useState('')
   const [photo, setPhoto] = useState('')
   const [map, setMap] = useState<'main' | 'acro'>('main')
   const [workingTowards, setWorkingTowards] = useState<Pick[]>([])
@@ -53,6 +57,8 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
     if (!canSave) return
     const now = new Date().toISOString()
     const pickIds = picks.map((p) => p.id)
+    const dob = birthday || undefined
+    const phone = parentPhone.trim() || undefined
     // Goals carry the display names so picks show under "Working towards"
     // on the profile, as intake picks do. Acro ids keep working in the
     // check-in board and recap lists, which resolve by acro id.
@@ -66,6 +72,10 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
     if (existing) {
       const updated: Athlete = {
         ...existing,
+        // Matching only adds what is missing, never overwrites, as on the
+        // intake link.
+        ...(dob && !existing.dateOfBirth ? { dateOfBirth: dob } : {}),
+        ...(phone && !existing.parentPhone ? { parentPhone: phone } : {}),
         ...(pickIds.length > 0
           ? {
               acroWorkingTowards: Array.from(
@@ -92,6 +102,8 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
       needsOnboarding: true,
       photoDataUrl: photo || undefined,
       createdAt: now,
+      ...(dob ? { dateOfBirth: dob } : {}),
+      ...(phone ? { parentPhone: phone } : {}),
       ...(pickIds.length > 0 ? { acroWorkingTowards: pickIds } : {}),
       ...(pickIds.length > 0 ? { skillGoals: freshGoals(undefined) } : {}),
     }
@@ -117,6 +129,7 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
               </p>
               <h3 className="mt-1 text-lg font-semibold">
                 {step === 'name' && 'New profile'}
+                {step === 'details' && 'Birthday and parent phone'}
                 {step === 'snapshot' && 'Take a snapshot'}
                 {step === 'skills' && 'What are you working towards?'}
               </h3>
@@ -154,7 +167,7 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                     onChange={(e) => setLast(e.target.value)}
                     placeholder="Last"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && canSave) setStep('snapshot')
+                      if (e.key === 'Enter' && canSave) setStep('details')
                     }}
                     className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-white/5 px-3 py-2.5 text-base"
                   />
@@ -162,18 +175,68 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
               </div>
               {existing && (
                 <p className="mt-3 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-3 text-sm">
-                  {existing.name} already has a profile. You'll add working-towards skills to it.
+                  {existing.name} already has a profile. Anything you fill in here gets added
+                  to it.
                 </p>
               )}
               <div className="mt-4 flex justify-end">
                 <button
                   type="button"
                   disabled={!canSave}
-                  onClick={() => setStep('snapshot')}
+                  onClick={() => setStep('details')}
                   className="rounded-lg bg-[var(--accent)] px-6 py-2.5 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-40"
                 >
                   Next
                 </button>
+              </div>
+            </>
+          )}
+
+          {step === 'details' && (
+            <>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Both are optional. Skip if the line is moving.
+              </p>
+              <div className="mt-3">
+                <BirthdayQuickPick value={birthday} onChange={setBirthday} />
+              </div>
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Parent phone
+                </span>
+                <input
+                  value={parentPhone}
+                  onChange={(e) => setParentPhone(e.target.value)}
+                  placeholder="Parent phone"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className="mt-1 w-full rounded-lg border border-[var(--panel-border)] bg-white/5 px-3 py-2.5 text-base"
+                />
+              </label>
+              <div className="mt-4 flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep('name')}
+                  className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
+                >
+                  Back
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep('snapshot')}
+                    className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep('snapshot')}
+                    className="rounded-lg bg-[var(--accent)] px-6 py-2.5 text-sm font-semibold text-[var(--on-accent)]"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -194,7 +257,7 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
               <div className="mt-4 flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep('name')}
+                  onClick={() => setStep('details')}
                   className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
                 >
                   Back
