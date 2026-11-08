@@ -60,6 +60,12 @@ export function LessonPlanCard({
   hideHeader = false,
   /** Open the athlete's profile (tap on their photo). */
   onViewProfile,
+  /**
+   * Morning brief only: open the athlete picker for this event. When
+   * provided, a Change (or Select, when nothing is linked) button shows
+   * in the header. Other usages leave this unset.
+   */
+  onChangeAthlete,
 }: {
   event: TodayCalendarEvent
   athlete: Athlete | null
@@ -74,6 +80,7 @@ export function LessonPlanCard({
   plansTick: number
   hideHeader?: boolean
   onViewProfile?: (id: string) => void
+  onChangeAthlete?: () => void
 }) {
   const planId = `lesson:${event.id}`
   const plan: ClassPlan = useMemo(
@@ -345,6 +352,19 @@ export function LessonPlanCard({
           </span>
           <span className="shrink-0 text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
         </button>
+        {onChangeAthlete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onChangeAthlete()
+            }}
+            className="shrink-0 rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs font-semibold text-[var(--text)]"
+            title="Change which athletes this lesson is linked to"
+          >
+            {people.length > 0 ? 'Change' : 'Select'}
+          </button>
+        )}
       </div>
       {open && <div className="mt-2 min-w-0 border-t border-white/10 pt-2">{body}</div>}
     </div>

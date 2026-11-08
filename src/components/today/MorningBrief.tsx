@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
 import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
-import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, matchCalendarEvent, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { EventAthletePicker } from '../calendar/EventAthletePicker'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from './LessonPlanCard'
 import { ReuseChecklist } from './ReuseChecklist'
@@ -56,6 +57,12 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
   const [openOfferingId, setOpenOfferingId] = useState<string | null>(null)
   const [taskInputs, setTaskInputs] = useState<Record<string, string>>({})
   const [taskAthlete, setTaskAthlete] = useState<Record<string, string[]>>({})
+  // Athlete picker for a lesson row: change or select who the event is
+  // linked to, without opening the calendar event.
+  const [pickEvent, setPickEvent] = useState<TodayCalendarEvent | null>(null)
+  const [pickSelected, setPickSelected] = useState<string[]>([])
+  const [saveTitle, setSaveTitle] = useState(false)
+  const [saveSeries, setSaveSeries] = useState(false)
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
@@ -64,22 +71,26 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
     void pullClassPlans()
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        if (!hasCalendarApiToken()) await authorizeCalendarFromSession()
-        const { events } = await fetchTodayEvents()
-        if (!cancelled) setEvents(events)
-      } catch {
-        /* calendar optional */
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
+  const refreshEvents = useCallback(async () => {
+    try {
+      if (!hasCalendarApiToken()) await authorizeCalendarFromSession()
+      const { events } = await fetchTodayEvents()
+      setEvents(events)
+    } catch {
+      /* calendar optional */
     }
   }, [])
+
+  useEffect(() => {
+    void refreshEvents()
+  }, [refreshEvents])
+
+  const openPicker = (ev: TodayCalendarEvent) => {
+    setPickEvent(ev)
+    setPickSelected(eventAthleteIds(ev))
+    setSaveTitle(false)
+    setSaveSeries(false)
+  }
 
   const offerings = useMemo(() => {
     const weekday = WEEKDAYS[new Date().getDay()]
@@ -234,6 +245,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
                     onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [planKey]: v }))}
                     plansTick={plansTick}
                     onViewProfile={onViewProfile}
+                    onChangeAthlete={() => openPicker(ev)}
                   />
                 )
               })}
@@ -241,6 +253,55 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
           </div>
         )}
       </div>
+
+      {pickEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog">
+          <div className="max-h-[80vh] w-full max-w-md overflow-auto rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
+            <h4 className="font-semibold">{pickEvent.title}</h4>
+            <p className="text-sm text-[var(--muted)]">
+              Match this event to its athletes, up to 3. Add everyone before you plan, so each athlete gets a checklist.
+            </p>
+            <div className="mt-3">
+              <EventAthletePicker
+                athletes={athletes}
+                selectedIds={pickSelected}
+                onChange={setPickSelected}
+              />
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={saveTitle} onChange={(e) => setSaveTitle(e.target.checked)} />
+              Use this match for future events with the same title
+            </label>
+            <label className="mt-1 flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={saveSeries} onChange={(e) => setSaveSeries(e.target.checked)} />
+              Use for this recurring series
+            </label>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={pickSelected.length === 0}
+                onClick={() => {
+                  void matchCalendarEvent(pickEvent.id, pickSelected, {
+                    saveSeries,
+                    saveTitle,
+                  }).then(() => {
+                    setPickEvent(null)
+                    void refreshEvents()
+                    // Do NOT auto-start here. Linking just attaches the
+                    // profiles; the clock starts the lesson at its time.
+                  })
+                }}
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[#06281f] disabled:opacity-40"
+              >
+                Done
+              </button>
+              <button type="button" className="text-sm text-[var(--muted)] underline" onClick={() => setPickEvent(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
