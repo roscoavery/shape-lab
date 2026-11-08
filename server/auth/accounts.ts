@@ -153,6 +153,20 @@ export async function findAccountByEmail(email: string): Promise<Account | null>
   return (await readFile()).accounts.find((row) => row.email === needle) ?? null
 }
 
+/**
+ * A coach's roster profile id points at their account, and the account
+ * carries their main gym. Intake links only know the coach's roster id,
+ * so this is how a submit finds the coach's gym.
+ */
+export async function findAccountByRosterProfileId(
+  rosterProfileId: string,
+): Promise<Account | null> {
+  if (!rosterProfileId) return null
+  return (
+    (await readFile()).accounts.find((row) => row.rosterProfileId === rosterProfileId) ?? null
+  )
+}
+
 export function allowFirstAdmin(): boolean {
   if (serverEnvFlag('SHAPE_LAB_ALLOW_FIRST_ADMIN')) return true
   return isHomeGym()

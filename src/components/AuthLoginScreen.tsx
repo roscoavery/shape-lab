@@ -8,6 +8,7 @@ import {
   type AuthSessionUser,
 } from '../lib/authSession'
 import { peekAccountInvite, redeemAccountInvite } from '../lib/accountAdmin'
+import { listPublicGyms } from '../lib/gyms'
 
 type Props = {
   bootstrapAllowed: boolean
@@ -57,6 +58,13 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
     bootstrapAllowed ? 'bootstrap' : 'login',
   )
   const [registerRole, setRegisterRole] = useState<'athlete' | 'parent' | 'coach'>('athlete')
+  // Coach invite setup asks for a main gym: a listed gym, or a typed name
+  // when theirs is not on file. Blank means no gym yet, never a blocker.
+  const [gyms, setGyms] = useState<{ id: string; name: string }[]>([])
+  const [gymsLoaded, setGymsLoaded] = useState(false)
+  const [gymsFailed, setGymsFailed] = useState(false)
+  const [gymId, setGymId] = useState('')
+  const [newGymName, setNewGymName] = useState('')
 
   useEffect(() => {
     const token = inviteTokenFromUrl()
@@ -101,6 +109,27 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
       })
   }, [])
 
+  // Coach invites ask for a main gym at setup. The list loads once the
+  // invite is confirmed as a coach invite.
+  useEffect(() => {
+    if (!isNewInvite || inviteRole !== 'coach' || !inviteReady) return
+    let cancelled = false
+    void listPublicGyms()
+      .then((rows) => {
+        if (cancelled) return
+        setGyms(rows)
+        setGymsLoaded(true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setGymsFailed(true)
+        setGymsLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isNewInvite, inviteRole, inviteReady])
+
   const submit = async () => {
     setError(null)
     setBusy(true)
@@ -109,7 +138,19 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
         mode === 'bootstrap'
           ? await bootstrapAdmin(email, password, displayName)
           : mode === 'invite' && isNewInvite
-            ? await redeemAccountInvite(inviteToken, email, password, displayName || email)
+            ? await redeemAccountInvite(
+                inviteToken,
+                email,
+                password,
+                displayName || email,
+                inviteRole === 'coach'
+                  ? gymId === '__new'
+                    ? { gymName: newGymName.trim() }
+                    : gymId
+                      ? { gymId }
+                      : undefined
+                  : undefined,
+              )
             : mode === 'invite'
               ? await redeemInvite(inviteToken, password)
               : mode === 'register'
@@ -198,6 +239,50 @@ export function AuthLoginScreen({ bootstrapAllowed, onSignedIn }: Props) {
           className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
         />
       </label>
+      {mode === 'invite' && isNewInvite && inviteRole === 'coach' && inviteReady && (
+        <label className="mt-4 block">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Your main gym
+          </span>
+          {gymsLoaded && (gymsFailed || gyms.length === 0) ? (
+            <input
+              value={newGymName}
+              onChange={(e) => setNewGymName(e.target.value)}
+              placeholder="Type your gym name"
+              className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+            />
+          ) : gymsLoaded ? (
+            <>
+              <select
+                value={gymId}
+                onChange={(e) => setGymId(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+              >
+                <option value="">Choose your main gym</option>
+                {gyms.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+                <option value="__new">My gym is not listed</option>
+              </select>
+              {gymId === '__new' && (
+                <input
+                  value={newGymName}
+                  onChange={(e) => setNewGymName(e.target.value)}
+                  placeholder="Type your gym name"
+                  className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                />
+              )}
+            </>
+          ) : (
+            <span className="mt-1 block text-xs text-[var(--muted)]">Loading gyms…</span>
+          )}
+          <span className="mt-1 block text-xs leading-relaxed text-[var(--muted)]">
+            This sets the gym for athletes who sign up through your links. Coaching a camp somewhere else does not change it. You can leave it blank and add it later.
+          </span>
+        </label>
+      )}
       {error && <p className="mt-3 text-sm text-[var(--bad)]">{error}</p>}
       <button
         type="button"

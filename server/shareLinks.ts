@@ -258,6 +258,90 @@ export async function handleShareIntake(
   })
 }
 
+/** The gym a profile is stamped with at intake submit. */
+type IntakeGym = { gymId?: string; gymName?: string }
+
+function normalizeIntakeGymName(name: unknown): string {
+  return String(name ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+}
+
+/**
+ * Group links: the athlete's pick from the form. A listed gym resolves to
+ * its id and name; a typed name stamps the name only. A gym that cannot be
+ * read never blocks the submit.
+ */
+async function resolveSelectedGym(body: any): Promise<IntakeGym | null> {
+  const pickedId = typeof body?.gymId === 'string' ? body.gymId.trim() : ''
+  if (pickedId) {
+    try {
+      const { getGym } = await import('./gymStore.ts')
+      const gym = await getGym(pickedId)
+      if (gym) return { gymId: gym.id, gymName: gym.name }
+    } catch {
+      // Fall through to the typed name, or no gym at all.
+    }
+  }
+  const typed = normalizeIntakeGymName(body?.gymName)
+  return typed ? { gymName: typed } : null
+}
+
+/**
+ * Open links: the coach's main gym, from the coach's account. Falls back to
+ * the gym name on the coach's own roster profile for older accounts. Null
+ * when the coach has no gym on file.
+ */
+async function coachMainGym(coachId: string, athletes: any[]): Promise<IntakeGym | null> {
+  try {
+    const { findAccountByRosterProfileId } = await import('./auth/accounts.ts')
+    const account = await findAccountByRosterProfileId(coachId)
+    if (account?.gymId) {
+      const { getGym } = await import('./gymStore.ts')
+      const gym = await getGym(account.gymId)
+      if (gym) return { gymId: gym.id, gymName: gym.name }
+    }
+  } catch {
+    // No account or gym read never blocks the submit.
+  }
+  const coach = athletes.find((a: any) => a.id === coachId)
+  const name = normalizeIntakeGymName(coach?.gymName)
+  return name ? { gymName: name } : null
+}
+
+/**
+ * Stamp the coach (and gym) on a profile. New profiles take both outright.
+ * Existing profiles only gain what is missing, the build 1200 rule: a
+ * match never overwrites what is already on file.
+ */
+function stampIntakeCoachAndGym(
+  athlete: any,
+  coachId: string,
+  gym: IntakeGym | null,
+  onlyMissing: boolean,
+): void {
+  if (!athlete || !coachId) return
+  const coaches = Array.isArray(athlete.worksWithCoachIds)
+    ? athlete.worksWithCoachIds.filter((id: unknown): id is string => typeof id === 'string')
+    : []
+  if (!coaches.includes(coachId)) {
+    athlete.worksWithCoachIds = [...coaches, coachId]
+  }
+  if (!onlyMissing || !athlete.createdByCoachId) {
+    athlete.createdByCoachId = coachId
+  }
+  if (gym) {
+    if (!onlyMissing) {
+      if (gym.gymId) athlete.gymId = gym.gymId
+      if (gym.gymName) athlete.gymName = gym.gymName
+    } else {
+      if (gym.gymId && !athlete.gymId && !athlete.gymName) athlete.gymId = gym.gymId
+      if (gym.gymName && !athlete.gymName) athlete.gymName = gym.gymName
+    }
+  }
+}
+
 /** POST /api/share/intake-submit?token= — { answers } → saved to the token's athlete. */
 export async function handleShareIntakeSubmit(
   req: IncomingMessage,
@@ -281,6 +365,13 @@ export async function handleShareIntakeSubmit(
   const roster = await readRosterFile()
   const athletes = roster.athletes as any[]
 
+  // The gym for this submit. Group links take the athlete's pick from the
+  // form; open links take the coach's main gym. A missing gym never blocks
+  // the submit: the coach is stamped, the gym stays blank.
+  const selectedGym = rec.type === 'intake-group' ? await resolveSelectedGym(body) : null
+  const openGym = rec.type === 'intake-open' ? await coachMainGym(rec.coachId, athletes) : null
+  const submitGym = selectedGym ?? openGym
+
   // Per-athlete mode: save to the existing profile.
   if (rec.type === 'intake' && rec.athleteId) {
     const athlete = athletes.find((a: any) => a.id === rec.athleteId)
@@ -289,6 +380,8 @@ export async function handleShareIntakeSubmit(
       return
     }
     saveAnswersToAthlete(athlete, answers)
+    // The coach who made this link works with this athlete.
+    stampIntakeCoachAndGym(athlete, rec.coachId, null, true)
     if (workingTowards.length > 0) {
       athlete.acroWorkingTowards = workingTowards.slice(0, 3)
       // Also save as skillGoals so they show in "Working towards" on the profile.
@@ -329,6 +422,9 @@ export async function handleShareIntakeSubmit(
     // Matching only adds missing answers, it never overwrites what is
     // already on the profile (saveAnswersToAthlete skips answered rows).
     saveAnswersToAthlete(matched, answers)
+    // The coach who sent the link, and the gym for this submit, fill only
+    // what is missing on the matched profile.
+    stampIntakeCoachAndGym(matched, rec.coachId, submitGym, true)
     if (workingTowards.length > 0) {
       matched.acroWorkingTowards = workingTowards.slice(0, 3)
       const now = new Date().toISOString()
@@ -376,6 +472,9 @@ export async function handleShareIntakeSubmit(
     intakeAnswers: [],
   }
   saveAnswersToAthlete(athlete, answers)
+  // The coach who sent the link, and the gym for this submit: the coach's
+  // main gym on open links, the athlete's pick on group links.
+  stampIntakeCoachAndGym(athlete, rec.coachId, submitGym, false)
   if (workingTowards.length > 0) {
     athlete.acroWorkingTowards = workingTowards.slice(0, 3)
     const now = new Date().toISOString()

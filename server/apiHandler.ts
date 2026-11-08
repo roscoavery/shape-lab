@@ -309,6 +309,7 @@ const API_PATHS = new Set([
   '/api/share/folder-zip',
   '/api/share/intake',
   '/api/share/intake-submit',
+  '/api/share/gyms',
   '/api/share/library',
   '/api/share/start-links',
   '/api/share/find-athlete',
@@ -565,6 +566,14 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/intake-submit') {
     await handleShareIntakeSubmit(req, res, url)
+    return true
+  }
+  // Public gym list for the invite setup page and the group intake form.
+  // Names only: no roster, no accounts, nothing that identifies anyone.
+  if (path === '/api/share/gyms') {
+    const { listGyms } = await import('./gymStore.ts')
+    const gyms = await listGyms()
+    sendJson(res, 200, { gyms: gyms.map((g) => ({ id: g.id, name: g.name })) })
     return true
   }
   if (path === '/api/share/library') {

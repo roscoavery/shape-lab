@@ -211,18 +211,21 @@ export async function linkGymAccounts(aId: string, bId: string, unlink = false):
 
 /**
  * Redeem an account-creation invite. Creates a new account with the role
- * authorized by the invite. Returns the authenticated user.
+ * authorized by the invite. Returns the authenticated user. For coach
+ * invites, gym carries the coach's main gym: gymId for a gym on file,
+ * gymName to name a new one.
  */
 export async function redeemAccountInvite(
   token: string,
   email: string,
   password: string,
   displayName: string,
+  gym?: { gymId?: string; gymName?: string },
 ): Promise<{ user: any }> {
   const res = await fetch('/api/auth/account-invite', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, email, password, displayName }),
+    body: JSON.stringify({ token, email, password, displayName, ...gym }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Could not create that account.')

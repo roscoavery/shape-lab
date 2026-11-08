@@ -643,7 +643,7 @@ export async function handleAuthRoutes(
       sendJson(res, 405, { error: 'Use GET or POST' })
       return true
     }
-    let body: { token?: string; email?: string; password?: string; displayName?: string } = {}
+    let body: { token?: string; email?: string; password?: string; displayName?: string; gymId?: string; gymName?: string } = {}
     try {
       body = JSON.parse(await readRequestBody(req)) as typeof body
     } catch {
@@ -665,10 +665,32 @@ export async function handleAuthRoutes(
         if (!peeked.valid || !peeked.role) return null
         const role = peeked.role
         const athleteIds = peeked.athleteIds ?? []
+        // Coach invites ask for a main gym at setup: an existing gym by id,
+        // or a new gym by name (reused when a gym with that name is already
+        // on file). Everything here is validated before the account is
+        // created, so a bad gym never burns the invite. Parent and athlete
+        // invites never carry a gym.
+        let resolvedGymId: string | undefined
+        let newGymName: string | undefined
+        if (role === 'coach') {
+          const { getGym, findGymByName } = await import('../gymStore.ts')
+          const pickedId = typeof body.gymId === 'string' ? body.gymId.trim() : ''
+          const typedName = typeof body.gymName === 'string' ? body.gymName.trim() : ''
+          if (pickedId) {
+            const picked = await getGym(pickedId)
+            if (!picked) throw new Error('That gym is gone. Pick again.')
+            resolvedGymId = picked.id
+          } else if (typedName) {
+            const existing = await findGymByName(typedName)
+            if (existing) resolvedGymId = existing.id
+            else newGymName = typedName
+          }
+        }
         const account = await createAccount({
           email: body.email || '',
           password: body.password || '',
           role,
+          gymId: resolvedGymId,
           displayName: body.displayName || body.email || 'Account',
           // Athlete accounts bind to their own profile as "self": the rest
           // of the app authorizes an athlete by rosterProfileId, not by
@@ -677,6 +699,15 @@ export async function handleAuthRoutes(
           rosterProfileId: role === 'athlete' ? athleteIds[0] : undefined,
           linkedAthleteIds: role === 'parent' && athleteIds.length > 0 ? athleteIds : undefined,
         })
+        if (role === 'coach' && newGymName) {
+          // The gym is created by this coach, so it can only exist once
+          // the account does. A bad name was already ruled out above, so
+          // this cannot strand the account without its gym.
+          const { createGym } = await import('../gymStore.ts')
+          const gym = await createGym({ name: newGymName, createdByAccountId: account.accountId })
+          await updateAccount(account.accountId, { gymId: gym.id })
+          account.gymId = gym.id
+        }
         if (role === 'parent') {
           // Parent bootstrap: the client family surface (Parent Home, kids
           // list, Athlete View entry) is keyed off a parent roster row,

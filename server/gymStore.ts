@@ -52,6 +52,17 @@ export async function getGym(id: string): Promise<Gym | null> {
   return gyms.find((g) => g.id === id) ?? null
 }
 
+/**
+ * Find a gym by name, ignoring case and extra spaces. A coach naming a gym
+ * that already exists reuses it instead of making a duplicate.
+ */
+export async function findGymByName(name: string): Promise<Gym | null> {
+  const needle = normalizeName(name).toLowerCase()
+  if (!needle) return null
+  const gyms = await listGyms()
+  return gyms.find((g) => g.name.toLowerCase() === needle) ?? null
+}
+
 export async function createGym(input: {
   name: string
   createdByAccountId: string

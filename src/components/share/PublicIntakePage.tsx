@@ -30,6 +30,7 @@ import { SkillMapView } from '../learn/SkillMapView'
 import { AcroMapView } from '../learn/AcroMapView'
 import { guideSkillsInOrder, type UnifiedSkill } from '../../lib/skillRegistry'
 import { ACRO_SKILLS } from '../../lib/acroSkills'
+import { listPublicGyms } from '../../lib/gyms'
 
 type Mode = 'athlete' | 'open' | 'group'
 
@@ -415,6 +416,13 @@ export function PublicIntakePage({ token }: { token: string }) {
     return name ? `${base}?name=${encodeURIComponent(name)}` : base
   }
   const [error, setError] = useState('')
+  // Group sign-up asks what gym the athlete usually trains at: a listed
+  // gym, or a typed name when theirs is not on file. Never a blocker.
+  const [gyms, setGyms] = useState<{ id: string; name: string }[]>([])
+  const [gymsLoaded, setGymsLoaded] = useState(false)
+  const [gymsFailed, setGymsFailed] = useState(false)
+  const [gymId, setGymId] = useState('')
+  const [newGymName, setNewGymName] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -460,6 +468,27 @@ export function PublicIntakePage({ token }: { token: string }) {
     }
   }, [token])
 
+  // Group sign-up loads the gym list for the gym picker. A failed load
+  // falls back to a plain text field, so the form is never stuck.
+  useEffect(() => {
+    if (mode !== 'group') return
+    let cancelled = false
+    void listPublicGyms()
+      .then((rows) => {
+        if (cancelled) return
+        setGyms(rows)
+        setGymsLoaded(true)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setGymsFailed(true)
+        setGymsLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode])
+
   const questions = useMemo(() => {
     // Include in-progress answers so conditional follow-ups (e.g. twistBetter
     // after answering "both") appear immediately.
@@ -490,6 +519,10 @@ export function PublicIntakePage({ token }: { token: string }) {
       if (mode !== 'athlete') {
         payload.firstName = firstName.trim()
         payload.lastName = lastName.trim()
+      }
+      if (mode === 'group') {
+        if (gymId && gymId !== '__new') payload.gymId = gymId
+        else if (newGymName.trim()) payload.gymName = newGymName.trim()
       }
       const r = await fetch(
         `/api/share/intake-submit?token=${encodeURIComponent(token)}`,
@@ -603,6 +636,52 @@ export function PublicIntakePage({ token }: { token: string }) {
                 className="h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white placeholder:text-white/40"
               />
             </div>
+            {mode === 'group' && (
+              <div className="mt-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                  What gym do you usually train at?
+                </span>
+                {gymsLoaded && (gymsFailed || gyms.length === 0) ? (
+                  <input
+                    type="text"
+                    value={newGymName}
+                    onChange={(e) => setNewGymName(e.target.value)}
+                    placeholder="Type your gym name"
+                    className="mt-1.5 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white placeholder:text-white/40"
+                  />
+                ) : gymsLoaded ? (
+                  <>
+                    <select
+                      value={gymId}
+                      onChange={(e) => setGymId(e.target.value)}
+                      className="mt-1.5 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white"
+                    >
+                      <option value="">Choose your gym</option>
+                      {gyms.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                      <option value="__new">My gym is not listed</option>
+                    </select>
+                    {gymId === '__new' && (
+                      <input
+                        type="text"
+                        value={newGymName}
+                        onChange={(e) => setNewGymName(e.target.value)}
+                        placeholder="Type your gym name"
+                        className="mt-1.5 h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-white placeholder:text-white/40"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-1.5 text-sm text-white/50">Loading gyms…</p>
+                )}
+                <p className="mt-1 text-xs text-white/50">
+                  So your coach knows where you train. Leave it blank if you are not sure.
+                </p>
+              </div>
+            )}
             {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
             <button
               type="button"

@@ -230,6 +230,8 @@ export type Athlete = {
   role?: 'gym_owner' | 'coach' | 'athlete' | 'parent'
   /** Home gym they own, coach at, or train at. Defaults to Tumble Smart Athletics. */
   gymName?: string
+  /** Id of the home gym in the gyms store, when the gym is on file. */
+  gymId?: string
   /** Other gyms they take classes at (besides home). */
   classGyms?: string[]
   /** Camp / clinic / travel event ids. Does not put them on a gym’s main Today list. */
