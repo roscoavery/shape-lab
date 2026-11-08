@@ -837,6 +837,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
       creator: 'anastaziahartsell.cheer',
     },
+    {
+      who: 'CBU STUNT',
+      url: 'https://www.instagram.com/reel/DfaMzmPlcgA/',
+      creator: 'stuntthesport',
+    },
   ],
   basics: [
     {
@@ -914,6 +919,13 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'MJ Elite Gymnastics',
       url: 'https://www.instagram.com/reel/DexW0WQAVIY/',
       watchFor: 'Standing tuck up to a knee-high surface.',
+    },
+  ],
+  'skl_standing_one_to_tuck': [
+    {
+      who: 'CBU STUNT',
+      url: 'https://www.instagram.com/reel/DfaMzmPlcgA/',
+      creator: 'stuntthesport',
     },
   ],
   'back-half': [

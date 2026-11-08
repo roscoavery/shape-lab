@@ -350,6 +350,68 @@ async function handleLibraryPostedBy(req: IncomingMessage, res: ServerResponse):
   return true
 }
 
+/**
+ * Rename / retag a library item by id. The app has no edit UI for a saved
+ * item (a player-saved reel lands with a generated "IG <code>" name and no
+ * keywords), so this is the edit path. Name, keywords and postedBy are each
+ * optional; at least one must be present. Keywords merge with any the item
+ * already has, because the library store unions keyword lists on write.
+ * Only the named item changes; tombstones are preserved by writeLibraryFile.
+ */
+async function handleLibraryItemUpdate(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Use POST' })
+    return true
+  }
+  const verified = await authed(req, res, 'library:add')
+  if (!verified) return true
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(await readRequestBody(req)) as Record<string, unknown>
+  } catch {
+    sendJson(res, 400, { error: 'Send JSON with id and at least one of name, keywords, postedBy.' })
+    return true
+  }
+  const id = typeof body.id === 'string' ? body.id.trim() : ''
+  if (!id) {
+    sendJson(res, 400, { error: 'A library item id is required.' })
+    return true
+  }
+  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : ''
+  const keywords = Array.isArray(body.keywords)
+    ? body.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0).slice(0, 12)
+    : []
+  const postedBy = normalizeSocialHandle(typeof body.postedBy === 'string' ? body.postedBy : null)
+  if (!name && keywords.length === 0 && !postedBy) {
+    sendJson(res, 400, { error: 'Nothing to update: send name, keywords, or postedBy.' })
+    return true
+  }
+  const library = await readLibraryFile()
+  let found: Record<string, unknown> | null = null
+  let foundCollection = ''
+  for (const col of library.collections as Array<{ name?: string; items?: Array<Record<string, unknown>> }>) {
+    for (const item of col.items ?? []) {
+      if (item && typeof item === 'object' && item.id === id) {
+        found = item
+        foundCollection = typeof col.name === 'string' ? col.name : ''
+        break
+      }
+    }
+    if (found) break
+  }
+  if (!found) {
+    sendJson(res, 404, { error: 'No library item with that id.' })
+    return true
+  }
+  if (name) found.name = name
+  if (keywords.length > 0) found.keywords = keywords
+  if (postedBy) found.postedBy = postedBy
+  await writeLibraryFile(library)
+  await verified.touch()
+  sendJson(res, 200, { item: found, collection: foundCollection })
+  return true
+}
+
 type AthleteSummary = {
   id: string
   name: string
@@ -1378,6 +1440,7 @@ export async function handleMuseApi(  req: IncomingMessage,
   if (path === '/api/muse/library') return handleLibraryGet(req, res)
   if (path === '/api/muse/library/items') return handleLibraryAdd(req, res)
   if (path === '/api/muse/library/posted-by') return handleLibraryPostedBy(req, res)
+  if (path === '/api/muse/library/items/update') return handleLibraryItemUpdate(req, res)
   if (path === '/api/muse/philosophy') return handlePhilosophy(req, res)
   if (path === '/api/muse/coach-shapes') return handleCoachShapes(req, res)
   if (path === '/api/muse/roster/athletes') return handleRosterAdd(req, res)

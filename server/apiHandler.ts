@@ -188,6 +188,7 @@ function isMuseBearerPath(path: string): boolean {
     path === '/api/muse/library' ||
     path === '/api/muse/library/items' ||
     path === '/api/muse/library/posted-by' ||
+    path === '/api/muse/library/items/update' ||
     path === '/api/muse/philosophy' ||
     path === '/api/muse/coach-shapes' ||
     path === '/api/muse/roster/athletes' ||
