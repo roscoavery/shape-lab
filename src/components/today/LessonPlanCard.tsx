@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
 import { parseAcuityNotes } from '../../lib/acuityNotes'
+import { formatEventDuration } from '../../lib/eventDuration'
 import { AthleteAvatar } from '../AthleteAvatar'
 import { EventTypePicker } from '../calendar/EventTypePicker'
 import type { CalendarEventType } from '../../lib/calendarClient'
@@ -171,6 +172,11 @@ export function LessonPlanCard({
   const doneCount = plan.tasks.filter((t) =>
     multi ? taskDoneForAll(t, plan, people) : athlete ? taskDoneFor(t, athlete.id) : taskDoneForAll(t, plan),
   ).length
+  // How long the lesson runs, from its calendar start to end.
+  const duration = useMemo(
+    () => formatEventDuration(event.startAt, event.endAt),
+    [event.startAt, event.endAt],
+  )
 
   const body = (
     <>
@@ -352,7 +358,8 @@ export function LessonPlanCard({
           onClick={onToggle}
         >
           <span className="min-w-0 truncate text-sm text-[var(--text)]">
-            {formatTime(event.startAt)} · {label}
+            {formatTime(event.startAt)}
+            {duration ? ` · ${duration}` : ''} · {label}
             {plan.tasks.length > 0 && (
               <span className="ml-2 text-xs text-[var(--muted)]">
                 {doneCount}/{plan.tasks.length} done

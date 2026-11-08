@@ -6,6 +6,7 @@ import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalend
 import { EventAthletePicker } from '../calendar/EventAthletePicker'
 import { EventTypePicker } from '../calendar/EventTypePicker'
 import { classifySessionEvent } from '../../lib/sessionGlow'
+import { formatDurationMinutes, formatEventDuration } from '../../lib/eventDuration'
 import { LessonPlanCard } from './LessonPlanCard'
 import { ReuseChecklist } from './ReuseChecklist'
 import { useDragList, DragGrip } from './useDragList'
@@ -53,6 +54,10 @@ function formatBriefTime(iso: string): string {
   h = h % 12 || 12
   return `${h}:${m}${ampm}`
 }
+
+// Classes run an hour. Offerings carry no length of their own, so the
+// brief shows the same hour the auto-start, day-done, and glow logic use.
+const CLASS_MINUTES = 60
 
 /**
  * Morning brief: what the coach is working with today, and a place to plan.
@@ -291,14 +296,17 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
               School, camp, and clinic today
             </p>
             <div className="mt-2 min-w-0 space-y-2">
-              {otherSessions.map((ev) => (
+              {otherSessions.map((ev) => {
+                const duration = formatEventDuration(ev.startAt, ev.endAt)
+                return (
                 <div
                   key={ev.id}
                   className="flex flex-wrap items-center gap-2 rounded-lg bg-[#121820] px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-[var(--text)]">
-                      {formatBriefTime(ev.startAt)} · {ev.title || 'Untitled'}
+                      {formatBriefTime(ev.startAt)}
+                      {duration ? ` · ${duration}` : ''} · {ev.title || 'Untitled'}
                     </p>
                     <p className="text-xs text-[var(--muted)]">
                       {eventTypeLabel(ev.eventType)}
@@ -309,7 +317,8 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
                     onChange={(t) => changeEventType(ev, t)}
                   />
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -508,7 +517,7 @@ function ClassPlanCard({
       >
         <div className="min-w-0">
           <p className="font-semibold text-[var(--text)]">
-            {offering.time} · {offering.name}
+            {offering.time} · {formatDurationMinutes(CLASS_MINUTES)} · {offering.name}
           </p>
           {lastWeek.length > 0 && (
             <p className="mt-1 text-sm text-[var(--text)]">
