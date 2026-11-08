@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
 import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
-import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, matchCalendarEvent, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, matchCalendarEvent, setCalendarEventType, eventTypeLabel, isNonLessonEventType, type CalendarEventType, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { EventAthletePicker } from '../calendar/EventAthletePicker'
+import { EventTypePicker } from '../calendar/EventTypePicker'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from './LessonPlanCard'
 import { ReuseChecklist } from './ReuseChecklist'
@@ -41,6 +42,16 @@ type Props = {
 
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
   return athletes.find((a) => a.id === id)
+}
+
+function formatBriefTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  let h = d.getHours()
+  const m = String(d.getMinutes()).padStart(2, '0')
+  const ampm = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  return `${h}:${m}${ampm}`
 }
 
 /**
@@ -105,6 +116,20 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
       .sort((a, b) => a.startAt.localeCompare(b.startAt))
   }, [events])
 
+  // School, camp, and clinic events are not lessons: they show with their
+  // type and never ask for an athlete or a plan.
+  const otherSessions = useMemo(() => {
+    return events
+      .filter((ev) => isNonLessonEventType(classifySessionEvent(ev)))
+      .sort((a, b) => a.startAt.localeCompare(b.startAt))
+  }, [events])
+
+  const changeEventType = (ev: TodayCalendarEvent, t: CalendarEventType | null) => {
+    void setCalendarEventType(ev.id, t).then(() => {
+      void refreshEvents()
+    })
+  }
+
   const totalAthletes = useMemo(() => {
     const ids = new Set<string>()
     for (const o of offerings) {
@@ -151,10 +176,14 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
       const end = new Date(l.endAt)
       if (!Number.isNaN(end.getTime()) && (!lastEnd || end > lastEnd)) lastEnd = end
     }
+    for (const s of otherSessions) {
+      const end = new Date(s.endAt)
+      if (!Number.isNaN(end.getTime()) && (!lastEnd || end > lastEnd)) lastEnd = end
+    }
     return lastEnd !== null && now > lastEnd
-  }, [offerings, lessons, nowTick])
+  }, [offerings, lessons, otherSessions, nowTick])
 
-  if (offerings.length === 0 && lessons.length === 0) return null
+  if (offerings.length === 0 && lessons.length === 0 && otherSessions.length === 0) return null
   if (dayDone) return null
 
   return (
@@ -173,7 +202,10 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
             {offerings.length > 0 && lessons.length > 0 && ' · '}
             {lessons.length > 0 &&
               `${lessons.length} lesson${lessons.length === 1 ? '' : 's'}`}
-            . Tap a class to plan what each athlete should focus on.
+            {(offerings.length > 0 || lessons.length > 0) && otherSessions.length > 0 && ' · '}
+            {otherSessions.length > 0 &&
+              `${otherSessions.length} school, camp, or clinic`}
+            {offerings.length > 0 || lessons.length > 0 ? '. Tap a class to plan what each athlete should focus on.' : '.'}
           </p>
         </div>
         <button
@@ -246,9 +278,38 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
                     plansTick={plansTick}
                     onViewProfile={onViewProfile}
                     onChangeAthlete={() => openPicker(ev)}
+                    onChangeType={(t) => changeEventType(ev, t)}
                   />
                 )
               })}
+            </div>
+          </div>
+        )}
+        {otherSessions.length > 0 && (
+          <div className="min-w-0 rounded-xl border border-[var(--panel-border)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+              School, camp, and clinic today
+            </p>
+            <div className="mt-2 min-w-0 space-y-2">
+              {otherSessions.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg bg-[#121820] px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-[var(--text)]">
+                      {formatBriefTime(ev.startAt)} · {ev.title || 'Untitled'}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {eventTypeLabel(ev.eventType)}
+                    </p>
+                  </div>
+                  <EventTypePicker
+                    value={ev.eventType ?? null}
+                    onChange={(t) => changeEventType(ev, t)}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         )}

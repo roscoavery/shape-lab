@@ -9,7 +9,11 @@ import {
   fetchCalendarRange,
   hasCalendarApiToken,
   matchCalendarEvent,
+  setCalendarEventType,
+  isNonLessonEventType,
+  eventTypeLabel,
   syncCalendarNow,
+  type CalendarEventType,
   type TodayCalendarEvent,
 } from '../../lib/calendarClient'
 import {
@@ -33,6 +37,7 @@ import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
 import { subscribeClassPlans, pullClassPlans, lessonPlanDateKey } from '../../lib/classPlans'
 import { EventAthletePicker } from './EventAthletePicker'
+import { EventTypePicker } from './EventTypePicker'
 import { QuickAddAthlete } from '../today/QuickAddAthlete'
 
 type Props = {
@@ -293,6 +298,15 @@ export function CalendarDesk({ coachId, athletes, onStartLesson, onAthletesChang
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  const changeEventType = useCallback(
+    (ev: TodayCalendarEvent, t: CalendarEventType | null) => {
+      void setCalendarEventType(ev.id, t).then(() => {
+        void refresh()
+      })
+    },
+    [refresh],
+  )
 
   useEffect(() => {
     if (!fullScreen) return
@@ -709,6 +723,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson, onAthletesChang
             onDelete={
               !openEvent.id.startsWith('shapelab-class:') ? () => deleteOpenEvent() : undefined
             }
+            onTypeChange={(t) => changeEventType(openEvent, t)}
           />
         </div>
       )}
@@ -819,6 +834,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson, onAthletesChang
                 activeLessonId={activeLessonId}
                 onStart={startLesson}
                 onPick={() => setPickEventId(ev.id)}
+                onTypeChange={(t) => changeEventType(ev, t)}
               />
             </li>
           ))}
@@ -1003,6 +1019,7 @@ export function CalendarDesk({ coachId, athletes, onStartLesson, onAthletesChang
                 onDelete={
                   !openEvent.id.startsWith('shapelab-class:') ? () => deleteOpenEvent() : undefined
                 }
+                onTypeChange={(t) => changeEventType(openEvent, t)}
               />
               {classifySessionEvent(openEvent) === 'lesson' && (
                 <div className="mt-2 border-t border-white/10 pt-2">
@@ -1176,6 +1193,7 @@ function EventPreview({
   onStart,
   onPick,
   onDelete,
+  onTypeChange,
   compact = false,
 }: {
   ev: TodayCalendarEvent
@@ -1186,20 +1204,27 @@ function EventPreview({
   onStart: (ev: TodayCalendarEvent, athleteIds: string[]) => void
   onPick: () => void
   onDelete?: () => void
+  /** When provided, a Type picker shows in the open detail. Unset for synthetic class offerings. */
+  onTypeChange?: (t: CalendarEventType | null) => void
   compact?: boolean
 }) {
   const linked = ev.lessonLinks?.[0]
   const linkedSession = linked ? getLessonSession(linked.lessonId) : null
   const activeForEvent = linked && activeLessonId === linked.lessonId && linkedSession && !linkedSession.endedAt
   const ids = eventAthleteIds(ev)
+  // School, camp, and clinic events are not lessons: no athlete prompt,
+  // no Start, just their type.
+  const nonLesson = isNonLessonEventType(classifySessionEvent(ev))
   const matchLine =
-    ids.length > 0
-      ? ids.map((id) => athleteName(id)).join(', ')
-      : ev.matchStatus === 'ambiguous'
-        ? 'Multiple athletes possible'
-        : ev.matchStatus === 'needs_athlete'
-          ? 'Needs athlete'
-          : 'Event'
+    nonLesson
+      ? eventTypeLabel(classifySessionEvent(ev))
+      : ids.length > 0
+        ? ids.map((id) => athleteName(id)).join(', ')
+        : ev.matchStatus === 'ambiguous'
+          ? 'Multiple athletes possible'
+          : ev.matchStatus === 'needs_athlete'
+            ? 'Needs athlete'
+            : 'Event'
   return (
     <div className={`rounded-lg bg-[#121820] ${compact ? 'px-1.5 py-1' : 'px-3 py-2'}`}>
       <div className="flex items-start justify-between gap-2">
@@ -1213,6 +1238,7 @@ function EventPreview({
           {!compact && <p className="text-xs text-[var(--muted)]">{matchLine}</p>}
         </button>
         {!compact &&
+          !nonLesson &&
           (ids.length > 0 ? (
             <div className="flex shrink-0 gap-1.5">
               <button
@@ -1250,7 +1276,13 @@ function EventPreview({
           ) : (
             <p>No notes on this event.</p>
           )}
+          {onTypeChange && !ev.id.startsWith('shapelab-class:') && (
+            <div className="pt-1">
+              <EventTypePicker value={ev.eventType ?? null} onChange={onTypeChange} />
+            </div>
+          )}
           {compact &&
+            !nonLesson &&
             (ids.length > 0 ? (
               <button
                 type="button"

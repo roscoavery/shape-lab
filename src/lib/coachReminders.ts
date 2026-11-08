@@ -4,6 +4,7 @@ import { loadMeetings, loadOfferingsForCoach, parseClassTimeMinutes, WEEKDAYS } 
 import { estimateHoursForDay, getDayLog, pendingJackrabbitDays } from './coachHours'
 import { getClassPlan } from './classPlans'
 import type { TodayCalendarEvent } from './calendarClient'
+import { isNonLessonEventType } from './calendarClient'
 
 export type CoachReminder =
   | { kind: 'log-wins'; meetings: number; lessons: number }
@@ -90,6 +91,8 @@ export function getCoachReminders(
   const unlinkedLessons = calendarEvents.filter((ev) => {
     if (linkedEventIds.has(ev.id)) return false
     if (ev.lessonLinks.length > 0) return false
+    // A school, camp, or clinic event never needs a lesson plan.
+    if (isNonLessonEventType(ev.eventType)) return false
     const day = ev.startAt.slice(0, 10)
     if (day !== today && day !== tomorrowKey) return false
     // A written task list counts as a plan, even before the lesson exists.

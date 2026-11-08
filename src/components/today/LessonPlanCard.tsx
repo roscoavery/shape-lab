@@ -3,6 +3,8 @@ import type { Athlete } from '../../types'
 import type { TodayCalendarEvent } from '../../lib/calendarClient'
 import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { AthleteAvatar } from '../AthleteAvatar'
+import { EventTypePicker } from '../calendar/EventTypePicker'
+import type { CalendarEventType } from '../../lib/calendarClient'
 import {
   getOrCreateClassPlan,
   addPlanTask,
@@ -66,6 +68,12 @@ export function LessonPlanCard({
    * in the header. Other usages leave this unset.
    */
   onChangeAthlete,
+  /**
+   * Morning brief only: change what kind of work this event is. When
+   * provided, a Type picker shows in the header. Other usages leave this
+   * unset.
+   */
+  onChangeType,
 }: {
   event: TodayCalendarEvent
   athlete: Athlete | null
@@ -81,6 +89,7 @@ export function LessonPlanCard({
   hideHeader?: boolean
   onViewProfile?: (id: string) => void
   onChangeAthlete?: () => void
+  onChangeType?: (t: CalendarEventType | null) => void
 }) {
   const planId = `lesson:${event.id}`
   const plan: ClassPlan = useMemo(
@@ -364,6 +373,11 @@ export function LessonPlanCard({
           >
             {people.length > 0 ? 'Change' : 'Select'}
           </button>
+        )}
+        {onChangeType && (
+          <span onClick={(e) => e.stopPropagation()}>
+            <EventTypePicker value={event.eventType ?? null} onChange={onChangeType} />
+          </span>
         )}
       </div>
       {open && <div className="mt-2 min-w-0 border-t border-white/10 pt-2">{body}</div>}

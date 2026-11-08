@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { eventsForCoachOnDay, upsertEvents } from './store.ts'
+import { isNonLessonEventType } from './types.ts'
 import type { CalendarDb, CalendarEvent } from './types.ts'
 
 function ev(id: string, stamp: string): CalendarEvent {
@@ -47,6 +48,40 @@ describe('upsertEvents', () => {
     assert.equal(merged.events.length, 1)
     assert.equal(merged.events[0]!.id, 'e2')
     assert.equal(merged.events[0]!.lastModifiedAt, '2026-01-02T00:00:00Z')
+  })
+
+  it('carries a coach-set event type through the merge', () => {
+    const db: CalendarDb = {
+      kind: 'shape-lab-calendar',
+      version: 1,
+      exportedAt: '',
+      connections: [],
+      connectedCalendars: [],
+      events: [],
+      aliases: [],
+      eventMappings: [],
+      titleMappings: [],
+      lessonLinks: [],
+      syncState: [],
+    }
+    const typed = { ...ev('e1', '2026-01-01T00:00:00Z'), eventType: 'school' as const }
+    const merged = upsertEvents(db, [typed])
+    assert.equal(merged.events[0]!.eventType, 'school')
+  })
+})
+
+describe('isNonLessonEventType', () => {
+  it('school, camp, and clinic are not lessons', () => {
+    assert.equal(isNonLessonEventType('school'), true)
+    assert.equal(isNonLessonEventType('camp'), true)
+    assert.equal(isNonLessonEventType('clinic'), true)
+  })
+
+  it('lesson, class, and unmarked stay lessons or classes', () => {
+    assert.equal(isNonLessonEventType('lesson'), false)
+    assert.equal(isNonLessonEventType('class'), false)
+    assert.equal(isNonLessonEventType(null), false)
+    assert.equal(isNonLessonEventType(undefined), false)
   })
 })
 

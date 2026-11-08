@@ -7,7 +7,11 @@ import {
   fetchTodayEvents,
   hasCalendarApiToken,
   matchCalendarEvent,
+  setCalendarEventType,
+  isNonLessonEventType,
+  eventTypeLabel,
   syncCalendarNow,
+  type CalendarEventType,
   type TodayCalendarEvent,
 } from '../../lib/calendarClient'
 import { digitsOnlyPin } from '../../lib/athletePasscode'
@@ -15,6 +19,7 @@ import { getLessonSession, loadActiveLessonId } from '../../lib/lessonStore'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { LessonPlanCard } from '../today/LessonPlanCard'
 import { EventAthletePicker } from './EventAthletePicker'
+import { EventTypePicker } from './EventTypePicker'
 import { subscribeClassPlans, pullClassPlans, todayKey } from '../../lib/classPlans'
 
 type Props = {
@@ -106,12 +111,24 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
     void refresh()
   }, [refresh])
 
+  const changeEventType = useCallback(
+    (ev: TodayCalendarEvent, t: CalendarEventType | null) => {
+      void setCalendarEventType(ev.id, t).then(() => {
+        void refresh()
+      })
+    },
+    [refresh],
+  )
+
   const activeLessonId = loadActiveLessonId()
 
   const athleteName = (id: string | null) =>
     roster.find((a) => a.id === id)?.name?.trim() || 'Athlete'
 
   const renderActions = (ev: TodayCalendarEvent) => {
+    // School, camp, and clinic events are not lessons: no athlete prompt
+    // and no Start. Their type is set from the event detail.
+    if (isNonLessonEventType(classifySessionEvent(ev))) return null
     const linked = ev.lessonLinks?.[0]
     const linkedSession = linked ? getLessonSession(linked.lessonId) : null
     const activeForEvent =
@@ -264,13 +281,15 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
           const open = openEventId === ev.id
           const linkedIds = eventAthleteIds(ev)
           const matchLine =
-            linkedIds.length > 0
-              ? linkedIds.map((id) => athleteName(id)).join(', ')
-              : ev.matchStatus === 'ambiguous'
-                ? 'Multiple athletes possible'
-                : ev.matchStatus === 'needs_athlete'
-                  ? 'Needs athlete'
-                  : 'Coaching event'
+            isNonLessonEventType(classifySessionEvent(ev))
+              ? eventTypeLabel(classifySessionEvent(ev))
+              : linkedIds.length > 0
+                ? linkedIds.map((id) => athleteName(id)).join(', ')
+                : ev.matchStatus === 'ambiguous'
+                  ? 'Multiple athletes possible'
+                  : ev.matchStatus === 'needs_athlete'
+                    ? 'Needs athlete'
+                    : 'Coaching event'
           return (
             <li key={ev.id} className="rounded-lg bg-[#121820] px-3 py-2">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -292,6 +311,14 @@ export function TodayCalendarSection({ coachId, athletes, onStartLesson }: Props
                     <p className="whitespace-pre-wrap text-[var(--text)]/85">{ev.notes.trim()}</p>
                   ) : (
                     <p>No notes on this event.</p>
+                  )}
+                  {!ev.id.startsWith('shapelab-class:') && (
+                    <div className="pt-1">
+                      <EventTypePicker
+                        value={ev.eventType ?? null}
+                        onChange={(t) => changeEventType(ev, t)}
+                      />
+                    </div>
                   )}
                   {classifySessionEvent(ev) === 'lesson' && (
                     <LessonPlanCard

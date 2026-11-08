@@ -5,6 +5,7 @@ import type {
   CalendarDb,
   CalendarEvent,
   CalendarEventMapping,
+  CalendarEventType,
   CalendarSyncState,
   ConnectedCalendar,
   LessonCalendarLink,
@@ -250,6 +251,21 @@ export async function upsertManualMatch(opts: {
     ]
   }
   await writeDb({ ...db, events, eventMappings, titleMappings })
+  return readCalendarDb()
+}
+
+export async function setEventType(opts: {
+  coachId: string
+  eventId: string
+  eventType: CalendarEventType | null
+}): Promise<CalendarDb> {
+  const db = await readCalendarDb()
+  const events = db.events.map((e) =>
+    e.id === opts.eventId && e.coachId === opts.coachId
+      ? { ...e, eventType: opts.eventType, updatedAt: new Date().toISOString() }
+      : e,
+  )
+  await writeDb({ ...db, events })
   return readCalendarDb()
 }
 

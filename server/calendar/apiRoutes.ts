@@ -30,6 +30,7 @@ import {
   removeConnectionData,
   saveCalendars,
   saveConnection,
+  setEventType,
   upsertEvents,
   upsertManualMatch,
 } from './store.ts'
@@ -37,7 +38,9 @@ import type {
   CalendarConnection,
   ConnectedCalendar,
   CalendarEventFilterMode,
+  CalendarEventType,
 } from './types.ts'
+import { isNonLessonEventType } from './types.ts'
 
 function safeErrorMessage(err: unknown): string {
   const raw = err instanceof Error ? err.message : 'REQUEST_FAILED'
@@ -517,6 +520,13 @@ export async function handleCalendarApi(
           sendJson(res, 404, { error: 'NOT_FOUND' })
           return true
         }
+        // A school, camp, or clinic event is not a lesson: no manual
+        // athlete matching for it either. Change its type back to lesson
+        // first if it was marked by mistake.
+        if (isNonLessonEventType(ev.eventType)) {
+          sendJson(res, 400, { error: 'EVENT_NOT_LESSON' })
+          return true
+        }
         const seriesKey = ev.recurrenceInstanceKey.split('|')[0] ?? ev.providerEventId
         await upsertManualMatch({
           coachId,
@@ -530,6 +540,35 @@ export async function handleCalendarApi(
           title: ev.title,
         })
         sendJson(res, 200, { ok: true })
+      } catch {
+        sendJson(res, 400, { error: 'BAD_REQUEST' })
+      }
+      return true
+    }
+    if (req.method === 'POST' && segments[2] === 'type') {
+      try {
+        const body = JSON.parse(await readRequestBody(req)) as { eventType?: string | null }
+        const t = body.eventType ?? null
+        const valid: (CalendarEventType | null)[] = [
+          'lesson',
+          'class',
+          'school',
+          'camp',
+          'clinic',
+          null,
+        ]
+        if (!valid.includes(t as CalendarEventType | null)) {
+          sendJson(res, 400, { error: 'BAD_TYPE' })
+          return true
+        }
+        const db = await readCalendarDb()
+        const ev = db.events.find((e) => e.id === eventId && e.coachId === coachId)
+        if (!ev) {
+          sendJson(res, 404, { error: 'NOT_FOUND' })
+          return true
+        }
+        await setEventType({ coachId, eventId, eventType: t as CalendarEventType | null })
+        sendJson(res, 200, { ok: true, eventType: t })
       } catch {
         sendJson(res, 400, { error: 'BAD_REQUEST' })
       }

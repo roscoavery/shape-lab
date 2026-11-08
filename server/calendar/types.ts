@@ -10,6 +10,14 @@ export type CalendarMatchStatus =
   | 'ambiguous'
   | 'not_lesson'
 
+/** What kind of coaching work a calendar event is. Null means unmarked: the app falls back to its title heuristic. */
+export type CalendarEventType = 'lesson' | 'class' | 'school' | 'camp' | 'clinic'
+
+/** School, camp, and clinic events are not lessons: no athlete matching, no lesson auto-start, no plan banner. */
+export function isNonLessonEventType(t: CalendarEventType | null | undefined): boolean {
+  return t === 'school' || t === 'camp' || t === 'clinic'
+}
+
 export type CalendarConnection = {
   id: string
   coachId: string
@@ -53,6 +61,8 @@ export type CalendarEvent = {
   matchedAthleteIds?: string[]
   matchStatus: CalendarMatchStatus
   matchConfidence: number
+  /** Set by the coach in the app. Null means unmarked: title heuristic decides. Survives syncs. */
+  eventType?: CalendarEventType | null
   createdAt: string
   updatedAt: string
 }

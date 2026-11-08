@@ -28,10 +28,14 @@ function titleHas(title: string, words: string[]): boolean {
 
 /**
  * Best-guess classification of a calendar event into a session kind.
- * Lesson links or a matched athlete mean lesson. Otherwise title keywords.
- * Falls back to 'class' since most scheduled hours are classes.
+ * An explicit type set by the coach wins over everything: a school event
+ * that happened to match an athlete is still a school event, not a lesson.
+ * Unmarked events keep the old behavior. Lesson links or a matched athlete
+ * mean lesson. Otherwise title keywords. Falls back to 'class' since most
+ * scheduled hours are classes.
  */
 export function classifySessionEvent(ev: TodayCalendarEvent): SessionKind {
+  if (ev.eventType) return ev.eventType
   if (ev.lessonLinks.length > 0 || ev.matchedAthleteId) return 'lesson'
   const title = ev.title ?? ''
   if (titleHas(title, SCHOOL_WORDS)) return 'school'

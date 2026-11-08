@@ -16,6 +16,7 @@ import {
   upsertEvents,
 } from './store.ts'
 import type { CalendarConnection, CalendarEvent, CalendarEventFilterMode } from './types.ts'
+import { isNonLessonEventType } from './types.ts'
 
 export function defaultSyncWindow(now = new Date()): { start: Date; end: Date } {
   const start = new Date(now)
@@ -94,16 +95,26 @@ export async function syncConnectionForCoach(
           e.recurrenceInstanceKey === norm.recurrenceInstanceKey,
       )
 
-      const match = matchEventToAthlete({
-        title: norm.title,
-        description: norm.description,
-        seriesKey,
-        connectionId: connection.id,
-        coachAthletes: roster,
-        aliases: db.aliases.filter((a) => a.coachId === connection.coachId),
-        seriesMappings: db.eventMappings.filter((m) => m.coachId === connection.coachId),
-        titleMappings: db.titleMappings.filter((m) => m.coachId === connection.coachId),
-      })
+      // A school, camp, or clinic event is not a lesson: never match an
+      // athlete to it and never auto-create a profile from its title or
+      // notes. The coach's explicit type wins over the title heuristic.
+      const skipMatching = isNonLessonEventType(existing?.eventType)
+      const match = skipMatching
+        ? {
+            athleteId: existing?.matchedAthleteId ?? null,
+            matchStatus: existing?.matchStatus ?? ('needs_athlete' as const),
+            matchConfidence: existing?.matchConfidence ?? 0,
+          }
+        : matchEventToAthlete({
+            title: norm.title,
+            description: norm.description,
+            seriesKey,
+            connectionId: connection.id,
+            coachAthletes: roster,
+            aliases: db.aliases.filter((a) => a.coachId === connection.coachId),
+            seriesMappings: db.eventMappings.filter((m) => m.coachId === connection.coachId),
+            titleMappings: db.titleMappings.filter((m) => m.coachId === connection.coachId),
+          })
 
       let athleteId = existing?.matchedAthleteId ?? match.athleteId
       let matchStatus = existing?.matchedAthleteId ? 'matched' : match.matchStatus
@@ -143,7 +154,7 @@ export async function syncConnectionForCoach(
         }
       }
 
-      if (!athleteId && matchStatus === 'needs_athlete') {
+      if (!skipMatching && !athleteId && matchStatus === 'needs_athlete') {
         const person = extractUnmatchedPersonName(norm.title, norm.description, coachAthleteList)
         if (person) {
           const id = `ath_cal_${randomBytes(8).toString('hex')}`
@@ -195,6 +206,8 @@ export async function syncConnectionForCoach(
         matchedAthleteIds: athleteIds,
         matchStatus,
         matchConfidence,
+        // The coach's type marking survives syncs: the fresh row keeps it.
+        eventType: existing?.eventType ?? null,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
       })

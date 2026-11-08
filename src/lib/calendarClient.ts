@@ -1,5 +1,19 @@
 import { withCsrfHeaders } from './authSession'
 
+/** What kind of coaching work a calendar event is. Null means unmarked: the app falls back to its title heuristic. */
+export type CalendarEventType = 'lesson' | 'class' | 'school' | 'camp' | 'clinic'
+
+/** School, camp, and clinic events are not lessons: no athlete matching, no lesson auto-start, no plan banner. */
+export function isNonLessonEventType(t: CalendarEventType | null | undefined): boolean {
+  return t === 'school' || t === 'camp' || t === 'clinic'
+}
+
+/** Display label for a type. Unmarked shows as Auto. */
+export function eventTypeLabel(t: CalendarEventType | null | undefined): string {
+  if (!t) return 'Auto'
+  return t[0]!.toUpperCase() + t.slice(1)
+}
+
 const TOKEN_KEY = 'shape-lab.calendarApiToken.v1'
 
 export type CalendarConnectionView = {
@@ -36,6 +50,8 @@ export type TodayCalendarEvent = {
   providerCalendarId: string
   notes?: string
   lessonLinks: { lessonId: string; athleteId: string }[]
+  /** Set by the coach in the app. Null means unmarked: title heuristic decides. */
+  eventType?: CalendarEventType | null
 }
 
 /** Every athlete linked to an event, primary first. Falls back to the single matchedAthleteId on older rows. */
@@ -288,6 +304,18 @@ export async function matchCalendarEvent(
     body: JSON.stringify({ athleteIds, ...opts }),
   })
   if (!res.ok) throw new Error('Match failed')
+}
+
+/** Mark what kind of work a calendar event is. Null clears it back to Auto. Persists server-side, so syncs keep it. */
+export async function setCalendarEventType(
+  eventId: string,
+  eventType: CalendarEventType | null,
+) {
+  const res = await calendarFetch(`/events/${eventId}/type`, {
+    method: 'POST',
+    body: JSON.stringify({ eventType }),
+  })
+  if (!res.ok) throw new Error('Could not save the event type.')
 }
 
 export async function linkLessonCalendarEvent(
