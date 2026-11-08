@@ -48,7 +48,9 @@ import {
   stashSharedUrl,
   takeSharedUrl,
 } from './lib/shareLink'
-import { saveSharedUrlToLibrary } from './lib/shareIntake'
+import { fetchLibrarySuggestion, saveSharedUrlToLibrary, type ShareSuggestion } from './lib/shareIntake'
+import { parseKeywords } from './lib/clipStore'
+import { defaultSocialName } from './lib/socialUrls'
 import { ChatPanel } from './components/chat/ChatPanel'
 import { HomeworkPanel } from './components/HomeworkPanel'
 import { LogForPicker } from './components/homework/LogForPicker'
@@ -340,6 +342,37 @@ export default function App() {
     | { state: 'saved' | 'duplicate'; collectionName?: string }
     | { state: 'error' }
   >({ state: 'idle' })
+  // Name and tags for the shared clip, editable before saving. They start
+  // at the URL fallback, then the server suggestion fills them in unless
+  // the coach has already typed. The dirty refs track that, and the seq
+  // ref drops a late suggestion from a clip that has already closed.
+  const [shareEditName, setShareEditName] = useState('')
+  const [shareEditTags, setShareEditTags] = useState('')
+  const [shareSuggestion, setShareSuggestion] = useState<ShareSuggestion | null>(null)
+  const shareNameDirtyRef = useRef(false)
+  const shareTagsDirtyRef = useRef(false)
+  const shareSuggestSeqRef = useRef(0)
+  const openSharedClip = (url: string) => {
+    const seq = shareSuggestSeqRef.current + 1
+    shareSuggestSeqRef.current = seq
+    shareNameDirtyRef.current = false
+    shareTagsDirtyRef.current = false
+    setShareSuggestion(null)
+    setShareSaveState({ state: 'idle' })
+    setSharedClip({ url })
+    setShareEditName(defaultSocialName(url))
+    setShareEditTags('')
+    void fetchLibrarySuggestion(url).then((suggestion) => {
+      if (!suggestion || shareSuggestSeqRef.current !== seq) return
+      setShareSuggestion(suggestion)
+      if (!shareNameDirtyRef.current && suggestion.name) {
+        setShareEditName(suggestion.name)
+      }
+      if (!shareTagsDirtyRef.current && suggestion.keywords.length > 0) {
+        setShareEditTags(suggestion.keywords.join(', '))
+      }
+    })
+  }
   const [pasteNote, setPasteNote] = useState<string | null>(null)
   // Share intake: a shared video link in the page URL is stashed and the
   // URL is cleaned; the clip itself opens once signed in (effect below,
@@ -455,8 +488,7 @@ export default function App() {
     if (!authUser || sharedClip) return
     const url = takeSharedUrl()
     if (url) {
-      setShareSaveState({ state: 'idle' })
-      setSharedClip({ url })
+      openSharedClip(url)
     }
   }, [authUser, sharedClip])
   const [authStatus, setAuthStatus] = useState<'loading' | 'in' | 'out'>('loading')
@@ -1084,12 +1116,17 @@ export default function App() {
   const saveSharedClip = async () => {
     if (!sharedClip || shareSaveState.state === 'saving') return
     setShareSaveState({ state: 'saving' })
+    const tags = parseKeywords(shareEditTags)
     const res = await saveSharedUrlToLibrary(sharedClip.url, {
       // Only Ryan's own profile saves into the main (gym) reference
       // library, the same rule the reference pane uses. Everyone else
       // who can file clips lands in their own library only.
       canEditGym: isRyanAthlete(activeProfile) && !sessionIsKiosk(authUser),
       profileId: authUser?.rosterProfileId ?? null,
+      // A blank field falls back to the suggestion, then to the old default.
+      name: shareEditName.trim() || shareSuggestion?.name?.trim() || undefined,
+      keywords: tags.length > 0 ? tags : shareSuggestion?.keywords,
+      postedBy: shareSuggestion?.postedBy ?? undefined,
     })
     setShareSaveState(
       res.status === 'error'
@@ -1112,8 +1149,7 @@ export default function App() {
     }
     const url = text ? extractSharedUrl(text) : null
     if (url) {
-      setShareSaveState({ state: 'idle' })
-      setSharedClip({ url })
+      openSharedClip(url)
       return
     }
     setPasteNote('No video link on the clipboard. Copy a link in Instagram first.')
@@ -2462,24 +2498,67 @@ export default function App() {
             onClose={() => setSharedClip(null)}
           />
           {canFileClips && (
-            <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
-              <button
-                type="button"
-                onClick={() => void saveSharedClip()}
-                disabled={shareSaveState.state === 'saving' || shareSaveState.state === 'saved'}
-                className="pointer-events-auto rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-80"
-              >
-                {shareSaveState.state === 'saving'
-                  ? 'Saving…'
-                  : shareSaveState.state === 'saved'
-                    ? `Saved to ${shareSaveState.collectionName ?? 'reference library'}`
-                    : shareSaveState.state === 'duplicate'
-                      ? `Already in ${shareSaveState.collectionName ?? 'the library'}`
-                      : shareSaveState.state === 'error'
-                        ? 'Save failed, tap to retry'
-                        : 'Save to reference library'}
-              </button>
-            </div>
+            <>
+              {shareSaveState.state !== 'saved' && shareSaveState.state !== 'duplicate' && (
+                <div className="pointer-events-none fixed inset-x-0 bottom-40 z-[600] flex justify-center px-4">
+                  <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 shadow-lg">
+                    <label>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                        Name
+                      </span>
+                      <input
+                        type="text"
+                        value={shareEditName}
+                        disabled={shareSaveState.state === 'saving'}
+                        onChange={(e) => {
+                          shareNameDirtyRef.current = true
+                          setShareEditName(e.target.value)
+                        }}
+                        placeholder="Name this clip"
+                        className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                      />
+                    </label>
+                    <label>
+                      <span className="mt-2 block text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                        Tags
+                      </span>
+                      <input
+                        type="text"
+                        value={shareEditTags}
+                        disabled={shareSaveState.state === 'saving'}
+                        onChange={(e) => {
+                          shareTagsDirtyRef.current = true
+                          setShareEditTags(e.target.value)
+                        }}
+                        placeholder="Tags, separated by commas"
+                        className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                      />
+                    </label>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      Leave a field blank to use the suggested name and tags.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
+                <button
+                  type="button"
+                  onClick={() => void saveSharedClip()}
+                  disabled={shareSaveState.state === 'saving' || shareSaveState.state === 'saved'}
+                  className="pointer-events-auto rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-80"
+                >
+                  {shareSaveState.state === 'saving'
+                    ? 'Saving…'
+                    : shareSaveState.state === 'saved'
+                      ? `Saved to ${shareSaveState.collectionName ?? 'reference library'}`
+                      : shareSaveState.state === 'duplicate'
+                        ? `Already in ${shareSaveState.collectionName ?? 'the library'}`
+                        : shareSaveState.state === 'error'
+                          ? 'Save failed, tap to retry'
+                          : 'Save to reference library'}
+                </button>
+              </div>
+            </>
           )}
         </>
       )}

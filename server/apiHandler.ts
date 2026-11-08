@@ -14,7 +14,14 @@ import {
   forgetResolvedSocial,
   sendJson,
 } from './instagramResolve.ts'
-import { postedByFromUrl } from '../src/lib/socialUrls.ts'
+import {
+  canonicalSocialUrl,
+  defaultSocialName,
+  normalizeSocialHandle,
+  postedByFromUrl,
+  socialPlatform,
+  youtubeVideoId,
+} from '../src/lib/socialUrls.ts'
 import { readLibraryFile, readRequestBody, writeLibraryFile } from './libraryStore.ts'
 import { readCoachLibrary, writeCoachLibrary } from './coachLibraryStore.ts'
 import { readRosterFile, rosterPeopleStamp, writeRosterFile } from './rosterStore.ts'
@@ -243,6 +250,7 @@ const API_PATHS = new Set([
   '/api/ig-resolve',
   '/api/ig-media',
   '/api/library',
+  '/api/library/suggest',
   '/api/muse/keys',
   '/api/muse/keys/revoke',
   '/api/roster',
@@ -406,6 +414,102 @@ async function classPlansForViewer(
     if (tasks.length > 0) out.push({ ...plan, tasks })
   }
   return out
+}
+
+/** Words dropped from a video title when deriving tag words. */
+const TITLE_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'this', 'that', 'your', 'you', 'are',
+  'into', 'how', 'why', 'what', 'when', 'then', 'than', 'but', 'not', 'all',
+  'can', 'just', 'like', 'get', 'got', 'one', 'two', 'new', 'best', 'top',
+  'free', 'video', 'watch', 'here', 'more', 'part',
+])
+
+function titleTagWords(title: string, authorHandle: string | null): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  const push = (raw: string) => {
+    const word = raw.toLowerCase().replace(/[^a-z0-9-]/g, '')
+    if (word.length < 3 || TITLE_STOPWORDS.has(word) || seen.has(word)) return
+    seen.add(word)
+    out.push(word)
+  }
+  if (authorHandle) push(authorHandle)
+  for (const word of title.split(/[\s_]+/)) push(word)
+  return out.slice(0, 12)
+}
+
+function fallbackFilingName(url: string, postedBy: string | null): string {
+  if (postedBy) return `@${postedBy}`
+  if (socialPlatform(canonicalSocialUrl(url))) return defaultSocialName(url)
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean)
+    const last = parts[parts.length - 1]
+    if (last) return decodeURIComponent(last).slice(0, 120)
+  } catch {
+    /* fall through to the raw URL */
+  }
+  return url.slice(0, 120)
+}
+
+/**
+ * Best-effort name, tags and author for a video URL, to pre-fill the
+ * share-player edit fields. YouTube gives a real title and author through
+ * public oEmbed, no key needed. Instagram, TikTok and Facebook expose no
+ * caption or title to a server fetch (the reel page is a login shell), so
+ * the suggestion there is the resolved author handle only and the fields
+ * stay editable for the coach to fill in. A failed lookup never throws:
+ * the caller falls back to the URL-derived defaults.
+ */
+async function suggestLibraryFiling(rawUrl: string): Promise<{
+  name: string
+  keywords: string[]
+  postedBy: string | null
+  source: 'oembed' | 'resolved' | 'url'
+}> {
+  const url = (rawUrl ?? '').trim()
+  if (!/^https?:\/\//i.test(url)) return { name: '', keywords: [], postedBy: null, source: 'url' }
+  // YouTube: public oEmbed returns the title and author with no key.
+  if (youtubeVideoId(url)) {
+    try {
+      const res = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+        { signal: AbortSignal.timeout(6000) },
+      )
+      if (res.ok) {
+        const data = (await res.json()) as { title?: string; author_url?: string; author_name?: string }
+        const handle = normalizeSocialHandle(
+          data.author_url?.match(/youtube\.com\/@([A-Za-z0-9._-]+)/i)?.[1] ?? data.author_name ?? null,
+        )
+        const title = typeof data.title === 'string' ? data.title.trim().slice(0, 120) : ''
+        if (title) {
+          return { name: title, keywords: titleTagWords(title, handle), postedBy: handle, source: 'oembed' }
+        }
+        if (handle) {
+          return { name: `@${handle}`, keywords: [handle.toLowerCase()], postedBy: handle, source: 'oembed' }
+        }
+      }
+    } catch {
+      /* fall through to the URL-derived fallback */
+    }
+  }
+  const fromUrl = postedByFromUrl(url)
+  let postedBy = fromUrl
+  if (!postedBy) {
+    try {
+      postedBy = await Promise.race([
+        lookupPostedBy(url),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      ])
+    } catch {
+      postedBy = null
+    }
+  }
+  return {
+    name: fallbackFilingName(url, postedBy),
+    keywords: postedBy ? [postedBy.toLowerCase()] : [],
+    postedBy,
+    source: fromUrl ? 'url' : postedBy ? 'resolved' : 'url',
+  }
 }
 
 /** Returns true when this request is a Shape Lab API call (response already written). */
@@ -2220,6 +2324,14 @@ export async function handleShapeLabApi(
       return true
     }
     sendJson(res, 405, { error: 'Use GET, POST, or DELETE' })
+    return true
+  }
+  if (path === '/api/library/suggest') {
+    if (req.method !== 'GET') {
+      sendJson(res, 405, { error: 'Use GET' })
+      return true
+    }
+    sendJson(res, 200, await suggestLibraryFiling(url.searchParams.get('url') ?? ''))
     return true
   }
   if (path === '/api/library') {
