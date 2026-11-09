@@ -360,33 +360,37 @@ export function LessonPlanCard({
           <span className="min-w-0 truncate text-sm text-[var(--text)]">
             {formatTime(event.startAt)}
             {duration ? ` · ${duration}` : ''} · {label}
-            {plan.tasks.length > 0 && (
-              <span className="ml-2 text-xs text-[var(--muted)]">
-                {doneCount}/{plan.tasks.length} done
-              </span>
-            )}
           </span>
           <span className="shrink-0 text-xs text-[var(--muted)]">{open ? '▾' : '▸'}</span>
         </button>
-        {onChangeAthlete && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onChangeAthlete()
-            }}
-            className="shrink-0 rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs font-semibold text-[var(--text)]"
-            title="Change which athletes this lesson is linked to"
-          >
-            {people.length > 0 ? 'Change' : 'Select'}
-          </button>
-        )}
-        {onChangeType && (
-          <span onClick={(e) => e.stopPropagation()}>
-            <EventTypePicker value={event.eventType ?? null} onChange={onChangeType} />
-          </span>
-        )}
       </div>
+      {(onChangeAthlete || onChangeType) && (
+        <div className="mt-1.5 flex items-center justify-end gap-2">
+          {plan.tasks.length > 0 && (
+            <span className="mr-auto text-xs text-[var(--muted)]">
+              {doneCount}/{plan.tasks.length} done
+            </span>
+          )}
+          {onChangeAthlete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onChangeAthlete()
+              }}
+              className="shrink-0 rounded-md border border-[var(--panel-border)] px-2 py-1 text-xs font-semibold text-[var(--text)]"
+              title="Change which athletes this lesson is linked to"
+            >
+              {people.length > 0 ? 'Change' : 'Select'}
+            </button>
+          )}
+          {onChangeType && (
+            <span onClick={(e) => e.stopPropagation()}>
+              <EventTypePicker value={event.eventType ?? null} onChange={onChangeType} />
+            </span>
+          )}
+        </div>
+      )}
       {open && <div className="mt-2 min-w-0 border-t border-white/10 pt-2">{body}</div>}
     </div>
   )
