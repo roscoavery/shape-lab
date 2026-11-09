@@ -590,6 +590,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Bounce backhandspring, the shapes, angles, and timing of the round off back handspring connection.',
       creator: 'coachwithpatience',
     },
+    {
+      who: 'Kyoko Negishi',
+      url: 'https://www.instagram.com/p/DfheffZmqGm/',
+      creator: 'kyoko_negishi',
+    },
   ],
   'ro-bhs-series': [
     {
