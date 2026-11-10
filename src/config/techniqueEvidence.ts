@@ -1391,6 +1391,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DfC_42rhpOY/',
       creator: 'anastaziahartsell.cheer',
     },
+    {
+      who: 'Kaden Brown',
+      url: 'https://www.instagram.com/reel/DfMrn-ZzCwd/',
+      creator: 'kadenmusprime',
+    },
   ],
   'miller': [
     {
