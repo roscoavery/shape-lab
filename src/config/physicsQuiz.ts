@@ -18,6 +18,15 @@ export type PhysicsQuizItem = {
   explain: string
   photoUrl?: string | null
   stillId?: string | null
+  /** Second still for side-by-side comparison questions. */
+  photoUrl2?: string | null
+  stillId2?: string | null
+  /**
+   * Pick-all-that-fit questions: the athlete must pick exactly this set.
+   * When set, answerId is the first correct choice (kept for callers that
+   * only read a single answer) and grading uses this set instead.
+   */
+  answerIds?: string[]
 }
 
 export const PHYSICS_QUIZ_BANK: PhysicsQuizItem[] = [

@@ -1,226 +1,424 @@
 /**
- * Shape test 2 — harder than “name this still.”
- * Mostly a shown picture: close lookalikes, or one detail on that still.
+ * Shape test 2 — rebuilt from Ryan's approved rework draft (build 1237).
+ * The old bank (lookalike job descriptions + fault details) is gone entirely.
+ * Every question here does one of the jobs Ryan named: tell two shapes apart,
+ * pick which shape a moment calls for, sort shapes into families, or spot the
+ * same shape turned a different way. Wording is the draft's wording.
+ *
+ * Comparison questions carry two stills, shown side by side with the shape
+ * names as choices. Family-sorting questions are pick-all-that-fit
+ * (answerIds). The side plank vs side support comparison is deliberately NOT
+ * in this bank: the draft flags it "draft answer only" and it ships only with
+ * Ryan's words for the tell, which he has not given.
  */
 
-import { SHAPE_BODY_QUIZ_BANK } from '../config/shapeBodyQuiz'
-import { getShape } from '../config/shapes'
-import { samePositionDisplayName } from './educationCopy'
 import { pickReferencePhoto } from './shippedRefs'
-import { buildFrom, type StudyQuestion } from './studyQuiz'
-import type { ReferencePhoto, ShapeDef } from '../types'
+import type { StudyQuestion } from './studyQuiz'
+import type { ReferencePhoto } from '../types'
 
-const HARD_GROUPS: string[][] = [
-  ['lunge_start', 'lunge_land', 'mountain_climber'],
-  ['hollow_arms_down', 'hollow_arms_up'],
-  ['candlestick', 'tucked_candle'],
-  ['seated_pike', 'pike_open_shoulders'],
-  ['handstand', 'wall_handstand'],
-  ['arch', 'superman'],
-  ['zombie', 'stand_clean'],
-  ['tuck', 'tuck_open_shoulders'],
-]
+type BankChoice = { id: string; label: string }
 
-type DetailAsk = {
-  shapeId: string
+type BankEntry = {
+  id: string
+  topic: string
   prompt: string
-  choices: { id: string; label: string }[]
+  choices: BankChoice[]
+  /** Single-answer questions: the correct choice id. */
   answerId: string
+  /** Pick-all-that-fit questions: the exact correct set. */
+  answerIds?: string[]
   explain: string
+  /** Comparison questions: the two shape ids whose stills show side by side. */
+  stills?: [string, string]
 }
 
-const DETAILS: DetailAsk[] = [
+export const SHAPE_TWO_BANK: BankEntry[] = [
+  // 1. Mountain climber vs lunge
   {
-    shapeId: 'lunge_start',
-    prompt: 'This is a fall stance. If the back heel slaps flat too soon, what usually went wrong?',
+    id: 's2-t1-compare',
+    topic: 's2-mountain-climber',
+    prompt: 'Both stills show one foot in front of the other. Which still is the mountain climber?',
     choices: [
-      { id: 'a', label: 'They shortened the stance and stopped the fall early' },
-      { id: 'b', label: 'They pointed the front toes too hard' },
-      { id: 'c', label: 'They looked at the ceiling' },
-      { id: 'd', label: 'They used zombie arms' },
+      { id: 'mountain_climber', label: 'Mountain climber' },
+      { id: 'lunge_land', label: 'Lunge' },
     ],
-    answerId: 'a',
-    explain: 'The starting lunge is long and the back heel stays up. A flat heel means they already finished, too short, too soon.',
+    answerId: 'mountain_climber',
+    explain: 'Two bent knees and a rounded C upper body. The lunge keeps the back leg straight.',
+    stills: ['mountain_climber', 'lunge_land'],
   },
   {
-    shapeId: 'lunge_land',
-    prompt: 'A finish stance fails if the back knee softens. Why?',
+    id: 's2-t1-step',
+    topic: 's2-mountain-climber',
+    prompt:
+      'An athlete steps forward and the back knee bends while the upper body rounds into a C. What shape did they just make?',
     choices: [
-      { id: 'a', label: 'It turns the finish into a pass-through C' },
-      { id: 'b', label: 'The front heel has to lift' },
-      { id: 'c', label: 'The arms have to drop' },
-      { id: 'd', label: 'They cannot look at their hands' },
+      { id: 'a', label: 'A lunge' },
+      { id: 'b', label: 'A mountain climber' },
+      { id: 'c', label: 'A landing' },
+      { id: 'd', label: 'A lever' },
     ],
-    answerId: 'a',
-    explain: 'A landing lunge keeps a straight back leg. Bend that knee and you built a mountain climber, not a finish.',
+    answerId: 'b',
+    explain:
+      'A bent back knee plus a C upper body is the mountain climber, even if the athlete meant to lunge.',
   },
   {
-    shapeId: 'mountain_climber',
-    prompt: 'When is this shape allowed in tumbling?',
+    id: 's2-t1-pause',
+    topic: 's2-mountain-climber',
+    prompt: 'An athlete pauses in a mountain climber instead of passing through it. What can they do from there?',
     choices: [
-      { id: 'a', label: 'Only as a pass-through, never as the finish they hold' },
-      { id: 'b', label: 'As the finish of every cartwheel' },
-      { id: 'c', label: 'As the start of a back handspring' },
-      { id: 'd', label: 'Whenever they want a rest' },
+      { id: 'a', label: 'Start a handstand, a cartwheel, a round off, or other skills' },
+      { id: 'b', label: 'Nothing, it is pass through only' },
+      { id: 'c', label: 'Only finish a skill in it' },
+      { id: 'd', label: 'Only roll out of it' },
     ],
     answerId: 'a',
-    explain: 'Two bent knees and a C is travel. Finishes live in a split stance or a stand.',
+    explain:
+      'It is commonly meant to be used as a pass through, but it is not pass through only. Ryan teaches athletes to pause in the shape and to start a handstand, a cartwheel, or a round off from that shape, and it is not limited to those.',
+  },
+  // 2. Starting lunge vs landing lunge
+  {
+    id: 's2-t2-compare',
+    topic: 's2-lunges',
+    prompt: 'Both stills are lunges. Which one is the starting lunge?',
+    choices: [
+      { id: 'lunge_start', label: 'Starting lunge' },
+      { id: 'lunge_land', label: 'Landing lunge' },
+    ],
+    answerId: 'lunge_start',
+    explain: 'Look at the back heel. Up means start. Flat means landing. The starting stance is also longer.',
+    stills: ['lunge_start', 'lunge_land'],
   },
   {
-    shapeId: 'hollow_arms_down',
-    prompt: 'If the low back peels off the floor here, the first fix is:',
+    id: 's2-t2-heel',
+    topic: 's2-lunges',
+    prompt: 'Which lunge has the back heel down?',
     choices: [
-      { id: 'a', label: 'Posterior tilt, ribs down, belt buckle toward the nose' },
-      { id: 'b', label: 'Reach the arms higher' },
-      { id: 'c', label: 'Lift the chin and look at the toes' },
-      { id: 'd', label: 'Bend the knees into a tuck' },
+      { id: 'lunge_start', label: 'Starting lunge' },
+      { id: 'lunge_land', label: 'Landing lunge' },
     ],
-    answerId: 'a',
-    explain: 'Hollow is a trunk job first. Arms are a lever. If the back leaves the floor, shorten the lever and find the tilt before you add time.',
+    answerId: 'lunge_land',
+    explain: 'Back heel flat.',
   },
   {
-    shapeId: 'hollow_arms_up',
-    prompt: 'Same trunk job as the short-lever hollow. What usually fails first when the lever gets longer?',
+    id: 's2-t2-finish',
+    topic: 's2-lunges',
+    prompt: 'A cartwheel finishes. Which finish is usual for it?',
     choices: [
-      { id: 'a', label: 'The ribs pop and the low back leaves the floor' },
-      { id: 'b', label: 'The toes stop pointing' },
-      { id: 'c', label: 'They look at the ceiling' },
-      { id: 'd', label: 'The stance gets shorter' },
+      { id: 'a', label: 'A landing lunge or a zombie' },
+      { id: 'b', label: 'A mountain climber' },
+      { id: 'c', label: 'A C shape' },
+      { id: 'd', label: 'A lightning bolt' },
     ],
     answerId: 'a',
-    explain: 'Arms-up hollow keeps the same posterior tilt. A longer lever just makes the tilt harder to hold.',
+    explain:
+      'A handstand or a cartwheel usually finishes in a landing lunge or a zombie. That does not mean every skill finishes in one of those. Other skills finish in other positions.',
+  },
+  // 3. C shape vs mountain climber
+  {
+    id: 's2-t3-compare',
+    topic: 's2-c-shape',
+    prompt: 'Both stills show a rounded upper body. Which still is the C shape?',
+    choices: [
+      { id: 'c_shape', label: 'C shape' },
+      { id: 'mountain_climber', label: 'Mountain climber' },
+    ],
+    answerId: 'c_shape',
+    explain:
+      'The C shape is a squat with hips under and feet together, no step. The mountain climber has taken a step forward out of it.',
+    stills: ['c_shape', 'mountain_climber'],
   },
   {
-    shapeId: 'superman',
-    prompt: 'This hold is the opposite of a hollow. What job are the hips doing?',
+    id: 's2-t3-step',
+    topic: 's2-c-shape',
+    prompt: 'What turns a C shape into a mountain climber?',
     choices: [
-      { id: 'a', label: 'Stay long and lifted' },
-      { id: 'b', label: 'Posterior tilt like a hollow' },
-      { id: 'c', label: 'Stack over the shoulders' },
-      { id: 'd', label: 'Finish a cartwheel' },
+      { id: 'a', label: 'Straightening the back leg' },
+      { id: 'b', label: 'One medium step forward' },
+      { id: 'c', label: 'Putting the hands on the floor' },
+      { id: 'd', label: 'Opening the shoulders' },
     ],
-    answerId: 'a',
-    explain: 'Superman is a long prone hold. A tumbling arch is a different shape and a different relationship to the floor.',
+    answerId: 'b',
+    explain: 'That is the app wording for what a mountain climber is.',
+  },
+  // 4. Tuck shape vs tucked candle
+  {
+    id: 's2-t4-compare',
+    topic: 's2-tuck',
+    prompt: 'Both stills show a tucked shape. Which one is the tucked candle?',
+    choices: [
+      { id: 'tuck_open_shoulders', label: 'Tuck' },
+      { id: 'tucked_candle', label: 'Tucked candle' },
+    ],
+    answerId: 'tucked_candle',
+    explain:
+      'In the candle the athlete has rolled back and the weight sits on the shoulders and arms. In the tuck the athlete is still sitting up.',
+    stills: ['tuck_open_shoulders', 'tucked_candle'],
   },
   {
-    shapeId: 'lunge_start',
-    prompt: 'This stance is the fall. What happens if they stand it up like a finish?',
+    id: 's2-t4-same',
+    topic: 's2-tuck',
+    prompt: 'What is the same in a tuck and a tucked candle?',
     choices: [
-      { id: 'a', label: 'They cut the travel short and lose the pass' },
-      { id: 'b', label: 'The front heel has to lift' },
-      { id: 'c', label: 'The arms have to drop' },
-      { id: 'd', label: 'They cannot look at their hands' },
+      { id: 'a', label: 'The knees are bent and pulled in the same way' },
+      { id: 'b', label: 'The legs are straight in both' },
+      { id: 'c', label: 'The weight is on the shoulders in both' },
+      { id: 'd', label: 'The arms point at the floor in both' },
     ],
     answerId: 'a',
-    explain: 'Starting lunge is the longer fall from passé. Standing it up early turns the fall into a stuck finish.',
+    explain: 'One shape, two places. That idea comes back in topic 8.',
   },
   {
-    shapeId: 'lunge_land',
-    prompt: 'This is the stuck finish. What would turn it back into travel?',
+    id: 's2-t4-drill',
+    topic: 's2-tuck',
+    prompt: 'A drill has an athlete roll back and hold the tuck balanced on their shoulders. What shape are they holding?',
     choices: [
-      { id: 'a', label: 'Soften the back knee into a C' },
-      { id: 'b', label: 'Point the front toes harder' },
-      { id: 'c', label: 'Cover the ears' },
-      { id: 'd', label: 'Look at the hands' },
+      { id: 'a', label: 'Seated tuck' },
+      { id: 'b', label: 'Tucked candle' },
+      { id: 'c', label: 'Candlestick' },
+      { id: 'd', label: 'Pike' },
+    ],
+    answerId: 'b',
+    explain:
+      'The app names the tucked candle as the shape used to teach forward and backward rolls and a lot of back tuck drills.',
+  },
+  // 5. When certain shapes might be used
+  {
+    id: 's2-t5-roundoff',
+    topic: 's2-when-used',
+    prompt:
+      'An athlete lands a round off and needs to get the chest up and stand out of it. Which shape is that landing?',
+    choices: [
+      { id: 'a', label: 'Zombie' },
+      { id: 'b', label: 'Mountain climber' },
+      { id: 'c', label: 'Lightning bolt' },
+      { id: 'd', label: 'C shape' },
     ],
     answerId: 'a',
-    explain: 'A landing lunge keeps a straight back leg. Bend that knee and you built a mountain climber, not a finish.',
+    explain:
+      'The app names zombie as the landing for cartwheel step ins, round offs, and handsprings, and says it helps get the chest up out of a round off to a stand.',
   },
   {
-    shapeId: 'candlestick',
-    prompt: 'This inversion is a stack, not a sit-up. What job keeps it a candle?',
+    id: 's2-t5-bhs',
+    topic: 's2-when-used',
+    prompt:
+      'An athlete is connecting into a back handspring and dips into a bend with a rounded torso and arms reaching forward. Which shape is that?',
     choices: [
-      { id: 'a', label: 'Hips over shoulders, legs long, hold the line' },
-      { id: 'b', label: 'Pull the knees in to rest' },
-      { id: 'c', label: 'Roll the belly toward the floor' },
-      { id: 'd', label: 'Turn it into a short split stance' },
+      { id: 'a', label: 'Landing lunge' },
+      { id: 'b', label: 'C shape' },
+      { id: 'c', label: 'Front support' },
+      { id: 'd', label: 'Side plank' },
     ],
-    answerId: 'a',
-    explain: 'Candlestick is a long inverted stack. Tucking the knees changes the job to tucked candle.',
+    answerId: 'b',
+    explain: 'The app says the C shape is used to connect into a back handspring.',
+  },
+  // 6. Lightning bolt vs C shape
+  {
+    id: 's2-t6-compare',
+    topic: 's2-lightning-bolt',
+    prompt: 'Both stills show bent knees and a chest leaning forward. Which still is the lightning bolt?',
+    choices: [
+      { id: 'gym_lightning_bolt', label: 'Lightning bolt' },
+      { id: 'c_shape', label: 'C shape' },
+    ],
+    answerId: 'gym_lightning_bolt',
+    explain:
+      'In the lightning bolt the line from the hips to the hands stays unbroken. In the C shape the torso rounds into a hollow and the arms reach forward out of a squat.',
+    stills: ['gym_lightning_bolt', 'c_shape'],
   },
   {
-    shapeId: 'tucked_candle',
-    prompt: 'Same stack as a long candle. Why would you shorten the legs?',
+    id: 's2-t6-use',
+    topic: 's2-lightning-bolt',
+    prompt: 'What is lightning bolt used for?',
     choices: [
-      { id: 'a', label: 'Cut the lever while the hips still sit over the shoulders' },
-      { id: 'b', label: 'Drop the arms to the sides' },
-      { id: 'c', label: 'Roll onto the belly' },
-      { id: 'd', label: 'Turn the stance into a lunge' },
+      { id: 'a', label: 'Landing a round off' },
+      { id: 'b', label: 'An introduction to breaking down a back handspring' },
+      { id: 'c', label: 'Finishing a cartwheel' },
+      { id: 'd', label: 'A conditioning hold' },
     ],
-    answerId: 'a',
-    explain: 'Tucked candle keeps the shoulder stack and shortens the legs so they can find the inversion first.',
+    answerId: 'b',
+    explain:
+      'Useful for the intro to back handspring deconstruction, and not a good position to land a round off.',
+  },
+  // 7. Plank vs support (side plank vs side support omitted: the draft flags it
+  // draft-only and it ships only with Ryan's words for the tell)
+  {
+    id: 's2-t7-compare',
+    topic: 's2-plank-support',
+    prompt: 'Both stills face the floor in a straight line. Which still is the front plank?',
+    choices: [
+      { id: 'front_plank', label: 'Front plank' },
+      { id: 'gym_front_support', label: 'Front support' },
+    ],
+    answerId: 'front_plank',
+    explain:
+      'The plank rests on the forearms with the elbows under the shoulders. The support is up on the hands with straight arms.',
+    stills: ['front_plank', 'gym_front_support'],
   },
   {
-    shapeId: 'zombie',
-    prompt: 'This is a standing hollow. What job are the arms doing?',
+    id: 's2-t7-difference',
+    topic: 's2-plank-support',
+    prompt: 'What is the difference between a front plank and a front support?',
     choices: [
-      { id: 'a', label: 'Cover the ears, ribs in, eyes through the hands' },
-      { id: 'b', label: 'Open a high V and lift the chest' },
-      { id: 'c', label: 'Rest by the sides so the neck can look up' },
-      { id: 'd', label: 'Reach a T so the shoulders can drop' },
+      { id: 'a', label: 'The plank is on the forearms and the support is on the hands' },
+      { id: 'b', label: 'The plank has bent knees and the support has straight knees' },
+      { id: 'c', label: 'The plank faces up and the support faces down' },
+      { id: 'd', label: 'There is no difference' },
     ],
     answerId: 'a',
-    explain: 'Zombie is a standing hollow. Shoulders shrugged, arms covering the ears, eyes toward where they came from.',
+    explain: 'Both hold a straight line from head to heels. The base is what changes.',
+  },
+  // 8. Same shape, different orientation
+  {
+    id: 's2-t8-hollow-line',
+    topic: 's2-same-shape',
+    prompt: 'Front support, zombie, and candlestick are the same shape three ways. What stays the same in all three?',
+    choices: [
+      { id: 'a', label: 'A hollow straight line with the ribs in' },
+      { id: 'b', label: 'Bent knees pulled in tight' },
+      { id: 'c', label: 'An arched back with the hips pushed up' },
+      { id: 'd', label: 'One foot in front of the other' },
+    ],
+    answerId: 'a',
+    explain: 'Same idea as candlestick and front support, just standing upright.',
   },
   {
-    shapeId: 'seated_pike',
-    prompt: 'This is a seated hollow. What fails the pike first?',
+    id: 's2-t8-turn',
+    topic: 's2-same-shape',
+    prompt:
+      'An athlete holds a hollow line standing up with arms reaching forward. Turn that same shape upside down onto the shoulders and what is it?',
     choices: [
-      { id: 'a', label: 'Soft knees or a popped chest' },
-      { id: 'b', label: 'Arms covering the ears' },
-      { id: 'c', label: 'Pointed toes' },
-      { id: 'd', label: 'Looking at the hands' },
+      { id: 'a', label: 'Candlestick' },
+      { id: 'b', label: 'Mountain climber' },
+      { id: 'c', label: 'Long bridge' },
+      { id: 'd', label: 'Tucked candle' },
     ],
     answerId: 'a',
-    explain: 'Pike with zombie arms: long legs, upright hollow chest. Soft knees or an open chest dump the hollow.',
+    explain: 'Standing it is a zombie. On the hands it is a front support. On the shoulders it is a candlestick.',
   },
   {
-    shapeId: 'handstand',
-    prompt: 'This inversion is a stack. What usually makes it a banana?',
+    id: 's2-t8-tuck-family',
+    topic: 's2-same-shape',
+    prompt: 'Tuck, tucked candle, and mad cat are the same tuck family. What do all three share?',
     choices: [
-      { id: 'a', label: 'Ribs and butt leave the line' },
-      { id: 'b', label: 'The toes stay pointed' },
-      { id: 'c', label: 'The ears stay covered' },
-      { id: 'd', label: 'The shoulders stay shrugged' },
+      { id: 'a', label: 'Knees bent and pulled in with a rounded back' },
+      { id: 'b', label: 'Straight legs and open hips' },
+      { id: 'c', label: 'A straight line from hands to toes' },
+      { id: 'd', label: 'Arms pressed overhead' },
     ],
     answerId: 'a',
-    explain: 'The still is a stacked handstand. Banana is ribs and hips leaving the line, not a missing pointed toe.',
+    explain:
+      'Seated it is a tuck. Rolled back onto the shoulders it is a tucked candle. On hands and knees with the spine rounded it is a mad cat.',
   },
   {
-    shapeId: 'passe',
-    prompt: 'This is the pull before the fall. What job is the standing leg doing?',
+    id: 's2-t8-ftos',
+    topic: 's2-same-shape',
+    prompt: 'Feet together open shoulders, stood upside down on the hands, is what shape?',
     choices: [
-      { id: 'a', label: 'Stay straight while the other knee comes up' },
-      { id: 'b', label: 'Bend into a C so they can travel' },
-      { id: 'c', label: 'Flatten the back heel like a finish' },
-      { id: 'd', label: 'Hollow on the floor' },
+      { id: 'handstand', label: 'Handstand' },
+      { id: 'wall_sit', label: 'Wall sit' },
+      { id: 'gym_front_support', label: 'Front support' },
+      { id: 'lever', label: 'Lever' },
     ],
-    answerId: 'a',
-    explain: 'Passé: pull the knee up, keep the stance leg straight, then fall into the longer starting lunge.',
+    answerId: 'handstand',
+    explain:
+      'Both are one long straight line with ribs in and open shoulders. Standing, the line runs from feet to hands overhead. In a handstand the same line runs from hands to toes.',
+    stills: ['feet_together_open_shoulders', 'handstand'],
   },
   {
-    shapeId: 'arch',
-    prompt: 'This is a tumbling C on the belly. What job are the hips doing that Superman does not?',
+    id: 's2-t8-ftos-same',
+    topic: 's2-same-shape',
+    prompt: 'What stays the same between feet together open shoulders and a handstand?',
     choices: [
-      { id: 'a', label: 'Lift and fold so the back can bend' },
-      { id: 'b', label: 'Stay long and quiet' },
-      { id: 'c', label: 'Stack over the shoulders' },
-      { id: 'd', label: 'Finish a split stance' },
+      { id: 'a', label: 'One long straight line, ribs in, open shoulders, straight knees' },
+      { id: 'b', label: 'The hands are on the floor in both' },
+      { id: 'c', label: 'The knees bend in both' },
+      { id: 'd', label: 'The back rounds in both' },
     ],
     answerId: 'a',
-    explain: 'Arch is a prone C. Superman stays long. If the hips do not lift, you built the wrong hold.',
+    explain: 'Only the base changes. Feet on the floor in one, hands on the floor in the other.',
   },
   {
-    shapeId: 'pike_open_shoulders',
-    prompt: 'Same seated pike, different arm job. What are the shoulders doing here?',
+    id: 's2-t8-lever',
+    topic: 's2-same-shape',
+    prompt: 'Both stills make an L. Which still is the L handstand?',
     choices: [
-      { id: 'a', label: 'Reaching the chest open instead of covering the ears' },
-      { id: 'b', label: 'Shrugging into a standing hollow' },
-      { id: 'c', label: 'Holding a wall banana' },
-      { id: 'd', label: 'Resting by the hips' },
+      { id: 'lever', label: 'Lever' },
+      { id: 'l_handstand', label: 'L handstand' },
+    ],
+    answerId: 'l_handstand',
+    explain:
+      'The L handstand is upside down on the hands, with one line vertical through the arms and torso and the legs near horizontal. The lever is standing on one foot, with the chest near parallel and the back leg lifted.',
+    stills: ['lever', 'l_handstand'],
+  },
+  {
+    id: 's2-t8-lever-same',
+    topic: 's2-same-shape',
+    prompt: 'A lever and an L handstand are very similar positions with a different orientation. What stays the same in both?',
+    choices: [
+      { id: 'a', label: 'An L, with one line near vertical and one line near horizontal' },
+      { id: 'b', label: 'Knees bent and pulled in tight in both' },
+      { id: 'c', label: 'A rounded hollow back in both' },
+      { id: 'd', label: 'Both feet on the floor in both' },
     ],
     answerId: 'a',
-    explain: 'Open-shoulder pike keeps the long legs. The chest reaches open instead of zombie-covering the ears.',
+    explain:
+      'In a lever the athlete stands on the front foot with a slight bend in that knee, the chest tilts near parallel, and the back leg lifts so the line runs from the back foot toward the hands. Turn that L onto the hands and it is an L handstand, arms and torso vertical with the legs near horizontal. Only the base and the orientation change.',
+  },
+  // 9. Hollow variations vs arch variations
+  {
+    id: 's2-t9-hollow',
+    topic: 's2-families',
+    prompt: 'Which of these shapes are hollow variations? Pick all that fit.',
+    choices: [
+      { id: 'hollow_arms_down', label: 'Hollow, arms down' },
+      { id: 'zombie', label: 'Zombie' },
+      { id: 'superman', label: 'Superman' },
+      { id: 'c_shape', label: 'C shape' },
+    ],
+    answerId: 'hollow_arms_down',
+    answerIds: ['hollow_arms_down', 'zombie', 'c_shape'],
+    explain:
+      'The app calls zombie a standing hollow and the C shape a squat with a hollow rounded torso. Superman lifts into an arch, so it does not fit.',
+  },
+  {
+    id: 's2-t9-arch',
+    topic: 's2-families',
+    prompt: 'Which of these shapes are arch variations? Pick all that fit.',
+    choices: [
+      { id: 'arch', label: 'Tight arch' },
+      { id: 'hollow_arms_up', label: 'Hollow, arms up' },
+      { id: 'rainbow_bridge', label: 'Rainbow bridge' },
+      { id: 'long_bridge', label: 'Long bridge' },
+    ],
+    answerId: 'arch',
+    answerIds: ['arch', 'rainbow_bridge', 'long_bridge'],
+    explain:
+      'The app says the rainbow bridge spreads the arch through every joint, and the long bridge is an arched shape whose less arched version is the flight to hands shape in a back handspring. Hollow arms up is the same hollow as arms down with a longer lever.',
+  },
+  {
+    id: 's2-t9-on-back',
+    topic: 's2-families',
+    prompt:
+      'An athlete is on their back with the lower back pressed to the floor and the feet lifted. Which family is that shape in?',
+    choices: [
+      { id: 'a', label: 'Hollow family' },
+      { id: 'b', label: 'Arch family' },
+    ],
+    answerId: 'a',
+    explain:
+      'That is the hollow hold from its app description, lower back compressed to the floor, and the app names it a tumbling staple for round offs, back handsprings, whips, layouts, and fulls.',
+  },
+  {
+    id: 's2-t9-face-down',
+    topic: 's2-families',
+    prompt:
+      'An athlete is face down with the chin up, straight arms behind the ears, and straight knees lifted off the ground. Which family is that shape in?',
+    choices: [
+      { id: 'a', label: 'Hollow family' },
+      { id: 'b', label: 'Arch family' },
+    ],
+    answerId: 'b',
+    explain: 'That is the superman, a prone arch hold. Same floor, opposite bend from the hollow.',
   },
 ]
 
@@ -233,86 +431,62 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function labelFor(id: string): string {
-  const cues: Record<string, string> = {
-    lunge_start: 'The fall, longer, still traveling',
-    lunge_land: 'The finish, shorter, they stuck it',
-    mountain_climber: 'Only a pass-through, never a hold',
-    hollow_arms_down: 'Short lever hollow, easier to keep the back down',
-    hollow_arms_up: 'Long lever hollow, same trunk, harder hold',
-    candlestick: 'Long inverted stack on the shoulders',
-    tucked_candle: 'Same stack, legs shortened',
-    seated_pike: 'Seated hollow with a closed pike',
-    pike_open_shoulders: 'Seated pike reaching the chest open',
-    handstand: 'Free stacked inversion',
-    wall_handstand: 'Inversion that uses a wall, banana is the usual miss',
-    arch: 'Prone C, hips lift, back bends',
-    superman: 'Prone long, hips stay long, not a tumbling arch',
-    zombie: 'Standing hollow',
-    stand_clean: 'Quiet stand, arms pinned',
-    tuck: 'Closed tuck, rounded',
-    tuck_open_shoulders: 'Tuck with the chest open',
-  }
-  return cues[id] ?? samePositionDisplayName(id)
+/**
+ * Same position under a gym-library id: the L handstand still ships as
+ * gym_l_handstand, so the scored l_handstand falls back to it.
+ */
+const STILL_ALIASES: Record<string, string[]> = {
+  l_handstand: ['gym_l_handstand'],
 }
 
 function photoFor(photos: ReferencePhoto[], shapeId: string): ReferencePhoto | null {
-  return pickReferencePhoto(photos, shapeId, null)
-}
-
-function lookalikeQuestion(
-  photos: ReferencePhoto[],
-  group: string[],
-  index: number,
-): StudyQuestion | null {
-  const withStill = group
-    .map((id) => ({ id, shape: getShape(id), photo: photoFor(photos, id) }))
-    .filter((row): row is { id: string; shape: ShapeDef; photo: ReferencePhoto } =>
-      Boolean(row.shape && row.photo?.dataUrl),
-    )
-  if (withStill.length < 2) return null
-  const pick = withStill[index % withStill.length]!
-  const options = shuffle(withStill.map((row) => row.id)).slice(0, 4)
-  if (!options.includes(pick.id)) options[0] = pick.id
-  return {
-    id: `s2_id_${pick.id}_${index}`,
-    lessonId: pick.id,
-    prompt: 'These shapes get mixed up. What job is this still doing?',
-    photoUrl: pick.photo.dataUrl,
-    stillId: pick.photo.id,
-    choices: shuffle(options).map((id) => ({ id, label: labelFor(id) })),
-    answerId: pick.id,
-    explain: `${labelFor(pick.id)}. Check heel, knees, and whether the back is a C or a long line.`,
+  const direct = pickReferencePhoto(photos, shapeId, null)
+  if (direct?.dataUrl) return direct
+  for (const alias of STILL_ALIASES[shapeId] ?? []) {
+    const p = pickReferencePhoto(photos, alias, null)
+    if (p?.dataUrl) return p
   }
+  return null
 }
 
-function detailQuestion(photos: ReferencePhoto[], ask: DetailAsk, index: number): StudyQuestion | null {
-  const photo = photoFor(photos, ask.shapeId)
-  if (!photo?.dataUrl) return null
+function buildQuestion(photos: ReferencePhoto[], entry: BankEntry): StudyQuestion | null {
+  let photoUrl: string | null = null
+  let stillId: string | null = null
+  let photoUrl2: string | null = null
+  let stillId2: string | null = null
+  if (entry.stills) {
+    // Vary which still sits on the left so the position cannot be memorized.
+    const [first, second] = shuffle(entry.stills)
+    const pa = photoFor(photos, first!)
+    const pb = photoFor(photos, second!)
+    // A comparison question without both stills is meaningless: skip it.
+    if (!pa?.dataUrl || !pb?.dataUrl) return null
+    photoUrl = pa.dataUrl
+    stillId = pa.id
+    photoUrl2 = pb.dataUrl
+    stillId2 = pb.id
+  }
   return {
-    id: `s2_dt_${ask.shapeId}_${index}`,
-    lessonId: ask.shapeId,
-    prompt: ask.prompt,
-    photoUrl: photo.dataUrl,
-    stillId: photo.id,
-    choices: shuffle(ask.choices),
-    answerId: ask.answerId,
-    explain: ask.explain,
+    id: entry.id,
+    lessonId: entry.topic,
+    prompt: entry.prompt,
+    choices: shuffle(entry.choices),
+    answerId: entry.answerId,
+    ...(entry.answerIds ? { answerIds: [...entry.answerIds] } : {}),
+    explain: entry.explain,
+    photoUrl,
+    stillId,
+    photoUrl2,
+    stillId2,
   }
 }
 
 export function buildShapeTwoQuiz(photos: ReferencePhoto[]): StudyQuestion[] {
-  const picture: StudyQuestion[] = []
-  HARD_GROUPS.forEach((group, i) => {
-    const q = lookalikeQuestion(photos, group, i)
-    if (q) picture.push(q)
-  })
-  shuffle(DETAILS).forEach((ask, i) => {
-    const q = detailQuestion(photos, ask, i)
-    if (q) picture.push(q)
-  })
-  const mixed = shuffle(picture).slice(0, 10)
-  if (mixed.length >= 8) return mixed
-  const text = buildFrom(SHAPE_BODY_QUIZ_BANK, 12 - mixed.length)
-  return shuffle([...mixed, ...text]).slice(0, 12)
+  const built: StudyQuestion[] = []
+  for (const entry of SHAPE_TWO_BANK) {
+    const q = buildQuestion(photos, entry)
+    if (q) built.push(q)
+  }
+  // Text questions always resolve, so the pool is never short: 10 at a time.
+  return shuffle(built).slice(0, 10)
 }

@@ -62,9 +62,9 @@ const SHOTS: Record<string, string> = {
   lunge_land:
     'SIDE. Landing lunge: back heel FLAT, shorter than a starting lunge, open shoulders, one line heel → hands. Same still as Lunge · open shoulders.',
   c_shape:
-    'SIDE. Tumbling C: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
+    'SIDE. C shape: squat, hollow chest, hips under, arms reaching forward (not a standing side-bend).',
   mountain_climber:
-    'SIDE. C plus one medium step (not as big as a lunge). Both knees bent. Upper body in the tumbling C. Arms reaching forward and out from the middle.',
+    'SIDE. C plus one medium step (not as big as a lunge). Both knees bent. Upper body in the C shape. Arms reaching forward and out from the middle.',
   hollow_arms_down:
     'SIDE. On the back. Start from a pike, inch back until the lower back is FLAT, arms by the sides, feet off the floor.',
   hollow_arms_up:

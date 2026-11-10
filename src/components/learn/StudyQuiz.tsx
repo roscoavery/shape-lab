@@ -14,6 +14,12 @@ type Props = {
   onExit: () => void
 }
 
+function sameSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const set = new Set(a)
+  return b.every((id) => set.has(id))
+}
+
 export function StudyQuiz({
   title,
   build,
@@ -30,16 +36,23 @@ export function StudyQuiz({
   const questions = useMemo(() => buildRef.current(), [seed])
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<string | null>(null)
-  const [pickedIds, setPickedIds] = useState<(string | null)[]>(() => questions.map(() => null))
+  const [pickedSet, setPickedSet] = useState<string[]>([])
+  const [checked, setChecked] = useState(false)
+  const [pickedIds, setPickedIds] = useState<(string | string[] | null)[]>(() =>
+    questions.map(() => null),
+  )
   const [done, setDone] = useState(false)
 
   const q = questions[index]
   const total = questions.length
+  const isMulti = Boolean(q?.answerIds?.length)
 
   const restart = () => {
     setSeed((n) => n + 1)
     setIndex(0)
     setPicked(null)
+    setPickedSet([])
+    setChecked(false)
     setPickedIds([])
     setDone(false)
   }
@@ -58,15 +71,36 @@ export function StudyQuiz({
   if (done) {
     const items = questions.map((question, i) => {
       const choice = pickedIds[i]
-      const correctChoice = question.choices.find((c) => c.id === question.answerId)
-      const pickedChoice = question.choices.find((c) => c.id === choice)
+      const multi = Boolean(question.answerIds?.length)
+      const correct = multi
+        ? sameSet(Array.isArray(choice) ? choice : [], question.answerIds ?? [])
+        : choice === question.answerId
+      const pickedChoiceIds = multi
+        ? Array.isArray(choice)
+          ? choice
+          : []
+        : typeof choice === 'string'
+          ? [choice]
+          : []
+      const pickedLabel =
+        pickedChoiceIds
+          .map((id) => question.choices.find((c) => c.id === id)?.label)
+          .filter((label): label is string => Boolean(label))
+          .join(', ') || '(no answer)'
+      const correctIds = multi ? (question.answerIds ?? []) : [question.answerId]
+      const correctLabel = correctIds
+        .map((id) => question.choices.find((c) => c.id === id)?.label)
+        .filter((label): label is string => Boolean(label))
+        .join(', ')
       return {
         prompt: question.prompt,
         photoUrl: question.photoUrl,
         stillId: question.stillId,
-        pickedLabel: pickedChoice?.label ?? '(no answer)',
-        correctLabel: correctChoice?.label ?? '',
-        correct: choice === question.answerId,
+        photoUrl2: question.photoUrl2,
+        stillId2: question.stillId2,
+        pickedLabel,
+        correctLabel,
+        correct,
         explain: question.explain,
       }
     })
@@ -87,9 +121,29 @@ export function StudyQuiz({
     )
   }
 
-  const locked = picked !== null
-  const correct = picked === q.answerId
+  const locked = isMulti ? checked : picked !== null
+  const correct = isMulti ? sameSet(pickedSet, q.answerIds ?? []) : picked === q.answerId
   const lesson = lessonTitle?.(q.lessonId)
+
+  const checkMulti = () => {
+    setChecked(true)
+    setPickedIds((prev) => {
+      const next = prev.length === total ? [...prev] : questions.map(() => null)
+      next[index] = [...pickedSet]
+      return next
+    })
+  }
+
+  const nextQuestion = () => {
+    if (index + 1 >= total) {
+      setDone(true)
+    } else {
+      setIndex((i) => i + 1)
+      setPicked(null)
+      setPickedSet([])
+      setChecked(false)
+    }
+  }
 
   return (
     <section className="rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] p-5">
@@ -104,7 +158,7 @@ export function StudyQuiz({
       </div>
 
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{q.prompt}</p>
-      {q.photoUrl && (
+      {q.photoUrl && !q.photoUrl2 && (
         <div className="mt-3 overflow-hidden rounded-lg bg-black">
           <CroppedStill
             src={q.photoUrl}
@@ -114,16 +168,48 @@ export function StudyQuiz({
           />
         </div>
       )}
+      {q.photoUrl && q.photoUrl2 && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="overflow-hidden rounded-lg bg-black">
+            <CroppedStill
+              src={q.photoUrl}
+              stillId={q.stillId}
+              alt=""
+              className="mx-auto max-h-72 w-full object-contain"
+            />
+          </div>
+          <div className="overflow-hidden rounded-lg bg-black">
+            <CroppedStill
+              src={q.photoUrl2}
+              stillId={q.stillId2}
+              alt=""
+              className="mx-auto max-h-72 w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+      {isMulti && !locked && (
+        <p className="mt-3 text-xs text-[var(--muted)]">
+          Tap every shape that fits, then check your answers.
+        </p>
+      )}
 
       <div className="mt-4 grid gap-2">
         {q.choices.map((c) => {
+          const inAnswer = q.answerIds?.includes(c.id) ?? c.id === q.answerId
+          const inPicked = isMulti ? pickedSet.includes(c.id) : picked === c.id
           let cls =
             'rounded-lg border border-[var(--panel-border)] px-3 py-2 text-left text-sm hover:bg-[#243040]'
+          if (isMulti && !locked && inPicked) {
+            cls =
+              'rounded-lg border border-[var(--accent)] bg-[#1a2636] px-3 py-2 text-left text-sm'
+          }
           if (locked) {
-            if (c.id === q.answerId)
+            if (inAnswer)
               cls =
                 'rounded-lg border border-[var(--good)] bg-[#102820] px-3 py-2 text-left text-sm text-[var(--good)]'
-            else if (c.id === picked)
+            else if (inPicked)
               cls =
                 'rounded-lg border border-[var(--bad)] bg-[#2a1518] px-3 py-2 text-left text-sm text-[var(--bad)]'
             else
@@ -137,6 +223,12 @@ export function StudyQuiz({
               disabled={locked}
               className={cls}
               onClick={() => {
+                if (isMulti) {
+                  setPickedSet((prev) =>
+                    prev.includes(c.id) ? prev.filter((id) => id !== c.id) : [...prev, c.id],
+                  )
+                  return
+                }
                 setPicked(c.id)
                 setPickedIds((prev) => {
                   const next = prev.length === total ? [...prev] : questions.map(() => null)
@@ -145,11 +237,25 @@ export function StudyQuiz({
                 })
               }}
             >
+              {isMulti && !locked && (inPicked ? '✓ ' : '')}
               {c.label}
             </button>
           )
         })}
       </div>
+
+      {isMulti && !locked && (
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            disabled={pickedSet.length === 0}
+            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)] disabled:opacity-50"
+            onClick={checkMulti}
+          >
+            Check answers
+          </button>
+        </div>
+      )}
 
       {locked && (
         <div className="mt-4 space-y-3">
@@ -159,7 +265,10 @@ export function StudyQuiz({
           {!correct && (
             <p className="rounded-lg border border-[var(--panel-border)] bg-[#152018] px-3 py-2 text-sm leading-relaxed text-[var(--muted)]">
               <span className="font-medium text-[var(--good)]">
-                {q.choices.find((c) => c.id === q.answerId)?.label}
+                {(isMulti ? (q.answerIds ?? []) : [q.answerId])
+                  .map((id) => q.choices.find((c) => c.id === id)?.label)
+                  .filter((label): label is string => Boolean(label))
+                  .join(', ')}
               </span>
               <span className="mt-1 block">{q.explain}</span>
             </p>
@@ -168,14 +277,7 @@ export function StudyQuiz({
             <button
               type="button"
               className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--on-accent)]"
-              onClick={() => {
-                if (index + 1 >= total) {
-                  setDone(true)
-                } else {
-                  setIndex((i) => i + 1)
-                  setPicked(null)
-                }
-              }}
+              onClick={nextQuestion}
             >
               {index + 1 >= total ? 'See score and misses' : 'Next'}
             </button>

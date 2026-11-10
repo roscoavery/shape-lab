@@ -9,6 +9,8 @@ export type QuizReviewItem = {
   prompt: string
   photoUrl?: string | null
   stillId?: string | null
+  photoUrl2?: string | null
+  stillId2?: string | null
   pickedLabel: string
   correctLabel: string
   correct: boolean
@@ -152,7 +154,7 @@ function ReviewCard({ item, index }: { item: QuizReviewItem; index: number }) {
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
         Miss {index}
       </p>
-      {item.photoUrl && (
+      {item.photoUrl && !item.photoUrl2 && (
         <div className="mt-2 overflow-hidden rounded-lg bg-[#0d1218]">
           <CroppedStill
             src={item.photoUrl}
@@ -160,6 +162,26 @@ function ReviewCard({ item, index }: { item: QuizReviewItem; index: number }) {
             alt=""
             className="max-h-48 w-full object-contain"
           />
+        </div>
+      )}
+      {item.photoUrl && item.photoUrl2 && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="overflow-hidden rounded-lg bg-[#0d1218]">
+            <CroppedStill
+              src={item.photoUrl}
+              stillId={item.stillId}
+              alt=""
+              className="max-h-48 w-full object-contain"
+            />
+          </div>
+          <div className="overflow-hidden rounded-lg bg-[#0d1218]">
+            <CroppedStill
+              src={item.photoUrl2}
+              stillId={item.stillId2}
+              alt=""
+              className="max-h-48 w-full object-contain"
+            />
+          </div>
         </div>
       )}
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">

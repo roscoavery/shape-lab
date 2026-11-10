@@ -54,7 +54,7 @@ export const SEQUENCES: SequenceDef[] = [
     id: 'mc_cartwheel_lever_lunge',
     name: 'Mountain Climber → Cartwheel → Landing lunge',
     description:
-      'Other usual cartwheel start: mountain climber (look ahead, not too far down). Finish in a landing lunge, never in the mountain climber. Cartwheel is not scored yet, the middle hold is the tumbling C.',
+      'Other usual cartwheel start: mountain climber (look ahead, not too far down). Finish in a landing lunge, never in the mountain climber. Cartwheel is not scored yet, the middle hold is the C shape.',
     steps: [
       { shapeId: 'mountain_climber', holdSeconds: 1.5 },
       { shapeId: 'c_shape', holdSeconds: 1.2 },

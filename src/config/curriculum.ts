@@ -294,7 +294,7 @@ export const CURRICULUM_TASKS: TaskDef[] = [
     id: 'task_c_shape',
     name: '12. C shape',
     description:
-      'Tumbling C: squat, hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring and to teach the round-off back handspring. Same C idea as mountain climber. You can pull a passé from here before a cartwheel or round-off. Back extension rolls often start from this shape.',
+      'C shape: squat, hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring and to teach the round-off back handspring. Same C idea as mountain climber. You can pull a passé from here before a cartwheel or round-off. Back extension rolls often start from this shape.',
     requiresTaskId: 'task_seq_ftos_passe_lunge_lever_hs_lunge_left',
     masterAfterCompletions: 2,
     steps: [{ shapeId: 'c_shape', ...HOLD, note: 'SIDE VIEW · squat C, not a standing side-bend' }],

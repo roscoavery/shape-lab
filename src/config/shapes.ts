@@ -988,9 +988,9 @@ export const SHAPES: ShapeDef[] = [
     id: 'mountain_climber',
     name: 'Mountain climber',
     description:
-      'A tumbling C plus one medium step forward, or a lunge with the back knee bent and a C upper body. Two bent knees. Reach from the middle out. Pass-through only; never a finish.',
+      'A C shape plus one medium step forward, or a lunge with the back knee bent and a C upper body. Two bent knees. Reach from the middle out. Pass-through only; never a finish.',
     bodyPosition:
-      'SIDE VIEW. Take a C shape and step one medium step forward. Or take a lunge, bend the back knee, and C-shape the upper half. Both knees BEND (two bent knees to generate speed and power into a kick and push). Upper body is the tumbling C: hips under, chest hollow, rounded back. Arms reach forward and out from the middle. Either leg forward. We never finish a skill here.',
+      'SIDE VIEW. Take a C shape and step one medium step forward. Or take a lunge, bend the back knee, and C-shape the upper half. Both knees BEND (two bent knees to generate speed and power into a kick and push). Upper body is the C shape: hips under, chest hollow, rounded back. Arms reach forward and out from the middle. Either leg forward. We never finish a skill here.',
     category: 'static',
     qualityThreshold: 60,
     cameraView: 'side',
@@ -3024,14 +3024,14 @@ export const SHAPES: ShapeDef[] = [
   },
 
   // ===========================================================================
-  // C SHAPE — tumbling C (back handspring / roundoff / mountain climber)
+  // C SHAPE — C shape (back handspring / roundoff / mountain climber)
   // SIDE view: squat, hollow chest, hips under, arms reaching forward.
   // ===========================================================================
   {
     id: 'c_shape',
     name: 'C shape',
     description:
-      'Tumbling C: squat with a hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring.',
+      'C shape: squat with a hollow rounded torso, hips under, arms reaching forward. Used to connect into a back handspring.',
     bodyPosition:
       'SIDE VIEW. Feet together (or close), flat on the floor. Knees bent in a partial squat. Hips tucked under. Chest hollow, shoulders rounded forward so the back makes a clear C from shoulders to tailbone. Arms reach straight forward and slightly up, elbows locked. Wrists can flex so palms face away. Head follows the curve, look toward the hands. This is not a standing side-bend.',
     category: 'static',
@@ -3265,6 +3265,69 @@ export const SHAPES: ShapeDef[] = [
         falloff: 0.2,
         weight: 4,
         feedbackHigh: 'Squeeze the feet together.',
+      },
+    ],
+  },
+
+  // ===========================================================================
+  // STICK POSITION — finish position. Not a landing lunge and not a zombie.
+  // Still is Ryan's own photo. Angle ranges borrow the C shape squat.
+  // ===========================================================================
+  {
+    id: 'stick_position',
+    name: 'Stick position',
+    description: 'Bent knees, hinged hips, arms forward.',
+    bodyPosition:
+      'SIDE VIEW. Feet together, flat on the floor. Knees bent. Hips hinged back, chest forward. Arms reach straight forward. Hold still, no steps.',
+    category: 'hold',
+    qualityThreshold: 60,
+    cameraView: 'side',
+    tips: [
+      'Bent knees.',
+      'Hinged hips.',
+      'Arms forward.',
+      'Hold still, no steps.',
+    ],
+    criteria: [
+      {
+        id: 'knees_bent',
+        label: 'Knees bent',
+        kind: 'joint_angle',
+        points: L_KNEE,
+        targetMin: 85,
+        targetMax: 130,
+        tolerance: 12,
+        falloff: 40,
+        weight: 30,
+        feedbackLow: 'Bend the knees.',
+        feedbackHigh: 'Come up a little, keep a bend, not a sit.',
+      },
+      {
+        id: 'hips_hinged',
+        label: 'Hips hinged',
+        kind: 'joint_angle',
+        points: [LM.LEFT_SHOULDER, LM.LEFT_HIP, LM.LEFT_KNEE],
+        targetMin: 70,
+        targetMax: 130,
+        tolerance: 12,
+        falloff: 40,
+        weight: 30,
+        feedbackLow: 'Hinge the hips back, chest forward.',
+        feedbackHigh: 'Keep the hinge, do not stand tall.',
+      },
+      {
+        id: 'arms_forward',
+        label: 'Arms reaching forward',
+        kind: 'segment_vs_horizontal',
+        segment: [LM.LEFT_SHOULDER, LM.LEFT_WRIST],
+        targetMin: 10,
+        targetMax: 50,
+        tolerance: 12,
+        falloff: 40,
+        weight: 30,
+        needsView: 'side',
+        feedbackLow: 'Lift the arms slightly, reach forward, not down.',
+        feedbackHigh: 'Reach forward, not up by the ears.',
       },
     ],
   },

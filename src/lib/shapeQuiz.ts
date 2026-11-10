@@ -93,7 +93,7 @@ const TOO_GENERIC = new Set(['hands', 'arch', 'c', 't', 'l'])
 
 /** Extra phrases that name the answer beyond the official card title. */
 const EXTRA_LEAKS: Record<string, string[]> = {
-  c_shape: ['C shape', 'tumbling C', 'C-shape'],
+  c_shape: ['C shape', 'C-shape'],
   mountain_climber: ['mountain climber'],
   arch: ['tight arch', 'arch (supine)', 'supine arch'],
   superman: ['Superman hold', 'prone Superman', 'Superman'],
