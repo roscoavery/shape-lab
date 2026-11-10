@@ -13,6 +13,7 @@ type Props = {
   stillId?: string | null
   alt?: string
   className?: string
+  loading?: 'lazy' | 'eager'
   onError?: () => void
 }
 
@@ -41,6 +42,7 @@ export function CroppedStill({
   stillId,
   alt = '',
   className = 'h-full w-full object-contain',
+  loading,
   onError,
 }: Props) {
   const { cropFor } = useStillCrop()
@@ -89,6 +91,7 @@ export function CroppedStill({
       src={clipped ?? src}
       alt={alt}
       className={className}
+      loading={loading}
       onError={onError}
       draggable={false}
     />

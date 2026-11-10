@@ -10,7 +10,7 @@ import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVide
 import { normalizeVideoUrl, postedByFromUrl, socialProfileUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
-import { shippedStillUrl, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
+import { makeShippedPhoto, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
 import { skillPhotosFor } from '../../config/skillPhotos'
 import {
   GUIDE_ORDER,
@@ -58,6 +58,7 @@ import { AddCardVideoModal } from './CardVideoManager'
 import { ProofFullscreenPlayer } from './ProofFullscreenPlayer'
 import { InlineVideo } from './InlineVideo'
 import { VariationCards } from './VariationCards'
+import { CroppedStill } from '../CroppedStill'
 import { markedFetch } from '../../lib/authSession'
 import { shareBaseUrl } from '../../lib/gymLink'
 import { useVideoAdjustmentsOptional } from '../../lib/videoAdjustments'
@@ -236,11 +237,11 @@ function ShapeStrip({ guideId }: { guideId: string }) {
   const items = refs
     .map((r) => {
       const def = getShape(r.shapeId)
-      const src = shippedStillUrl(r.shapeId)
-      if (!def || !src) return null
-      return { key: r.shapeId, name: def.name, desc: def.description?.trim() || '', src }
+      const photo = makeShippedPhoto(r.shapeId)
+      if (!def || !photo) return null
+      return { key: r.shapeId, name: def.name, desc: def.description?.trim() || '', src: photo.dataUrl, stillId: photo.id }
     })
-    .filter((x): x is { key: string; name: string; desc: string; src: string } => x !== null)
+    .filter((x): x is { key: string; name: string; desc: string; src: string; stillId: string } => x !== null)
   if (items.length === 0) return null
   return (
     <div>
@@ -250,7 +251,7 @@ function ShapeStrip({ guideId }: { guideId: string }) {
         {items.map((s) => (
           <div key={s.key} className="w-36 shrink-0">
             <div className="aspect-square overflow-hidden rounded-xl bg-black">
-              <img src={s.src} alt={s.name} className="h-full w-full object-cover" loading="lazy" />
+              <CroppedStill src={s.src} stillId={s.stillId} alt={s.name} className="h-full w-full object-cover" loading="lazy" />
             </div>
             <div className="mt-1 text-xs font-bold">{s.name}</div>
             {s.desc && <div className="text-[11px] opacity-70">{s.desc}</div>}
