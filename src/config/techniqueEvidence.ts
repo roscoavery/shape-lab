@@ -81,6 +81,7 @@ export const GUIDELESS_EVIDENCE_KEY: Record<string, string> = {
   skl_front_15: 'front-15',
   skl_whips: 'whips',
   skl_miller: 'miller',
+  skl_killer: 'killer',
 }
 
 /**
@@ -1390,6 +1391,18 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Jake Jarman',
       url: 'https://www.instagram.com/reel/DfXhUHvM_2i/',
       creator: 'gymgermanschool',
+    },
+    {
+      who: 'Vasco Peso',
+      url: 'https://www.instagram.com/reel/DfjufBZSv2c/',
+      creator: 'ethan_tumbler',
+    },
+  ],
+  'killer': [
+    {
+      who: 'Vasco Peso',
+      url: 'https://www.instagram.com/reel/DfjufBZSv2c/',
+      creator: 'ethan_tumbler',
     },
   ],
 }
