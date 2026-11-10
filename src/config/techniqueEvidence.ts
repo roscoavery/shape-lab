@@ -1060,6 +1060,12 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DalCqRAo8ig/',
       watchFor: 'Back walkover to handstand step-out, the line through the skill.',
     },
+    {
+      who: 'Amy Hartnell-Saunders',
+      url: 'https://www.instagram.com/reel/DfkgmZiqViJ/',
+      creator: 'coachamycontent',
+      watchFor: 'Never do back bends or walkovers down a wedge.',
+    },
   ],
   'cartwheel-step-in': [
     {
@@ -1403,6 +1409,14 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       who: 'Vasco Peso',
       url: 'https://www.instagram.com/reel/DfjufBZSv2c/',
       creator: 'ethan_tumbler',
+    },
+  ],
+  'skl_backbend_kick_over': [
+    {
+      who: 'Amy Hartnell-Saunders',
+      url: 'https://www.instagram.com/reel/DfkgmZiqViJ/',
+      creator: 'coachamycontent',
+      watchFor: 'Never do back bends or walkovers down a wedge.',
     },
   ],
 }
