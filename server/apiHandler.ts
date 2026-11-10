@@ -138,7 +138,7 @@ import {
 import { handleAuthRoutes } from './auth/routes.ts'
 import { gateApiRequest } from './auth/gate.ts'
 import { handleShareCard } from './shareCard.ts'
-import { handleShareLearn } from './shareLearn.ts'
+import { handleShareLearn, handleShareLearnSection } from './shareLearn.ts'
 import {
   getOrCreateGroupIntakeToken,
   getOrCreateIntakeToken,
@@ -321,6 +321,7 @@ const API_PATHS = new Set([
   '/api/share-links/library-token',
   '/api/share-links/parent-learn-token',
   '/api/share/learn',
+  '/api/share/learn/section',
   '/api/coach-media-file',
   '/api/stories',
   '/api/story-file',
@@ -586,6 +587,10 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/share/learn') {
     await handleShareLearn(req, res, url)
+    return true
+  }
+  if (path === '/api/share/learn/section') {
+    await handleShareLearnSection(req, res, url)
     return true
   }
   if (path === '/api/share/find-athlete') {

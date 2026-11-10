@@ -87,3 +87,64 @@ export async function handleShareLearn(
   res.setHeader('Cache-Control', 'public, max-age=60')
   sendJson(res, 200, { ok: true, live, articles: publicLearnArticles(articles) })
 }
+
+/**
+ * Single-section public Learn pages (build 1233). Three shareable links,
+ * one per section, each opening JUST that section: How skills grow,
+ * Concepts, and 4 levels. Same token as the parent Learn desk, no sign-in,
+ * no athlete data, no edit paths. The section content itself lives in the
+ * app bundle (PhysicsLessons, ConceptCards, ProgressionLevels); this
+ * endpoint only gates the link: a valid parent-learn token plus a known
+ * section slug.
+ */
+export const LEARN_SECTIONS = {
+  'how-skills-grow': {
+    title: 'How skills grow',
+    description:
+      'Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room.',
+  },
+  concepts: {
+    title: 'Coaching concepts',
+    description:
+      'The ideas behind the training. Two gears, the S-curve, control, and why slow is fast.',
+  },
+  '4-levels': {
+    title: 'The 4 levels of progression',
+    description:
+      'The four levels of progression. Where you are and what it takes to move up.',
+  },
+} as const
+
+export type LearnSectionSlug = keyof typeof LEARN_SECTIONS
+
+export function isLearnSectionSlug(value: string): value is LearnSectionSlug {
+  return Object.prototype.hasOwnProperty.call(LEARN_SECTIONS, value)
+}
+
+export async function handleShareLearnSection(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+): Promise<void> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'Use GET' })
+    return
+  }
+  const section = url.searchParams.get('section') ?? ''
+  if (!isLearnSectionSlug(section)) {
+    sendJson(res, 404, { error: 'Unknown section.' })
+    return
+  }
+  const rec = await validateShareToken(url.searchParams.get('token') ?? '')
+  if (!rec || rec.type !== 'parent-learn') {
+    sendJson(res, 404, { error: 'Invalid or expired link.' })
+    return
+  }
+  res.setHeader('Cache-Control', 'public, max-age=60')
+  sendJson(res, 200, {
+    ok: true,
+    section,
+    title: LEARN_SECTIONS[section].title,
+    description: LEARN_SECTIONS[section].description,
+  })
+}

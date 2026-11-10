@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeParentGuideAnswers, publicLearnArticles } from './shareLearn.ts'
+import {
+  isLearnSectionSlug,
+  LEARN_SECTIONS,
+  mergeParentGuideAnswers,
+  publicLearnArticles,
+} from './shareLearn.ts'
 import { PARENT_EDUCATION } from '../src/config/parentEducation.ts'
 
 describe('mergeParentGuideAnswers', () => {
@@ -50,5 +55,36 @@ describe('publicLearnArticles', () => {
       { id: 'g', category: 'guide', title: 'G', summary: '', intro: [], qa: [] },
     ])
     assert.equal(pub.length, 1)
+  })
+})
+
+describe('learn section links (build 1233)', () => {
+  it('exactly the three shareable sections exist', () => {
+    assert.deepEqual(Object.keys(LEARN_SECTIONS).sort(), [
+      '4-levels',
+      'concepts',
+      'how-skills-grow',
+    ])
+  })
+
+  it('each section has a title and a description', () => {
+    for (const section of Object.values(LEARN_SECTIONS)) {
+      assert.ok(section.title.length > 0)
+      assert.ok(section.description.length > 0)
+    }
+    assert.equal(LEARN_SECTIONS['how-skills-grow'].title, 'How skills grow')
+    assert.equal(LEARN_SECTIONS.concepts.title, 'Coaching concepts')
+    assert.equal(LEARN_SECTIONS['4-levels'].title, 'The 4 levels of progression')
+  })
+
+  it('accepts the three slugs and nothing else', () => {
+    assert.equal(isLearnSectionSlug('how-skills-grow'), true)
+    assert.equal(isLearnSectionSlug('concepts'), true)
+    assert.equal(isLearnSectionSlug('4-levels'), true)
+    assert.equal(isLearnSectionSlug('learn'), false)
+    assert.equal(isLearnSectionSlug('path-guide'), false)
+    assert.equal(isLearnSectionSlug(''), false)
+    assert.equal(isLearnSectionSlug('Concepts'), false)
+    assert.equal(isLearnSectionSlug('concepts/'), false)
   })
 })

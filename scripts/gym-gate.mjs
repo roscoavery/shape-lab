@@ -243,6 +243,24 @@ const PREVIEW_META = [
     description: 'Answer the intake questions so your coach can set up your profile.',
   },
   {
+    match: (p) => p.includes('/share/learn/') && p.endsWith('/how-skills-grow'),
+    title: 'ShapeLab | How skills grow',
+    description:
+      'Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room. No account needed.',
+  },
+  {
+    match: (p) => p.includes('/share/learn/') && p.endsWith('/concepts'),
+    title: 'ShapeLab | Coaching concepts',
+    description:
+      'The ideas behind the training. Two gears, the S-curve, control, and why slow is fast. No account needed.',
+  },
+  {
+    match: (p) => p.includes('/share/learn/') && p.endsWith('/4-levels'),
+    title: 'ShapeLab | 4 levels',
+    description:
+      'The four levels of progression. Where you are and what it takes to move up. No account needed.',
+  },
+  {
     match: (p) => p.startsWith('/share/learn/'),
     title: 'ShapeLab | For parents',
     description:

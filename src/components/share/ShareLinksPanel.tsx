@@ -18,11 +18,15 @@ function LinkRow({
   blurb,
   endpoint,
   body,
+  suffix,
 }: {
   label: string
   blurb: string
   endpoint: string
   body?: Record<string, string>
+  /** Appended to the returned path (build 1233): section links reuse the
+   * parent Learn token, so the row copies origin + path + suffix. */
+  suffix?: string
 }) {
   const [url, setUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -40,7 +44,7 @@ function LinkRow({
       })
       const d = await r.json()
       if (!r.ok || !d?.path) throw new Error(d?.error ?? 'Could not make the link.')
-      setUrl(`${window.location.origin}${d.path}`)
+      setUrl(`${window.location.origin}${d.path}${suffix ?? ''}`)
     } catch (e: any) {
       setError(e?.message ?? 'Could not make the link.')
     } finally {
@@ -208,6 +212,27 @@ export function ShareLinksPanel() {
         label="Parent Learn link"
         blurb="The whole Learn section parents see in the app: Parent Guide, progression levels, coaching concepts, nutrition. No account needed."
         endpoint="/api/share-links/parent-learn-token"
+      />
+
+      <LinkRow
+        label="How skills grow link"
+        blurb="Just the How skills grow section. Four stages, written for the person on the floor. Nerves, stuck skills, a heavy room. No account needed."
+        endpoint="/api/share-links/parent-learn-token"
+        suffix="/how-skills-grow"
+      />
+
+      <LinkRow
+        label="Concepts link"
+        blurb="Just the coaching concepts. The ideas behind the training. Two gears, the S-curve, control, and why slow is fast. No account needed."
+        endpoint="/api/share-links/parent-learn-token"
+        suffix="/concepts"
+      />
+
+      <LinkRow
+        label="4 levels link"
+        blurb="Just the 4 levels of progression. Where you are and what it takes to move up. No account needed."
+        endpoint="/api/share-links/parent-learn-token"
+        suffix="/4-levels"
       />
     </div>
   )

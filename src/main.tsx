@@ -6,6 +6,7 @@ import App from './App.tsx'
 import PublicSharePage from './components/share/PublicSharePage.tsx'
 import PublicFolderPage from './components/share/PublicFolderPage.tsx'
 import PublicLearnPage from './components/share/PublicLearnPage.tsx'
+import PublicLearnSectionPage from './components/share/PublicLearnSectionPage.tsx'
 import PublicIntakePage from './components/share/PublicIntakePage.tsx'
 import PublicLibraryPage from './components/share/PublicLibraryPage.tsx'
 import PublicStartHubPage from './components/share/PublicStartHubPage.tsx'
@@ -39,6 +40,11 @@ createRoot(document.getElementById('root')!).render(
         <PublicStartHubPage />
       ) : shareFolderTokenFromPath() ? (
         <PublicFolderPage token={shareFolderTokenFromPath()!} />
+      ) : learnSectionFromPath() ? (
+        <PublicLearnSectionPage
+          token={learnSectionFromPath()!.token}
+          section={learnSectionFromPath()!.section}
+        />
       ) : parentLearnTokenFromPath() ? (
         <PublicLearnPage token={parentLearnTokenFromPath()!} />
       ) : shareCardIdFromPath() ? (
@@ -68,6 +74,18 @@ function shareFolderTokenFromPath(): string | null {
   try {
     const m = /^\/share\/folder\/([^/?#]+)/.exec(window.location.pathname)
     return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
+
+/** /share/learn/<token>/<section> renders one public Learn section only (how-skills-grow, concepts, 4-levels). Checked before the desk route: the desk regex would otherwise swallow the section URL as a bare desk link. */
+function learnSectionFromPath(): { token: string; section: string } | null {
+  try {
+    const m = /^\/share\/learn\/([^/?#]+)\/([^/?#]+)/.exec(window.location.pathname)
+    return m
+      ? { token: decodeURIComponent(m[1]), section: decodeURIComponent(m[2]) }
+      : null
   } catch {
     return null
   }
