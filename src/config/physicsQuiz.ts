@@ -22,6 +22,14 @@ export type PhysicsQuizItem = {
   photoUrl2?: string | null
   stillId2?: string | null
   /**
+   * Comparison questions answered by tapping a still: the shape id of the
+   * still in photoUrl, then the still in photoUrl2, in that order. Only
+   * set when the two choices ARE those two shapes, so the answer is
+   * picking a still rather than matching a name in the prompt. A two-still
+   * question whose choices are something else keeps its text buttons.
+   */
+  stillChoiceIds?: [string, string]
+  /**
    * Pick-all-that-fit questions: the athlete must pick exactly this set.
    * When set, answerId is the first correct choice (kept for callers that
    * only read a single answer) and grading uses this set instead.

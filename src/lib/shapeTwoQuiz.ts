@@ -5,8 +5,11 @@
  * pick which shape a moment calls for, sort shapes into families, or spot the
  * same shape turned a different way. Wording is the draft's wording.
  *
- * Comparison questions carry two stills, shown side by side with the shape
- * names as choices. Family-sorting questions are pick-all-that-fit
+ * Comparison questions carry two stills, shown side by side, and are
+ * answered by tapping the still itself: the shape names never appear as
+ * answer buttons, or the prompt would give the answer away. The question
+ * carries stillChoiceIds, the shape id of each still in display order.
+ * Family-sorting questions are pick-all-that-fit
  * (answerIds). The side plank vs side support comparison is deliberately NOT
  * in this bank: the draft flags it "draft answer only" and it ships only with
  * Ryan's words for the tell, which he has not given.
@@ -454,9 +457,11 @@ function buildQuestion(photos: ReferencePhoto[], entry: BankEntry): StudyQuestio
   let stillId: string | null = null
   let photoUrl2: string | null = null
   let stillId2: string | null = null
+  let stillChoiceIds: [string, string] | undefined
   if (entry.stills) {
+    const stills = entry.stills
     // Vary which still sits on the left so the position cannot be memorized.
-    const [first, second] = shuffle(entry.stills)
+    const [first, second] = shuffle(stills)
     const pa = photoFor(photos, first!)
     const pb = photoFor(photos, second!)
     // A comparison question without both stills is meaningless: skip it.
@@ -465,6 +470,18 @@ function buildQuestion(photos: ReferencePhoto[], entry: BankEntry): StudyQuestio
     stillId = pa.id
     photoUrl2 = pb.dataUrl
     stillId2 = pb.id
+    // Tap-the-still questions only: the two choices ARE the two stills, so
+    // the answer is picking a still, not matching a name in the prompt.
+    // A two-still question whose choices are something else (s2-t8-ftos:
+    // four shape names, the stills just show one shape two ways) keeps its
+    // text buttons. The ids ride with the shuffled stills, so tapping the
+    // left still always answers the shape that still shows.
+    if (
+      entry.choices.length === 2 &&
+      entry.choices.every((c) => stills.includes(c.id))
+    ) {
+      stillChoiceIds = [first!, second!]
+    }
   }
   return {
     id: entry.id,
@@ -478,6 +495,7 @@ function buildQuestion(photos: ReferencePhoto[], entry: BankEntry): StudyQuestio
     stillId,
     photoUrl2,
     stillId2,
+    ...(stillChoiceIds ? { stillChoiceIds } : {}),
   }
 }
 

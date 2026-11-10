@@ -98,6 +98,9 @@ export function StudyQuiz({
         stillId: question.stillId,
         photoUrl2: question.photoUrl2,
         stillId2: question.stillId2,
+        stillChoiceIds: question.stillChoiceIds,
+        pickedChoiceId: multi ? undefined : typeof choice === 'string' ? choice : null,
+        correctChoiceId: multi ? undefined : question.answerId,
         pickedLabel,
         correctLabel,
         correct,
@@ -124,6 +127,27 @@ export function StudyQuiz({
   const locked = isMulti ? checked : picked !== null
   const correct = isMulti ? sameSet(pickedSet, q.answerIds ?? []) : picked === q.answerId
   const lesson = lessonTitle?.(q.lessonId)
+  // Comparison questions are answered by tapping a still, not a name: the
+  // shape names never appear as buttons, or the prompt gives the answer
+  // away. stillChoiceIds rides with the shuffled stills, so the left still
+  // always answers the shape that still shows.
+  const isStillPick = Boolean(q.photoUrl2 && q.stillChoiceIds && !isMulti)
+  const stillOptions =
+    isStillPick && q.photoUrl && q.photoUrl2
+      ? [
+          { url: q.photoUrl, stillId: q.stillId, shapeId: q.stillChoiceIds![0] },
+          { url: q.photoUrl2, stillId: q.stillId2, shapeId: q.stillChoiceIds![1] },
+        ]
+      : []
+
+  const pickSingle = (id: string) => {
+    setPicked(id)
+    setPickedIds((prev) => {
+      const next = prev.length === total ? [...prev] : questions.map(() => null)
+      next[index] = id
+      return next
+    })
+  }
 
   const checkMulti = () => {
     setChecked(true)
@@ -168,7 +192,46 @@ export function StudyQuiz({
           />
         </div>
       )}
-      {q.photoUrl && q.photoUrl2 && (
+      {q.photoUrl && q.photoUrl2 && isStillPick && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {stillOptions.map((still, i) => {
+            const inAnswer = still.shapeId === q.answerId
+            const inPicked = picked === still.shapeId
+            let cls =
+              'overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black'
+            if (!locked && inPicked) {
+              cls = 'overflow-hidden rounded-lg border border-[var(--accent)] bg-[#1a2636]'
+            }
+            if (locked) {
+              if (inAnswer)
+                cls = 'overflow-hidden rounded-lg border border-[var(--good)] bg-[#102820]'
+              else if (inPicked)
+                cls = 'overflow-hidden rounded-lg border border-[var(--bad)] bg-[#2a1518]'
+              else
+                cls =
+                  'overflow-hidden rounded-lg border border-[var(--panel-border)] bg-black opacity-50'
+            }
+            return (
+              <button
+                key={still.stillId ?? i}
+                type="button"
+                disabled={locked}
+                aria-label={i === 0 ? 'Choose the left still' : 'Choose the right still'}
+                className={cls}
+                onClick={() => pickSingle(still.shapeId)}
+              >
+                <CroppedStill
+                  src={still.url}
+                  stillId={still.stillId}
+                  alt=""
+                  className="mx-auto max-h-72 w-full object-contain"
+                />
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {q.photoUrl && q.photoUrl2 && !isStillPick && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="overflow-hidden rounded-lg bg-black">
             <CroppedStill
@@ -189,12 +252,17 @@ export function StudyQuiz({
         </div>
       )}
 
+      {isStillPick && !locked && (
+        <p className="mt-3 text-xs text-[var(--muted)]">Tap the still that fits.</p>
+      )}
+
       {isMulti && !locked && (
         <p className="mt-3 text-xs text-[var(--muted)]">
           Tap every shape that fits, then check your answers.
         </p>
       )}
 
+      {!isStillPick && (
       <div className="mt-4 grid gap-2">
         {q.choices.map((c) => {
           const inAnswer = q.answerIds?.includes(c.id) ?? c.id === q.answerId
@@ -229,12 +297,7 @@ export function StudyQuiz({
                   )
                   return
                 }
-                setPicked(c.id)
-                setPickedIds((prev) => {
-                  const next = prev.length === total ? [...prev] : questions.map(() => null)
-                  next[index] = c.id
-                  return next
-                })
+                pickSingle(c.id)
               }}
             >
               {isMulti && !locked && (inPicked ? '✓ ' : '')}
@@ -243,6 +306,7 @@ export function StudyQuiz({
           )
         })}
       </div>
+      )}
 
       {isMulti && !locked && (
         <div className="mt-4 flex justify-end">

@@ -11,6 +11,12 @@ export type QuizReviewItem = {
   stillId?: string | null
   photoUrl2?: string | null
   stillId2?: string | null
+  /** Tap-the-still questions: shape id of the still in photoUrl, then photoUrl2. */
+  stillChoiceIds?: [string, string]
+  /** Single-answer questions: the picked choice id, or null for no answer. */
+  pickedChoiceId?: string | null
+  /** Single-answer questions: the correct choice id. */
+  correctChoiceId?: string
   pickedLabel: string
   correctLabel: string
   correct: boolean
@@ -166,22 +172,45 @@ function ReviewCard({ item, index }: { item: QuizReviewItem; index: number }) {
       )}
       {item.photoUrl && item.photoUrl2 && (
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="overflow-hidden rounded-lg bg-[#0d1218]">
-            <CroppedStill
-              src={item.photoUrl}
-              stillId={item.stillId}
-              alt=""
-              className="max-h-48 w-full object-contain"
-            />
-          </div>
-          <div className="overflow-hidden rounded-lg bg-[#0d1218]">
-            <CroppedStill
-              src={item.photoUrl2}
-              stillId={item.stillId2}
-              alt=""
-              className="max-h-48 w-full object-contain"
-            />
-          </div>
+          {(
+            [
+              { url: item.photoUrl, stillId: item.stillId, shapeId: item.stillChoiceIds?.[0] },
+              { url: item.photoUrl2, stillId: item.stillId2, shapeId: item.stillChoiceIds?.[1] },
+            ] as const
+          ).map((still, i) => {
+            const isPicked =
+              still.shapeId !== undefined && still.shapeId === item.pickedChoiceId
+            const isCorrect =
+              still.shapeId !== undefined && still.shapeId === item.correctChoiceId
+            const ring = isCorrect
+              ? 'ring-2 ring-[var(--good)]'
+              : isPicked
+                ? 'ring-2 ring-[var(--bad)]'
+                : ''
+            return (
+              <div
+                key={still.stillId ?? i}
+                className={`relative overflow-hidden rounded-lg bg-[#0d1218] ${ring}`}
+              >
+                <CroppedStill
+                  src={still.url}
+                  stillId={still.stillId}
+                  alt=""
+                  className="max-h-48 w-full object-contain"
+                />
+                {isPicked && (
+                  <span className="absolute left-1 top-1 rounded bg-[#2a1518] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--bad)]">
+                    You chose
+                  </span>
+                )}
+                {isCorrect && (
+                  <span className="absolute left-1 top-1 rounded bg-[#102820] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--good)]">
+                    Correct
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
