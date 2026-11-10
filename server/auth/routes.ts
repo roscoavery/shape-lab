@@ -21,7 +21,7 @@ import {
 } from './accounts.ts'
 import { clampMaxDevices } from './types.ts'
 import { readAudit, writeAudit } from './audit.ts'
-import { stampGuardianLinks, ensureParentRosterProfile } from './familyLinks.ts'
+import { stampGuardianLinks, ensureParentRosterProfile, ensureCoachRosterProfile } from './familyLinks.ts'
 import {
   createInvite,
   peekInvite,
@@ -270,6 +270,19 @@ export async function handleAuthRoutes(
             rosterProfileId: created.rosterProfileId,
             linkedAthleteIds: created.linkedAthleteIds,
           })
+        }
+        if (created.role === 'coach' && !created.rosterProfileId) {
+          // Coach bootstrap (build 1236): an admin-created coach account
+          // with no profile gets one here, same as invite redemption.
+          // Invite acceptance re-runs the same ensure and finds this row.
+          const coachRow = await ensureCoachRosterProfile({
+            accountId: created.accountId,
+            displayName: created.displayName,
+          })
+          if (coachRow) {
+            const saved = await updateAccount(created.accountId, { rosterProfileId: coachRow.id })
+            created.rosterProfileId = saved.rosterProfileId
+          }
         }
         const invite = !body.password?.trim()
           ? await createInvite(created.accountId, req)
@@ -727,6 +740,33 @@ export async function handleAuthRoutes(
               rosterProfileId: parentRow.id,
               linkedAthleteIds: athleteIds,
             })
+            account.rosterProfileId = saved.rosterProfileId
+          }
+        }
+        if (role === 'coach') {
+          // Coach bootstrap (build 1236): same shape as the parent block
+          // above. A coach account has a gym and a display name but no
+          // roster row, and the client coach surface is keyed off a coach
+          // roster row — so without one the coach signs in to nothing.
+          // Create it once here (id derives from the account, so repeats
+          // find the same row) and point the account at it. The row
+          // carries needsProfileSetup until the coach finishes or skips
+          // the first-run profile step, which then guides them into the
+          // setup wizard.
+          const gymId = account.gymId
+          let gymName: string | undefined
+          if (gymId) {
+            const { getGym } = await import('../gymStore.ts')
+            gymName = (await getGym(gymId))?.name
+          }
+          const coachRow = await ensureCoachRosterProfile({
+            accountId: account.accountId,
+            displayName: account.displayName,
+            gymId,
+            gymName,
+          })
+          if (coachRow) {
+            const saved = await updateAccount(account.accountId, { rosterProfileId: coachRow.id })
             account.rosterProfileId = saved.rosterProfileId
           }
         }

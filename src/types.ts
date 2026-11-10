@@ -252,6 +252,13 @@ export type Athlete = {
   createdFromCalendar?: boolean
   needsOnboarding?: boolean
   /**
+   * Coach profiles created by invite redemption or admin account creation.
+   * True until the coach finishes the first-run profile step (photo, name,
+   * gym) and moves into the setup wizard. Never set on athlete or parent
+   * rows; existing coach rows never carry it, so they never see the step.
+   */
+  needsProfileSetup?: boolean
+  /**
    * When true, anyone at the gym can open this profile. Missing or false =
    * private: only the athlete, their parents, and coaches who work with them
    * in a lesson, class, camp, clinic, or school.

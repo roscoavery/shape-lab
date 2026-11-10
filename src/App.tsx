@@ -76,6 +76,7 @@ import { EndClassPrompt } from './components/today/EndClassPrompt'
 import { NamesQuiz } from './components/coach/NamesQuiz'
 import { SkillPathBuilder } from './components/coach/SkillPathBuilder'
 import { CoachSetupWizard } from './components/coach/CoachSetupWizard'
+import { CoachProfileSetup } from './components/coach/CoachProfileSetup'
 import { MySystemPanel } from './components/coach/MySystemPanel'
 import { ClassStopwatch } from './components/today/ClassStopwatch'
 import { ClockOverlay } from './components/today/ClockOverlay'
@@ -939,6 +940,19 @@ export default function App() {
 
   const activeProfile = athletes.find((a) => a.id === activeAthleteId) ?? null
   activeProfileRef.current = activeProfile
+
+  // Coach first run (build 1236): invite redemption and admin account
+  // creation now make the coach roster row, stamped needsProfileSetup.
+  // Until the coach finishes or skips the profile step, guide them to
+  // it. Ryan's admin profile and every existing coach row never carry
+  // the flag, so they never see this. Athlete and parent flows are
+  // untouched: the gate is the coach role on the signed-in profile.
+  const coachProfileSetupNeeded =
+    authUser != null &&
+    activeProfile != null &&
+    profileRole(activeProfile) === 'coach' &&
+    !isShapelabAdmin(activeProfile) &&
+    activeProfile.needsProfileSetup === true
 
   // Family beta: athlete view through a parent login. Auth (authUser) stays
   // the parent — this only changes which experience renders. The id is
@@ -3251,6 +3265,22 @@ export default function App() {
         onOpenAsk={() => {
           setCoachWizardOpen(false)
           goTab('chat')
+        }}
+      />
+    )}
+    {coachProfileSetupNeeded && activeProfile && (
+      <CoachProfileSetup
+        coach={activeProfile}
+        onFinish={(patched) => {
+          setAthleteRoster(athletes.map((a) => (a.id === patched.id ? patched : a)))
+          setCoachWizardOpen(true)
+        }}
+        onSkip={() => {
+          setAthleteRoster(
+            athletes.map((a) =>
+              a.id === activeProfile.id ? { ...a, needsProfileSetup: false } : a,
+            ),
+          )
         }}
       />
     )}

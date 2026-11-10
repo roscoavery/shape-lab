@@ -126,3 +126,51 @@ export async function ensureParentRosterProfile(opts: {
   await writeRosterFile({ ...roster, athletes: [...athletes, row] })
   return { id }
 }
+
+/**
+ * Coach bootstrap for invite redemption and admin account creation
+ * (build 1236). A coach account created from an invite has a gym and a
+ * display name but no roster row of its own, and the whole client coach
+ * surface (active profile, My System, setup wizard) is keyed off a coach
+ * roster row — so without one the coach signs in to nothing and nothing
+ * guides them to make a profile. This creates that row exactly once: the
+ * id derives from the account id, so re-running finds the same row
+ * instead of duplicating it, and it never re-sets the setup flag once the
+ * coach has finished or skipped the first-run profile step. The caller
+ * then points the account's rosterProfileId at the row, which makes the
+ * existing active-profile and wizard paths work unchanged.
+ * The coach is never treated as one of the athletes: the row's role is
+ * 'coach' and its gym is the one picked at invite setup, when given.
+ */
+export async function ensureCoachRosterProfile(opts: {
+  accountId: string
+  displayName: string
+  gymId?: string
+  gymName?: string
+}): Promise<{ id: string } | null> {
+  const id = `coa_${opts.accountId}`
+  const roster = await readRosterFile()
+  const athletes = Array.isArray(roster.athletes) ? roster.athletes : []
+  const byId = new Map(
+    athletes.map((row) => {
+      const r = row as Record<string, unknown>
+      return [typeof r.id === 'string' ? r.id : '', r]
+    }),
+  )
+  const existing = byId.get(id)
+  if (existing && existing.role === 'coach') return { id }
+  if (existing) return null
+  const firstName = opts.displayName.trim().split(/\s+/)[0] || opts.displayName
+  const row = {
+    id,
+    name: opts.displayName,
+    firstName,
+    role: 'coach',
+    ...(opts.gymId ? { gymId: opts.gymId } : {}),
+    ...(opts.gymName ? { gymName: opts.gymName } : {}),
+    needsProfileSetup: true,
+    createdAt: new Date().toISOString(),
+  }
+  await writeRosterFile({ ...roster, athletes: [...athletes, row] })
+  return { id }
+}

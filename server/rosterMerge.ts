@@ -18,6 +18,8 @@ export type Athlete = {
   updatedAt?: string
   passcodeHash?: string
   role?: ProfileKind
+  /** Coach profiles created by invite redemption or admin account creation. True until the coach finishes the first-run profile step. */
+  needsProfileSetup?: boolean
   gymName?: string
   classGyms?: string[]
   eventIds?: string[]
