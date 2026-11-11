@@ -306,7 +306,8 @@ export const UNIFIED_SKILL_SEED: UnifiedSkill[] = [
       "Open hips and a real hollow, not a bent one"
     ],
     "canBend": [
-      "Often arrives after the running handspring, not before. That is normal in Ryan’s gym."
+      "If an athlete bends their knees enough to follow the curve of their arch, this can be ok as long as they get straight legs by the time they get to the hands. Ideally we have straight legs all the way through, but even some of the most advanced tumblers will subtly bend their knees to speed up their rotation so they can get more power from the handspring.",
+      "Many athletes do get a round off back handspring before they get a standing back handspring on the floor. They usually have either an angle back handspring or a standing back handspring on the trampoline when they get their first round off handspring independent on the floor."
     ],
     "ask": "Ask your coach whether your running handspring shapes are clean. The standing one gets built from those reps.",
     "shapeVariations": ARCH_HOLLOW_VARIATIONS
