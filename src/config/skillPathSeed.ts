@@ -576,6 +576,14 @@ export const SHIPPED_CONDITIONING: ConditioningNeed[] = [
     shapeId: 'wall_handstand',
     shipped: true,
   },
+  {
+    id: 'cnd_handstand_kneeling_wall_hollow',
+    skillId: 'skl_handstand',
+    label: 'Kneeling wall hollow',
+    kind: 'helpful',
+    shapeId: 'gym_kneeling_wall_hollow',
+    shipped: true,
+  },
 ]
 
 /** Harder versions shipped with the app. Ryan names these himself. */
