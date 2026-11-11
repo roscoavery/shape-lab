@@ -1564,6 +1564,25 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
 }
 
 /**
+ * Still for a conditioning shape, resolved the same way the Guide tab's
+ * variation stills resolve: shipped library stills first (stillId
+ * default_<shapeId>_0), then shipped coach extras (coach_... ids).
+ * Tucked / piked / L handstand ship their stills under the gym-library twin
+ * id (gym_<id>), so fall back to that twin before giving up — the same
+ * relationship the quiz bank records in STILL_ALIASES for l_handstand.
+ * The returned stillId is the photo's own id, so CroppedStill applies the
+ * crop Ryan set for that still. Returns null when no still ships.
+ */
+function conditioningStill(shapeId: string | null | undefined): { src: string; stillId: string } | null {
+  if (!shapeId) return null
+  for (const id of [shapeId, `gym_${shapeId}`]) {
+    const photo = listCoachStills([], id).find((s) => s.dataUrl)
+    if (photo) return { src: photo.dataUrl, stillId: photo.id }
+  }
+  return null
+}
+
+/**
  * The Path tab inside a skill card: the prerequisite chain as a vertical
  * glow (target on top, deepest prerequisite at the bottom, shapes at the
  * bottom of the glow), helpful-but-not-required skills, and the drill list.
@@ -1712,12 +1731,18 @@ function PathTab({
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {shapes.map((c) => {
               const label = c.shapeId ? getShape(c.shapeId)?.name ?? c.label : c.label
+              const still = conditioningStill(c.shapeId)
               return (
                 <span
                   key={c.id}
                   title={c.note ?? c.label}
-                  className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white"
+                  className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-2.5 text-[11px] font-semibold text-white"
                 >
+                  {still && (
+                    <span className="h-7 w-7 shrink-0 overflow-hidden rounded-md bg-black">
+                      <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-cover" loading="lazy" />
+                    </span>
+                  )}
                   {label}
                   {c.kind === 'helpful' && (
                     <span aria-hidden className="opacity-50">
@@ -2267,6 +2292,16 @@ export function SkillPathCards({
                     This skill is on the map but its guide card isn't written
                     yet.
                   </p>
+                  {(modalSkill.canBend ?? []).length > 0 && (
+                    <div data-card-section="canbend" className="scroll-mt-4 rounded-xl bg-[var(--panel-border)]/20 p-3">
+                      <Label>Can bend</Label>
+                      <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                        {(modalSkill.canBend ?? []).map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <HarderVersions skillId={modalSkill.id} canEdit={canEdit} />
                   <ProofStrip
                     evidenceKey={evidenceKeyForSkill(modalSkill)}
@@ -2275,6 +2310,11 @@ export function SkillPathCards({
                     canEdit={canEdit}
                     editor={editor}
                   />
+                  {modalSkill.ryanNote && (
+                    <p data-card-section="ryan" className="scroll-mt-4 whitespace-pre-line border-l-2 pl-3 text-xs opacity-70" style={{ borderColor: '#3a3f45' }}>
+                      Ryan: {modalSkill.ryanNote}
+                    </p>
+                  )}
                   <PathTab skill={modalSkill} canEdit={canEdit} onSelectSkill={setModalSkill} />
                 </div>
               )}
