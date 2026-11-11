@@ -144,7 +144,7 @@ export default function PublicLearnPage({ token }: { token: string }) {
 
       <footer className="border-t border-white/10 px-4 py-6">
         <p className="mx-auto max-w-3xl text-center text-xs text-white/50">
-          Shared from Shape Lab · This link works while Coach Ryan&apos;s gym is online.
+          Shared from Shape Lab · This link works while ShapeLab is online.
         </p>
       </footer>
     </div>
