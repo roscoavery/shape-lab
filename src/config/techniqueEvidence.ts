@@ -1408,6 +1408,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DfjufBZSv2c/',
       creator: 'ethan_tumbler',
     },
+    {
+      who: 'Tofig Aliyev',
+      url: 'https://www.instagram.com/reel/DfcM2brOTo-/',
+      creator: 'eurovisionsport',
+    },
   ],
   'killer': [
     {
