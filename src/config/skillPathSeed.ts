@@ -586,6 +586,29 @@ export const SHIPPED_CONDITIONING: ConditioningNeed[] = [
   },
 ]
 
+/**
+ * Prerequisite sequences attached to a skill card, mirroring the
+ * SHIPPED_CONDITIONING pattern (skillId link, kind, shipped). The sequence
+ * itself lives in config/sequences.ts. No live-edit path yet — shipped only.
+ */
+export type SkillSequenceLink = {
+  id: string
+  skillId: string
+  sequenceId: string
+  kind: 'required' | 'helpful'
+  shipped: boolean
+}
+
+export const SHIPPED_SKILL_SEQUENCES: SkillSequenceLink[] = [
+  {
+    id: 'seq_cartwheel_ftos_lunge_lever_hs_lunge',
+    skillId: 'skl_cartwheel',
+    sequenceId: 'ftos_lunge_lever_hs_lunge',
+    kind: 'required',
+    shipped: true,
+  },
+]
+
 /** Harder versions shipped with the app. Ryan names these himself. */
 export const SHIPPED_VERSIONS: SkillVersion[] = [
   {

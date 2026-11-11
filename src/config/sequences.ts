@@ -29,6 +29,19 @@ export const SEQUENCES: SequenceDef[] = [
     ],
   },
   {
+    id: 'ftos_lunge_lever_hs_lunge',
+    name: 'Feet together open shoulders → Starting lunge → Lever → Handstand → Landing lunge',
+    description:
+      'Cartwheel prerequisite, usually needed. Finish in a landing lunge, heel flat.',
+    steps: [
+      { shapeId: 'feet_together_open_shoulders', holdSeconds: 1.5 },
+      { shapeId: 'lunge_start', holdSeconds: 1.5 },
+      { shapeId: 'lever', holdSeconds: 1.5 },
+      { shapeId: 'handstand', holdSeconds: 2 },
+      { shapeId: 'lunge_land', holdSeconds: 1.5 },
+    ],
+  },
+  {
     id: 'mc_hs_lever_lunge',
     name: 'Mountain Climber → Handstand → Lever → Landing lunge',
     description:

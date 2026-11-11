@@ -19,6 +19,9 @@ import {
 } from './skillPaths'
 import { getRegistrySkill } from './skillRegistry'
 import { getAcroSkill } from './acroSkills'
+import { SEQUENCES_BY_ID } from '../config/sequences'
+import { SHIPPED_SKILL_SEQUENCES } from '../config/skillPathSeed'
+import type { SequenceDef } from '../types'
 
 /**
  * A skill that can sit in a path tree: a main-registry skill or an acro
@@ -58,6 +61,26 @@ export function conditioningForSkillConsolidated(skillId: string): ConditioningN
     seen.add(c.id)
     return true
   })
+}
+
+/** Prerequisite sequences attached to a skill, incl. consolidated ids. */
+export function sequencesForSkillConsolidated(
+  skillId: string,
+): { sequence: SequenceDef; kind: 'required' | 'helpful' }[] {
+  const ids = new Set([skillId])
+  for (const [oldId, canon] of Object.entries(CANONICAL_SKILL_ID)) {
+    if (canon === skillId) ids.add(oldId)
+  }
+  const seen = new Set<string>()
+  const out: { sequence: SequenceDef; kind: 'required' | 'helpful' }[] = []
+  for (const link of SHIPPED_SKILL_SEQUENCES) {
+    if (!ids.has(link.skillId)) continue
+    if (seen.has(link.sequenceId)) continue
+    seen.add(link.sequenceId)
+    const sequence = SEQUENCES_BY_ID[link.sequenceId]
+    if (sequence) out.push({ sequence, kind: link.kind })
+  }
+  return out
 }
 
 export type PathHighlight = {

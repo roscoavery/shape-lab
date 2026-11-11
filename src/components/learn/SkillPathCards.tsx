@@ -10,7 +10,9 @@ import { FEATURED_PROOF, TECHNIQUE_EVIDENCE, evidenceKeyForSkill, type ProofVide
 import { normalizeVideoUrl, postedByFromUrl, socialProfileUrl, youtubeEmbedSrc } from '../../lib/socialUrls'
 import { SKILL_SHAPES } from '../../config/skillShapes'
 import { SHAPES, getShape } from '../../config/shapes'
-import { makeShippedPhoto, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
+import { isUsablePhotoSrc, makeShippedPhoto, pickCoachStill, shippedFileCandidates, listCoachStills } from '../../lib/shippedRefs'
+import { loadReferencePhotos } from '../../lib/storage'
+import { subscribeCoachStills } from '../../lib/coachStillStore'
 import { skillPhotosFor } from '../../config/skillPhotos'
 import {
   GUIDE_ORDER,
@@ -44,6 +46,7 @@ import {
   buildPathHighlight,
   conditioningForSkillConsolidated,
   needsForSkillConsolidated,
+  sequencesForSkillConsolidated,
   usePathTick,
   type PathHighlight,
 } from '../../lib/skillPathHighlight'
@@ -51,7 +54,7 @@ import { toggleKeyHelperWiggle } from '../../lib/keyHelperOverrides'
 import { FAMILY_BY_SKILL, SkillMapView, hlGlowStyle, type SkillFamily } from './SkillMapView'
 import { AcroMapView } from './AcroMapView'
 import { ACRO_SKILLS, acroSkillToUnified, getAcroSkill } from '../../lib/acroSkills'
-import type { Athlete } from '../../types'
+import type { Athlete, ReferencePhoto } from '../../types'
 import { InstagramEmbed } from '../compare/InstagramEmbed'
 import { VideoTrimmer } from './VideoTrimmer'
 import { AddCardVideoModal } from './CardVideoManager'
@@ -1564,20 +1567,27 @@ function PathNeedsEditor({ skillId }: { skillId: string }) {
 }
 
 /**
- * Still for a conditioning shape, resolved the same way the Guide tab's
- * variation stills resolve: shipped library stills first (stillId
- * default_<shapeId>_0), then shipped coach extras (coach_... ids).
+ * Still for a conditioning shape, resolved the same way the shape library
+ * resolves a teaching still: the admin-picked main still wins, otherwise
+ * the first surviving shipped picture, then the first surviving extra
+ * (pickCoachStill). The live photo list comes from the app's
+ * reference-photo store (hydrated from /api/coach-stills at sign-in) — the
+ * previous empty-list call could only ever see shipped stills, so a shape
+ * whose picture lives only as a gym upload (front support, wall handstand)
+ * resolved to nothing even though the picture is in the app. Tombstones
+ * still apply: pickCoachStill only picks from listCoachStills, which
+ * filters removed still ids.
  * Tucked / piked / L handstand ship their stills under the gym-library twin
  * id (gym_<id>), so fall back to that twin before giving up — the same
  * relationship the quiz bank records in STILL_ALIASES for l_handstand.
  * The returned stillId is the photo's own id, so CroppedStill applies the
- * crop Ryan set for that still. Returns null when no still ships.
+ * crop Ryan set for that still. Returns null when no still survives.
  */
-function conditioningStill(shapeId: string | null | undefined): { src: string; stillId: string } | null {
+function conditioningStill(photos: ReferencePhoto[], shapeId: string | null | undefined): { src: string; stillId: string } | null {
   if (!shapeId) return null
   for (const id of [shapeId, `gym_${shapeId}`]) {
-    const photo = listCoachStills([], id).find((s) => s.dataUrl)
-    if (photo) return { src: photo.dataUrl, stillId: photo.id }
+    const photo = pickCoachStill(photos, id)
+    if (photo && isUsablePhotoSrc(photo.dataUrl)) return { src: photo.dataUrl, stillId: photo.id }
   }
   return null
 }
@@ -1598,9 +1608,16 @@ function PathTab({
   onSelectSkill?: (s: UnifiedSkill) => void
 }) {
   const tick = usePathTick()
+  // Live coach stills hydrate after sign-in (App calls hydrateCoachStills
+  // and merges the gym's uploads into the photo store). Re-read the store
+  // when they land so a shape whose picture lives only as a gym upload
+  // appears without a reload.
+  const [photos, setPhotos] = useState<ReferencePhoto[]>(() => loadReferencePhotos())
+  useEffect(() => subscribeCoachStills(() => setPhotos(loadReferencePhotos())), [])
   const canon = canonicalSkillId(skill.id)
   const hl = useMemo(() => buildPathHighlight(canon), [canon, tick])
   const shapes = useMemo(() => conditioningForSkillConsolidated(canon), [canon, tick])
+  const skillSequences = useMemo(() => sequencesForSkillConsolidated(canon), [canon])
   const directNeeds = useMemo(() => needsForSkillConsolidated(canon), [canon, tick])
   // Notes and either/or groups live on this skill's direct needs; deeper
   // nodes in the chain belong to other skills' cards.
@@ -1728,33 +1745,62 @@ function PathTab({
       {shapes.length > 0 && (
         <div>
           <Label>Shapes in the path</Label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
             {shapes.map((c) => {
               const label = c.shapeId ? getShape(c.shapeId)?.name ?? c.label : c.label
-              const still = conditioningStill(c.shapeId)
+              const still = conditioningStill(photos, c.shapeId)
               return (
-                <span
-                  key={c.id}
-                  title={c.note ?? c.label}
-                  className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-2.5 text-[11px] font-semibold text-white"
-                >
+                <div key={c.id} className="w-36 shrink-0" title={c.note ?? c.label}>
                   {still && (
-                    <span className="h-7 w-7 shrink-0 overflow-hidden rounded-md bg-black">
+                    <div className="aspect-square overflow-hidden rounded-xl bg-black">
                       <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-cover" loading="lazy" />
-                    </span>
+                    </div>
                   )}
-                  {label}
-                  {c.kind === 'helpful' && (
-                    <span aria-hidden className="opacity-50">
-                      {' '}✧
-                    </span>
-                  )}
-                </span>
+                  <div className="mt-1 text-xs font-bold">
+                    {label}
+                    {c.kind === 'helpful' && (
+                      <span aria-hidden className="opacity-50">
+                        {' '}✧
+                      </span>
+                    )}
+                  </div>
+                </div>
               )
             })}
           </div>
         </div>
       )}
+
+      {skillSequences.length > 0 &&
+        skillSequences.map(({ sequence, kind }) => (
+          <div key={sequence.id}>
+            <Label>Prerequisite sequence</Label>
+            <p className="mt-1 text-xs opacity-70">{sequence.description}</p>
+            <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
+              {sequence.steps.map((step, i) => {
+                const label = getShape(step.shapeId)?.name ?? step.shapeId
+                const still = conditioningStill(photos, step.shapeId)
+                return (
+                  <div key={`${sequence.id}:${step.shapeId}:${i}`} className="w-36 shrink-0">
+                    {still && (
+                      <div className="aspect-square overflow-hidden rounded-xl bg-black">
+                        <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="mt-1 text-xs font-bold">
+                      {label}
+                      {kind === 'helpful' && (
+                        <span aria-hidden className="opacity-50">
+                          {' '}✧
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
 
       {hl && helpful.length > 0 && (
         <div>
