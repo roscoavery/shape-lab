@@ -561,6 +561,14 @@ export const SHIPPED_CONDITIONING: ConditioningNeed[] = [
     shipped: true,
   },
   {
+    id: 'cnd_handstand_decline',
+    skillId: 'skl_handstand',
+    label: 'Decline handstand',
+    kind: 'required',
+    shapeId: 'decline_handstand',
+    shipped: true,
+  },
+  {
     id: 'cnd_handstand_wall',
     skillId: 'skl_handstand',
     label: 'Wall handstand',

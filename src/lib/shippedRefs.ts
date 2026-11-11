@@ -47,6 +47,7 @@ export const SHIPPED_FILES: Record<string, string | string[]> = {
   puck: 'puck.jpg',
   mountain_climber: 'mountain_climber.jpg',
   stick_position: 'stick_position.jpg',
+  decline_handstand: 'decline_handstand.jpg',
   superman: 'superman.jpg',
   rainbow_bridge: 'rainbow_bridge.jpg',
   long_bridge: 'long_bridge.jpg',
