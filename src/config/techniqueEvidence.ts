@@ -1067,6 +1067,18 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       watchFor: 'Never do back bends or walkovers down a wedge.',
     },
   ],
+  'skl_cartwheel': [
+    {
+      who: 'Reference',
+      url: '/videos/cartwheel-ideal.mp4',
+      watchFor: 'Ideal hand and head position. Feet together open shoulders, through passé, cartwheel to a landing lunge, held long enough to make the little corrections for the next rep.',
+    },
+    {
+      who: 'Reference',
+      url: '/videos/cartwheel-ideal-mirrored.mp4',
+      watchFor: 'Mirrored version. Ideal hand and head position. Feet together open shoulders, through passé, cartwheel to a landing lunge, held long enough to make the little corrections for the next rep.',
+    },
+  ],
   'cartwheel-step-in': [
     {
       who: 'Coach Ryan Williams',
