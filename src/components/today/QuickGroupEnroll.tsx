@@ -365,17 +365,35 @@ export function QuickGroupEnroll({
                 onClick={() => {
                   commit({ stayForMore: true })
                   if (event.kind === 'clinic' || event.kind === 'camp') setStep('acrotowards')
+                  else if (event.kind === 'school') setStep('goal')
                 }}
                 className="h-16 rounded-2xl bg-[var(--accent)] text-lg font-bold text-[var(--on-accent)] disabled:opacity-40"
               >
-                {photo ? 'They’re in · working towards' : 'Take a snapshot first'}
+                {photo
+                  ? event.kind === 'school'
+                    ? 'They’re in · skill hope'
+                    : 'They’re in · working towards'
+                  : 'Take a snapshot first'}
               </button>
               <button
                 type="button"
-                onClick={() => commit()}
+                onClick={() => {
+                  if (event.kind === 'school') {
+                    commit({ stayForMore: true })
+                    setStep('goal')
+                    return
+                  }
+                  commit()
+                }}
                 className="h-12 rounded-2xl border border-white/15 text-sm font-semibold text-white/80"
               >
-                {photo ? 'Done · next athlete' : 'Skip photo · next athlete'}
+                {event.kind === 'school'
+                  ? photo
+                    ? 'Done · skill hope'
+                    : 'Skip photo · skill hope'
+                  : photo
+                    ? 'Done · next athlete'
+                    : 'Skip photo · next athlete'}
               </button>
               <button type="button" onClick={() => setStep('phone')} className="self-start text-sm text-white/50 underline">
                 Back
