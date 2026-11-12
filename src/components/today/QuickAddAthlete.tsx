@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { Athlete, AthleteSkillGoal } from '../../types'
 import { createId } from '../../lib/storage'
 import { displayPersonName, namesMatch } from '../../lib/classStation'
@@ -37,6 +37,9 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
   const [photo, setPhoto] = useState('')
   const [map, setMap] = useState<'main' | 'acro'>('main')
   const [workingTowards, setWorkingTowards] = useState<Pick[]>([])
+  // Skill whose path is shining after a first tap on a map tile. The bright
+  // message below names it and says a second tap picks it.
+  const [previewSkill, setPreviewSkill] = useState<Pick | null>(null)
 
   const firstName = first.trim()
   const lastName = last.trim()
@@ -45,7 +48,13 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
 
   // The maps shine a skill's path on the first tap and only call this on
   // a second tap on the same skill, exactly as on the intake link.
+  // The second tap picks (or unpicks) the skill, so the first-tap message
+  // goes away with it.
+  const handlePreview = useCallback((skill: UnifiedSkill | null) => {
+    setPreviewSkill(skill ? { id: skill.id, name: skill.name } : null)
+  }, [])
   const toggleWorking = (skill: UnifiedSkill) => {
+    setPreviewSkill(null)
     setWorkingTowards((prev) => {
       if (prev.some((p) => p.id === skill.id)) return prev.filter((p) => p.id !== skill.id)
       if (prev.length >= 3) return prev
@@ -294,7 +303,10 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setMap('main')}
+                  onClick={() => {
+                    setMap('main')
+                    setPreviewSkill(null)
+                  }}
                   className={`h-11 rounded-xl text-sm font-bold ${
                     map === 'main'
                       ? 'bg-sky-400 text-black'
@@ -305,7 +317,10 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMap('acro')}
+                  onClick={() => {
+                    setMap('acro')
+                    setPreviewSkill(null)
+                  }}
                   className={`h-11 rounded-xl text-sm font-bold ${
                     map === 'acro'
                       ? 'bg-sky-400 text-black'
@@ -319,11 +334,16 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
                 {workingTowards.length}/3 selected
                 {workingTowards.length > 0 && `: ${workingTowards.map((p) => p.name).join(', ')}`}
               </p>
+              {previewSkill && (
+                <p className="mt-3 rounded-xl border border-amber-300/70 bg-amber-400/25 p-3 text-sm font-bold text-amber-200">
+                  Here is the path to {previewSkill.name}. Tap it again to pick it.
+                </p>
+              )}
               <div className="mt-2 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
                 {map === 'main' ? (
-                  <SkillMapView onTileTap={toggleWorking} />
+                  <SkillMapView onTileTap={toggleWorking} onPreview={handlePreview} />
                 ) : (
-                  <AcroMapView onTileTap={toggleWorking} />
+                  <AcroMapView onTileTap={toggleWorking} onPreview={handlePreview} />
                 )}
               </div>
               {workingTowards.length > 0 && (
@@ -338,7 +358,10 @@ export function QuickAddAthlete({ coach, athletes, onAthletesChange, onClose, on
               <div className="mt-4 flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep('snapshot')}
+                  onClick={() => {
+                    setPreviewSkill(null)
+                    setStep('snapshot')
+                  }}
                   className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold"
                 >
                   Back

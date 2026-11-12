@@ -2478,11 +2478,16 @@ function LevelsView({
 
 export function SkillMapView({
   onTileTap,
+  onPreview,
   viewer = null,
   classAthletes = [],
   activeAthlete = null,
 }: {
   onTileTap: (skill: UnifiedSkill) => void
+  /** Called whenever the first-tap preview (shining path) changes — the
+      skill whose path is shining, or null when the shine clears. Lets
+      embedders (quick-add) say what a second tap does. No-op when absent. */
+  onPreview?: (skill: UnifiedSkill | null) => void
   /** Signed-in viewer. Glow only renders for athlete-role viewers with goals. */
   viewer?: Athlete | null
   /** Athletes on the live class roster — their goal paths light up too. */
@@ -2570,6 +2575,13 @@ export function SkillMapView({
     [hlTarget, comboIdx, directPath, pathTick],
   )
   const hlTargetName = hlTarget ? getRegistrySkill(hlTarget)?.name ?? null : null
+  // First-tap preview: surface the shining skill to embedders (quick-add)
+  // so they can say what a second tap does. Covers tile taps, search picks,
+  // and tap-away / clear-button clears. No-op without onPreview.
+  useEffect(() => {
+    if (!onPreview) return
+    onPreview(hlTarget ? (getRegistrySkill(hlTarget) ?? null) : null)
+  }, [hlTarget, onPreview])
   const pickHlTarget = useCallback((id: string) => {
     setComboIdx(0)
     setHlTarget(canonicalSkillId(id) || null)

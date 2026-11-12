@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ACRO_SKILLS,
   ACRO_TRACKS,
@@ -16,6 +16,10 @@ import { needsForSkill } from '../../lib/skillPaths'
 type Props = {
   /** Called when a tile is tapped with the resolved skill. */
   onTileTap: (skill: UnifiedSkill) => void
+  /** Called whenever the first-tap preview (shining path) changes — the
+      skill whose path is shining, or null when the shine clears. Lets
+      embedders (quick-add) say what a second tap does. No-op when absent. */
+  onPreview?: (skill: UnifiedSkill | null) => void
 }
 
 /** Track colors matching the main map's ember UI. */
@@ -34,9 +38,26 @@ const TRACK_RGB: Record<AcroTrack, string> = {
  * Tap a tile to open its card. Shine search highlights a skill.
  * Wiggle mode: tap target, then helpers to make them wiggle.
  */
-export function AcroMapView({ onTileTap }: Props) {
+export function AcroMapView({ onTileTap, onPreview }: Props) {
   const [shineQuery, setShineQuery] = useState('')
   const [shineId, setShineId] = useState<string | null>(null)
+
+  // First-tap preview: surface the shining skill to embedders (quick-add)
+  // so they can say what a second tap does. Covers tile taps, search picks,
+  // and tap-away / clear-button clears. No-op without onPreview.
+  useEffect(() => {
+    if (!onPreview) return
+    if (!shineId) {
+      onPreview(null)
+      return
+    }
+    const acroSkill = getAcroSkill(shineId)
+    if (!acroSkill) {
+      onPreview(null)
+      return
+    }
+    onPreview(getRegistrySkillByName(acroSkill.name) ?? acroSkillToUnified(acroSkill))
+  }, [shineId, onPreview])
 
   const shineResults = useMemo(() => {
     const q = shineQuery.trim().toLowerCase()
