@@ -75,12 +75,17 @@ import {
   eventKindLabel,
   getTrainingEvent,
   listTrainingEvents,
-  createTrainingEvent,
   setEventAthletes,
   subscribeTrainingEvents,
   toggleEventAthlete,
   type TrainingEventKind,
 } from '../../lib/trainingEvents'
+import {
+  clearOpenTrainingSession,
+  getRestorableOpenTrainingSession,
+  setOpenTrainingSession,
+  subscribeOpenTrainingSession,
+} from '../../lib/openTrainingSession'
 import { GymBadge, gymHint } from '../today/GymBadge'
 import { TodayGymScope } from '../today/TodayGymScope'
 import { GroupNeedFaces, QuickGroupEnroll } from '../today/QuickGroupEnroll'
@@ -165,7 +170,14 @@ export function HomeDashboard({
   const [unlockQuery, setUnlockQuery] = useState('')
   const [unlockGym, setUnlockGym] = useState<string | 'all'>('all')
   const [lessonQuery, setLessonQuery] = useState('')
-  const [gymScope, setGymScope] = useState<GymScope>({ kind: 'desk' })
+  // A school / camp / clinic session opened on this device re-opens here:
+  // the Today view remounts on every navigation, and the scope alone used
+  // to be lost with it. Only a session opened today, for this coach, whose
+  // event still exists comes back.
+  const [gymScope, setGymScope] = useState<GymScope>(() => {
+    const restored = getRestorableOpenTrainingSession(signedIn?.id)
+    return restored ? { kind: 'event', eventId: restored.eventId } : { kind: 'desk' }
+  })
   const [rowMenuId, setRowMenuId] = useState<string | null>(null)
   const [addGroupFor, setAddGroupFor] = useState<string | null>(null)
   const [pickHint, setPickHint] = useState(false)
@@ -219,6 +231,32 @@ export function HomeDashboard({
   }, [])
   useEffect(() => subscribeTrainingEvents(() => setRefresh((n) => n + 1)), [])
   useEffect(() => subscribeHiddenGyms(() => setHiddenTick((n) => n + 1)), [])
+  // Keep the open training session in the per-device store: opening a
+  // school / camp / clinic session records it, ending it (or leaving the
+  // scope for the desk, all athletes, or another gym) clears it.
+  useEffect(() => {
+    if (gymScope.kind === 'event') {
+      if (signedIn) setOpenTrainingSession(gymScope.eventId, signedIn.id)
+    } else {
+      clearOpenTrainingSession()
+    }
+  }, [gymScope, signedIn?.id])
+  // Pick up a session the clock started on another tab, or one that was
+  // open when this view unmounted. The functional update returns the same
+  // scope when nothing changed, so the store notification never loops.
+  useEffect(() => {
+    const restore = () => {
+      const restored = getRestorableOpenTrainingSession(signedIn?.id)
+      if (!restored) return
+      setGymScope((prev) =>
+        prev.kind === 'event' && prev.eventId === restored.eventId
+          ? prev
+          : { kind: 'event', eventId: restored.eventId },
+      )
+    }
+    restore()
+    return subscribeOpenTrainingSession(restore)
+  }, [signedIn?.id])
   useEffect(() => {
     if (!coach || !signedIn) return
     let cancelled = false
@@ -239,45 +277,11 @@ export function HomeDashboard({
           })
         }
       }
-      // Auto-start school/camp/clinic from the calendar when enabled.
-      if (getAutoStartSessions()) {
-        const trainingKinds: ('school' | 'camp' | 'clinic')[] = ['school', 'camp', 'clinic']
-        for (const kind of trainingKinds) {
-          if (!glow.glowing.has(kind)) continue
-          const calEvent = glow.closest[kind]
-          if (!calEvent) continue
-          // Don't auto-start if something is already live.
-          const hasLive = getActiveMeeting(signedIn.id) || findLiveLesson(signedIn.id) || (gymScope.kind === 'event' && getTrainingEvent(gymScope.eventId))
-          if (hasLive) break
-          // Find or create the training event for this kind.
-          const all = listTrainingEvents()
-          const matches = all.filter((e) => e.kind === kind && e.coachIds.includes(signedIn.id))
-          if (matches[0]) {
-            setGymScope({ kind: 'event', eventId: matches[0].id })
-          } else {
-            // No group yet; create one from the calendar event title so the
-            // session starts and athletes can be added as they arrive.
-            const title = (calEvent.title || kind).trim() || kind
-            try {
-              const created = createTrainingEvent({
-                name: title,
-                kind,
-                coachId: signedIn.id,
-                hostGym: title,
-                athleteIds: [],
-              })
-              setGymScope({ kind: 'event', eventId: created.id })
-            } catch {
-              /* never break the app over auto-start */
-            }
-          }
-          break // Only auto-start one per check.
-        }
-        // 1-on-1 lesson auto-start now lives in the app's every-minute clock
-        // (App.tsx) so it runs on any tab. This view keeps the glow and the
-        // athlete pre-selection. Manual linking in the calendar never starts
-        // the lesson, only the clock does.
-      }
+      // School / camp / clinic auto-start lives in the app's every-minute
+      // clock (App.tsx) now, like 1-on-1 lessons, so it runs on any tab and
+      // starts at the scheduled time. This view keeps the glow and the
+      // athlete pre-selection. Manual linking in the calendar never starts
+      // a session, only the clock does.
     }
     void check()
     // Re-check every minute so the glow kicks in as the 5-minute window opens.

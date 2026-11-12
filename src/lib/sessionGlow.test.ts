@@ -24,7 +24,7 @@ mock.module('./shippedRefs.ts', {
   },
 } as Parameters<typeof mock.module>[1])
 
-const { classifySessionEvent } = await import('./sessionGlow.ts')
+const { classifySessionEvent, getSessionGlow } = await import('./sessionGlow.ts')
 
 function ev(partial: Partial<TodayCalendarEvent>): TodayCalendarEvent {
   return {
@@ -69,5 +69,40 @@ describe('classifySessionEvent with an explicit event type', () => {
 
   it('an unmarked event with a matched athlete is still a lesson', () => {
     assert.equal(classifySessionEvent(ev({ matchedAthleteId: 'ath_1' })), 'lesson')
+  })
+})
+
+describe('getSessionGlow with a school-typed event', () => {
+  // The BA fixture is the Thursday school block: 2:00-4:30pm.
+  const school = () => ev({ eventType: 'school' })
+
+  it('a school-typed event glows at its start time', () => {
+    const glow = getSessionGlow([school()], new Date('2026-11-12T14:00:00'))
+    assert.equal(glow.glowing.has('school'), true)
+    assert.equal(glow.closest.school?.id, 'evt_1')
+  })
+
+  it('a school-typed event glows 5 minutes before it starts', () => {
+    const glow = getSessionGlow([school()], new Date('2026-11-12T13:55:00'))
+    assert.equal(glow.glowing.has('school'), true)
+  })
+
+  it('a school-typed event does not glow 6 minutes before it starts', () => {
+    const glow = getSessionGlow([school()], new Date('2026-11-12T13:54:00'))
+    assert.equal(glow.glowing.has('school'), false)
+  })
+
+  it('a school-typed event stops glowing after it ends', () => {
+    const glow = getSessionGlow([school()], new Date('2026-11-12T16:31:00'))
+    assert.equal(glow.glowing.has('school'), false)
+  })
+
+  it('school wins the glow even when the title says lesson', () => {
+    const glow = getSessionGlow(
+      [ev({ eventType: 'school', title: 'Private lesson' })],
+      new Date('2026-11-12T14:00:00'),
+    )
+    assert.equal(glow.glowing.has('school'), true)
+    assert.equal(glow.glowing.has('lesson'), false)
   })
 })

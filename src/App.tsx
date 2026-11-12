@@ -247,6 +247,7 @@ import { syncAthleteProfileToResearch } from './lib/profileResearch'
 import { canViewAthleteProfile } from './lib/coachLink'
 import { isAthleteProfile, isCoachProfile, isShapelabAdmin, profileRole } from './lib/profileRole'
 import { checkLessonAutoStart, checkLessonAutoEnd, checkLessonEndWarning, extendLessonEnd } from './lib/lessonAuto'
+import { checkTrainingAutoStart } from './lib/trainingAuto'
 import { getAutoStartSessions } from './lib/sessionPrefs'
 import { childAthletes } from './lib/parentLink'
 import { resolveAthleteViewAthlete } from './lib/familyView'
@@ -676,6 +677,13 @@ export default function App() {
               .catch(() => {
                 /* never break the app over auto-start */
               })
+            // School / camp / clinic: start the training session at its
+            // calendar time, exactly like lessons. The session opens through
+            // the open-training-session store, so Today picks it up whether
+            // it is mounted or not.
+            void checkTrainingAutoStart(coach.id).catch(() => {
+              /* never break the app over auto-start */
+            })
           }
         }
       } catch {
