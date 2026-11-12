@@ -338,6 +338,10 @@ export default function App() {
   // the web share target on Chrome) opens straight in the fullscreen
   // player, with a one-tap save into the reference library.
   const [sharedClip, setSharedClip] = useState<{ url: string } | null>(null)
+  // The save form starts closed so a pasted clip can be watched and
+  // analyzed first. The bookmark button reopens it when the coach is
+  // ready to save.
+  const [shareSaveCardOpen, setShareSaveCardOpen] = useState(false)
   const [shareSaveState, setShareSaveState] = useState<
     | { state: 'idle' }
     | { state: 'saving' }
@@ -361,6 +365,7 @@ export default function App() {
     shareTagsDirtyRef.current = false
     setShareSuggestion(null)
     setShareSaveState({ state: 'idle' })
+    setShareSaveCardOpen(false)
     setSharedClip({ url })
     setShareEditName(defaultSocialName(url))
     setShareEditTags('')
@@ -2521,9 +2526,18 @@ export default function App() {
           />
           {canFileClips && (
             <>
-              {shareSaveState.state !== 'saved' && shareSaveState.state !== 'duplicate' && (
+              {shareSaveCardOpen && shareSaveState.state !== 'saved' && shareSaveState.state !== 'duplicate' && (
                 <div className="pointer-events-none fixed inset-x-0 bottom-40 z-[600] flex justify-center px-4">
-                  <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 shadow-lg">
+                  <div className="pointer-events-auto relative w-full max-w-md rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-3 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => setShareSaveCardOpen(false)}
+                      className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white"
+                      aria-label="Close save form"
+                      title="Close"
+                    >
+                      ✕
+                    </button>
                     <label>
                       <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                         Name
@@ -2562,24 +2576,50 @@ export default function App() {
                   </div>
                 </div>
               )}
-              <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
-                <button
-                  type="button"
-                  onClick={() => void saveSharedClip()}
-                  disabled={shareSaveState.state === 'saving' || shareSaveState.state === 'saved'}
-                  className="pointer-events-auto rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-80"
-                >
-                  {shareSaveState.state === 'saving'
-                    ? 'Saving…'
-                    : shareSaveState.state === 'saved'
-                      ? `Saved to ${shareSaveState.collectionName ?? 'reference library'}`
-                      : shareSaveState.state === 'duplicate'
-                        ? `Already in ${shareSaveState.collectionName ?? 'the library'}`
-                        : shareSaveState.state === 'error'
-                          ? 'Save failed, tap to retry'
-                          : 'Save to reference library'}
-                </button>
-              </div>
+              {(shareSaveCardOpen ||
+                shareSaveState.state === 'saved' ||
+                shareSaveState.state === 'duplicate') && (
+                <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[600] flex justify-center px-4">
+                  <button
+                    type="button"
+                    onClick={() => void saveSharedClip()}
+                    disabled={shareSaveState.state === 'saving' || shareSaveState.state === 'saved'}
+                    className="pointer-events-auto rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-80"
+                  >
+                    {shareSaveState.state === 'saving'
+                      ? 'Saving…'
+                      : shareSaveState.state === 'saved'
+                        ? `Saved to ${shareSaveState.collectionName ?? 'reference library'}`
+                        : shareSaveState.state === 'duplicate'
+                          ? `Already in ${shareSaveState.collectionName ?? 'the library'}`
+                          : shareSaveState.state === 'error'
+                            ? 'Save failed, tap to retry'
+                            : 'Save to reference library'}
+                  </button>
+                </div>
+              )}
+              {!shareSaveCardOpen &&
+                shareSaveState.state !== 'saved' &&
+                shareSaveState.state !== 'duplicate' && (
+                  <div className="pointer-events-none fixed bottom-48 right-4 z-[600]">
+                    <button
+                      type="button"
+                      onClick={() => setShareSaveCardOpen(true)}
+                      className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg"
+                      aria-label="Save to reference library"
+                      title="Save to reference library"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-6 w-6"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
             </>
           )}
         </>
