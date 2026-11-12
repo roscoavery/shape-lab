@@ -250,9 +250,9 @@ function ShapeStrip({ guideId }: { guideId: string }) {
     <div>
       <Label>Shapes</Label>
       <p className="mt-1 text-xs opacity-70">The body positions inside this skill.</p>
-      <div className="mt-2 flex min-w-0 gap-3 overflow-x-auto pb-1">
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {items.map((s) => (
-          <div key={s.key} className="w-36 shrink-0">
+          <div key={s.key} className="min-w-0">
             <div className="aspect-square overflow-hidden rounded-xl bg-black">
               <CroppedStill src={s.src} stillId={s.stillId} alt={s.name} className="h-full w-full object-cover" loading="lazy" />
             </div>
