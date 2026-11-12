@@ -750,6 +750,7 @@ export const FAMILY_BY_SKILL: Record<string, SkillFamily> = {
   skl_bounders: 'forwards',
   skl_bounder_step_out: 'forwards',
   skl_front_tuck: 'forwards',
+  skl_front_pike: 'forwards',
   skl_front_layout: 'forwards',
   skl_barani: 'forwards',
   skl_front_full: 'forwards',
@@ -891,13 +892,15 @@ const ROWS: MapRow[] = [
     ],
   },
   {
-    // R5
+    // R5 — front pike splits the front HS front tuck space, on the left
+    cols: 16,
     tiles: [
-      { skillId: 'skl_standing_two_to_tuck', label: 'Standing 2 to tuck', col: '1 / 3' },
-      { skillId: 'skl_fhs_front_tuck', label: 'Front HS front tuck', col: '3 / 4' },
-      { skillId: 'skl_bounder_step_out', label: 'Bounder step out', col: '4 / 5' },
-      { skillId: 'skl_cart_tuck', label: 'Cart tuck', col: '5 / 7' },
-      { skillId: 'skl_ro_bhs_tuck', label: 'RO HS tuck', col: '7 / 9' },
+      { skillId: 'skl_standing_two_to_tuck', label: 'Standing 2 to tuck', col: '1 / 5' },
+      { skillId: 'skl_front_pike', label: 'Front pike', col: '5 / 6' },
+      { skillId: 'skl_fhs_front_tuck', label: 'Front HS front tuck', col: '6 / 7' },
+      { skillId: 'skl_bounder_step_out', label: 'Bounder step out', col: '7 / 9' },
+      { skillId: 'skl_cart_tuck', label: 'Cart tuck', col: '9 / 13' },
+      { skillId: 'skl_ro_bhs_tuck', label: 'RO HS tuck', col: '13 / 17' },
     ],
   },
   {
@@ -979,8 +982,14 @@ function mergeCustomSkills(rows: MapRow[], customs: CustomMapSkill[]): MapRow[] 
       byFamily.set(c.family, list)
     }
     const tiles = [...row.tiles]
+    // FAMILY_COLS is defined on the 8-col grid as grid LINES (1-based);
+    // map them to this row's line numbers so a finer row (e.g. R5 at
+    // 16 cols) splits in its own coordinates instead of 8-col ones.
+    // Line mapping: new = (old - 1) * scale + 1. Scale 1 = identity.
+    const scale = (row.cols ?? 8) / 8
+    const toRowLine = (line: number) => (line - 1) * scale + 1
     for (const [family, list] of byFamily) {
-      const [start, end] = FAMILY_COLS[family]
+      const [start, end] = [toRowLine(FAMILY_COLS[family][0]), toRowLine(FAMILY_COLS[family][1])]
       // Find existing tiles overlapping this family's range
       const overlapping = tiles.filter((t) => {
         const m = t.col.match(/(\d+)\s*\/\s*(\d+)/)
@@ -1283,9 +1292,16 @@ function reflowRowTiles(row: MapRow, headers?: { label: string; col: string }[])
   if (survivors.length === row.tiles.length) return row.tiles
   if (survivors.length === 0) return []
   if (headers && headers.length > 0) {
+    // Header spans are defined on the 8-col grid as grid LINES (1-based);
+    // map them to this row's line numbers so a finer row (e.g. R5 at
+    // 16 cols) reflows in its own coordinates. Line mapping:
+    // new = (old - 1) * scale + 1. Scale 1 = identity.
+    const scale = (row.cols ?? 8) / 8
+    const toRowLine = (line: number) => (line - 1) * scale + 1
     const spans = headers
       .map((h) => parseColSpan(h.col))
       .filter((s): s is { start: number; end: number } => s !== null)
+      .map((s) => ({ start: toRowLine(s.start), end: toRowLine(s.end) }))
     if (spans.length === 0) return survivors
     const groups: MapTile[][] = spans.map(() => [])
     for (const t of survivors) {
