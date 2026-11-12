@@ -108,7 +108,7 @@ function VariationCard({
             src={still.url}
             stillId={still.stillId}
             alt={`${v.name} reference`}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center px-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/35">
