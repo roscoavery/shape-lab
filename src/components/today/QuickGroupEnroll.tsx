@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Athlete, AthleteSkillGoal, FavoriteColor } from '../../types'
 import { createId } from '../../lib/storage'
 import { displayPersonName, namesMatch } from '../../lib/classStation'
 import { FAVORITE_COLORS } from '../../lib/profileTheme'
+import {
+  makeRegistrySkillGoal,
+  type UnifiedSkill,
+} from '../../lib/skillRegistry'
 import {
   eventKindLabel,
   setEventAthletes,
@@ -12,7 +16,7 @@ import { withEventMembership } from '../../lib/gymScope'
 import { rememberLocalPhoto } from '../../lib/rosterSync'
 import { hasAthleteFace } from '../../lib/namesQuiz'
 import { FaceSnapshotField } from '../coach/FaceSnapshotField'
-import { SkillGoalPicker } from '../coach/SkillGoalPicker'
+import { SkillMapView } from '../learn/SkillMapView'
 import { ACRO_SKILLS, ACRO_TRACKS, ACRO_TRACK_LABELS, type AcroTrack } from '../../lib/acroSkills'
 import { BirthdayQuickPick } from './BirthdayQuickPick'
 import { AthleteSearchField } from './AthleteSearchField'
@@ -58,6 +62,9 @@ export function QuickGroupEnroll({
   const [birthday, setBirthday] = useState('')
   const [flash, setFlash] = useState<string | null>(null)
   const [workingTowards, setWorkingTowards] = useState<string[]>([])
+  // Skill whose path is shining after a first tap on the hope map. The bright
+  // message below names it and says a second tap picks it.
+  const [previewSkill, setPreviewSkill] = useState<UnifiedSkill | null>(null)
 
   const toggleWorking = (id: string) => {
     setWorkingTowards((prev) => {
@@ -66,6 +73,31 @@ export function QuickGroupEnroll({
       return [...prev, id]
     })
   }
+
+  const handlePreview = useCallback((skill: UnifiedSkill | null) => {
+    setPreviewSkill(skill)
+  }, [])
+
+  // Second tap on the same map tile picks (or unpicks) it as a hope. Same
+  // goal shape the picker it replaces made, minus the surface — Ryan dropped
+  // the surface question for now, so no surface is asked or stamped.
+  const toggleGoal = (skill: UnifiedSkill) => {
+    setPreviewSkill(null)
+    setGoals((prev) => {
+      const matches = (g: AthleteSkillGoal) =>
+        g.skillId === skill.id || g.label.toLowerCase() === skill.name.toLowerCase()
+      if (prev.some(matches)) return prev.filter((g) => !matches(g))
+      if (prev.length >= 3) return prev
+      return [...prev, makeRegistrySkillGoal(skill, { createId, source: 'intake' })]
+    })
+  }
+
+  // Leaving the goal step unmounts the map and clears its shine, so the
+  // first-tap message must go with it — otherwise it would show stale on
+  // the way back in with no path shining.
+  useEffect(() => {
+    if (step !== 'goal') setPreviewSkill(null)
+  }, [step])
 
   const kind = eventKindLabel(event.kind).toLowerCase()
   const existingMatch = athletes.find((a) => namesMatch(a, first, last))
@@ -563,7 +595,21 @@ export function QuickGroupEnroll({
 
           {step === 'goal' && (
             <>
-              <SkillGoalPicker value={goals} onChange={setGoals} />
+              <p className="text-sm text-white/65">
+                Tap a skill once to see the path to get there. Tap it again to pick it as their hope.
+              </p>
+              <p className="mt-3 text-xs text-white/50">
+                {goals.length}/3 selected
+                {goals.length > 0 && `: ${goals.map((g) => g.label).join(', ')}`}
+              </p>
+              {previewSkill && (
+                <p className="mt-3 rounded-xl border border-amber-300/70 bg-amber-400/25 p-3 text-sm font-bold text-amber-200">
+                  Here is the path to {previewSkill.name}. Tap it again to pick it.
+                </p>
+              )}
+              <div className="mt-2 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10">
+                <SkillMapView onTileTap={toggleGoal} onPreview={handlePreview} />
+              </div>
               <button
                 type="button"
                 onClick={() => {
