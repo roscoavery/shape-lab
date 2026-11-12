@@ -205,7 +205,7 @@ export function QuickGroupEnroll({
             : step === 'photo'
               ? `Snapshot ${first.trim() || 'them'}`
               : step === 'more'
-                ? `${first.trim() || 'They'} are on the list`
+                ? `${first.trim() || 'They'} is all set.`
                 : step === 'color'
                   ? 'Favorite color'
                   : step === 'birthday'
@@ -224,7 +224,7 @@ export function QuickGroupEnroll({
             : step === 'photo'
               ? 'Snap a face now. That is the main thing after the name.'
               : step === 'more'
-                ? 'Move on, or answer a couple more if they have a minute.'
+                ? 'All set. Move on to the next athlete, or tap anything below to change it.'
                 : step === 'color'
                   ? 'Themes their app. Skip if the line is moving.'
                   : step === 'birthday'
@@ -472,6 +472,9 @@ export function QuickGroupEnroll({
                   Skill hope{goals.length ? ' · set' : ''}
                 </button>
               </div>
+              <button type="button" onClick={() => setStep('photo')} className="self-start text-sm text-white/50 underline">
+                Back
+              </button>
             </>
           )}
 
