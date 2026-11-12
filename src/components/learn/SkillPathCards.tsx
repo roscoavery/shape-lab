@@ -254,7 +254,7 @@ function ShapeStrip({ guideId }: { guideId: string }) {
         {items.map((s) => (
           <div key={s.key} className="min-w-0">
             <div className="aspect-square overflow-hidden rounded-xl bg-black">
-              <CroppedStill src={s.src} stillId={s.stillId} alt={s.name} className="h-full w-full object-cover" loading="lazy" />
+              <CroppedStill src={s.src} stillId={s.stillId} alt={s.name} className="h-full w-full object-contain" loading="lazy" />
             </div>
             <div className="mt-1 text-xs font-bold">{s.name}</div>
             {s.desc && <div className="text-[11px] opacity-70">{s.desc}</div>}
@@ -1753,7 +1753,7 @@ function PathTab({
                 <div key={c.id} className="w-36 shrink-0" title={c.note ?? c.label}>
                   {still && (
                     <div className="aspect-square overflow-hidden rounded-xl bg-black">
-                      <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-cover" loading="lazy" />
+                      <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-contain" loading="lazy" />
                     </div>
                   )}
                   <div className="mt-1 text-xs font-bold">
@@ -1784,7 +1784,7 @@ function PathTab({
                   <div key={`${sequence.id}:${step.shapeId}:${i}`} className="w-36 shrink-0">
                     {still && (
                       <div className="aspect-square overflow-hidden rounded-xl bg-black">
-                        <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-cover" loading="lazy" />
+                        <CroppedStill src={still.src} stillId={still.stillId} alt={label} className="h-full w-full object-contain" loading="lazy" />
                       </div>
                     )}
                     <div className="mt-1 text-xs font-bold">
