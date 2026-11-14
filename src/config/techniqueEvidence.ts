@@ -247,6 +247,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/DdmF9Abx9un/',
       watchFor: 'Back triple.',
     },
+    {
+      who: 'Jolie Brunemeier',
+      url: 'https://www.instagram.com/reel/DfjIx-yMF3b/',
+      creator: 'joliebeegymnast',
+    },
   ],
   skl_kick_15: [
     {
