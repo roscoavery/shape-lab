@@ -31,6 +31,7 @@ export const MUSE_SCOPES = [
   'chalkboards:write',
   'homework:write',
   'lessons:write',
+  'calendar:read',
 ] as const
 
 export type MuseScope = (typeof MUSE_SCOPES)[number]
@@ -116,14 +117,17 @@ function cleanRecord(raw: unknown): MuseKeyRecord | null {
     typeof r.createdByAccountId === 'string' && r.createdByAccountId ? r.createdByAccountId : null
   // Build 707: chalkboard routes are new, so keys minted before they existed
   // cannot carry the scopes. Build 1188: same for the lessons repair
-  // routes. Owner/admin keys never escalate past their creator's role,
-  // and owners/admins manage lessons in the app itself, so backfill
-  // these scopes at read time rather than stranding old keys.
+  // routes. Build 1264: same for the read-only calendar endpoint. Owner/admin
+  // keys never escalate past their creator's role, and owners/admins manage
+  // lessons in the app itself, so backfill these scopes at read time rather
+  // than stranding old keys.
   // Runtime-only; stored records are untouched.
   const ownerMade =
     !createdByAccountId || createdByRole === 'gymOwner' || createdByRole === 'admin'
   const withBackfilled = ownerMade
-    ? (['chalkboards:read', 'chalkboards:write', 'lessons:write'] as const).reduce<MuseScope[]>(
+    ? (
+        ['chalkboards:read', 'chalkboards:write', 'lessons:write', 'calendar:read'] as const
+      ).reduce<MuseScope[]>(
         (list, s) => (list.includes(s) ? list : [...list, s]),
         [...scopes],
       )

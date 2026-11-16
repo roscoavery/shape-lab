@@ -38,8 +38,16 @@ import { readSkillPathsFile, writeSkillPathsFile } from './skillPathStore.ts'
 import { mergeChalkboardBoards, readChalkboardsFile, writeChalkboardsFile } from './chalkboardStore.ts'
 import { addAthleteToSessionRow, readLessonsFile, writeLessonsFile } from './lessonStore.ts'
 import { appendHoldLog, HOLD_LOG_SHAPES, roundHoldSecondsUp } from './holdLog.ts'
+import { eventsForCoachInRange, readCalendarDb } from './calendar/store.ts'
+import { unescapeCalendarText } from './calendar/matching.ts'
 
 const WINDOW_DAYS = 30
+
+// Ryan's roster profile id. Kept local (mirrors src/lib/ryanProfile.ts)
+// because server code compiles under node16 resolution and cannot import
+// the client file's extensionless relative imports. Same pattern as
+// server/calendar/coachAuth.ts and server/rosterMerge.ts.
+const RYAN_PROFILE_ID = 'ath_ryan'
 
 function bearerSecret(req: IncomingMessage): string | null {
   const header = req.headers.authorization
@@ -1086,6 +1094,59 @@ function boardSummary(board: ChalkboardRow): Record<string, unknown> {
   }
 }
 
+/**
+ * Read-only calendar events for the key creator's own calendar, with full
+ * notes. Build 1264: Muse's device calendar reads truncate notes at 500
+ * chars by platform design, so briefs built from them cut off mid-field.
+ * This endpoint reads the same synced CalDAV store the app itself reads,
+ * so the full Acuity note comes through. GET only, bearer + calendar:read
+ * scope, window bound to 120 days so one call can never dump the calendar.
+ */
+async function handleMuseCalendarEvents(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<boolean> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'Use GET' })
+    return true
+  }
+  const verified = await authed(req, res, 'calendar:read')
+  if (!verified) return true
+  const creator = await keyCreator(verified.key)
+  // Same coach resolution as the in-app calendar route: the creator's own
+  // roster profile, falling back to Ryan for owner/admin keys.
+  const coachId =
+    creator.rosterProfileId ?? (creator.privileged ? RYAN_PROFILE_ID : creator.accountId ?? 'muse')
+  const url = new URL(req.url ?? '/', 'http://local')
+  const from = url.searchParams.get('from') || new Date(Date.now() - 30 * 86400000).toISOString()
+  const to = url.searchParams.get('to') || new Date(Date.now() + 90 * 86400000).toISOString()
+  const fromMs = Date.parse(from)
+  const toMs = Date.parse(to)
+  if (
+    !Number.isFinite(fromMs) ||
+    !Number.isFinite(toMs) ||
+    toMs < fromMs ||
+    toMs - fromMs > 120 * 86400000
+  ) {
+    sendJson(res, 400, { error: 'Pass from and to as ISO dates, at most 120 days apart.' })
+    return true
+  }
+  const db = await readCalendarDb()
+  const events = eventsForCoachInRange(db, coachId, from, to).sort((a, b) =>
+    a.startAt.localeCompare(b.startAt),
+  )
+  const links = db.lessonLinks.filter((l) => l.coachId === coachId)
+  sendJson(res, 200, {
+    events: events.map((e) => ({
+      ...e,
+      notes: unescapeCalendarText(e.description || ''),
+      lessonLinks: links.filter((l) => l.calendarEventId === e.id),
+    })),
+  })
+  await verified.touch()
+  return true
+}
+
 async function handleChalkboardsList(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (req.method !== 'GET') {
     sendJson(res, 405, { error: 'Use GET' })
@@ -1449,6 +1510,7 @@ export async function handleMuseApi(  req: IncomingMessage,
   if (path === '/api/muse/homework-logs') return handleHomeworkLog(req, res)
   if (path === '/api/muse/stories') return handleStories(req, res)
   if (path === '/api/muse/drills') return handleDrills(req, res)
+  if (path === '/api/muse/calendar/events') return handleMuseCalendarEvents(req, res)
   const drillDeleteMatch = /^\/api\/muse\/drills\/([^/]+)$/.exec(path)
   if (drillDeleteMatch && req.method === 'DELETE') return handleDrillDelete(req, res, drillDeleteMatch[1])
   if (path === '/api/muse/skill-maps') {
