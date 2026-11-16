@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
 import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
@@ -8,6 +8,7 @@ import { EventTypePicker } from '../calendar/EventTypePicker'
 import { classifySessionEvent } from '../../lib/sessionGlow'
 import { formatDurationMinutes, formatEventDuration } from '../../lib/eventDuration'
 import { LessonPlanCard } from './LessonPlanCard'
+import { AthleteSearchField } from './AthleteSearchField'
 import { ReuseChecklist } from './ReuseChecklist'
 import { useDragList, DragGrip } from './useDragList'
 import {
@@ -25,6 +26,7 @@ import {
   previousPlanForOffering,
   copyPlanTasksFresh,
   copyChecklistForAthlete,
+  stampPlanAthlete,
   tasksNotYetIn,
   pastTasksForAthlete,
   subscribeClassPlans,
@@ -107,6 +109,24 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
     setSaveTitle(false)
     setSaveSeries(false)
   }
+
+  // Opening a class or lesson plan grows the page below the tap point,
+  // and the viewport can jump while the layout settles. There is no
+  // scroll call in this flow, the jump is the browser re-laying out a
+  // taller page, so pin the scroll position across the toggle: the
+  // tapped row stays put and the plan opens underneath it.
+  const scrollYRef = useRef(0)
+  const restoreScrollRef = useRef(false)
+  const toggleOffering = useCallback((id: string) => {
+    scrollYRef.current = window.scrollY
+    restoreScrollRef.current = true
+    setOpenOfferingId((cur) => (cur === id ? null : id))
+  }, [])
+  useLayoutEffect(() => {
+    if (!restoreScrollRef.current) return
+    restoreScrollRef.current = false
+    window.scrollTo(0, scrollYRef.current)
+  }, [openOfferingId])
 
   const offerings = useMemo(() => {
     const weekday = WEEKDAYS[new Date().getDay()]
@@ -239,9 +259,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
               coachId={coach.id}
               dateKey={dateKey}
               open={openOfferingId === offering.id}
-              onToggle={() =>
-                setOpenOfferingId((id) => (id === offering.id ? null : offering.id))
-              }
+              onToggle={() => toggleOffering(offering.id)}
               taskInput={taskInputs[offering.id] ?? ''}
               onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [offering.id]: v }))}
               taskAthleteIds={taskAthlete[offering.id] ?? ['all']}
@@ -275,9 +293,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
                     coachId={coach.id}
                     dateKey={lessonPlanDateKey(ev)}
                     open={openOfferingId === planKey}
-                    onToggle={() =>
-                      setOpenOfferingId((id) => (id === planKey ? null : planKey))
-                    }
+                    onToggle={() => toggleOffering(planKey)}
                     taskInput={taskInputs[planKey] ?? ''}
                     onTaskInput={(v) => setTaskInputs((s) => ({ ...s, [planKey]: v }))}
                     plansTick={plansTick}
@@ -414,6 +430,9 @@ function ClassPlanCard({
     [offering.id, athletes],
   )
   // Task picker options: last week's crew plus regulars, no duplicates.
+  // Plus any athlete the coach added by hand for today: stamped on the
+  // plan, so the chip survives closing the card and syncs to the
+  // checklist iPad like any other plan edit.
   const expected = useMemo(() => {
     const seen = new Set<string>()
     const out: Athlete[] = []
@@ -423,8 +442,15 @@ function ClassPlanCard({
         out.push(a)
       }
     }
+    for (const id of plan.athleteIds ?? []) {
+      const a = athleteById(athletes, id)
+      if (a && !seen.has(a.id)) {
+        seen.add(a.id)
+        out.push(a)
+      }
+    }
     return out
-  }, [lastWeek, regulars])
+  }, [lastWeek, regulars, plan.athleteIds, athletes])
 
   // The most recent earlier checklist for this same class, offered as a
   // starting template so the coach trims it instead of rewriting it.
@@ -451,6 +477,8 @@ function ClassPlanCard({
       : undefined
 
   const [repsInput, setRepsInput] = useState('')
+  const [addAthleteOpen, setAddAthleteOpen] = useState(false)
+  const [addAthleteQuery, setAddAthleteQuery] = useState('')
 
   const { handleProps, rowStyle } = useDragList((from, to) => {
     const task = plan.tasks[from]
@@ -691,6 +719,32 @@ function ClassPlanCard({
                   </button>
                 )
               })}
+              {!addAthleteOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setAddAthleteOpen(true)}
+                  className="rounded-full border border-dashed border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]"
+                >
+                  + Add athlete
+                </button>
+              ) : (
+                <span className="min-w-44 flex-1">
+                  <AthleteSearchField
+                    athletes={athletes}
+                    query={addAthleteQuery}
+                    onQuery={setAddAthleteQuery}
+                    excludeIds={expected.map((a) => a.id)}
+                    placeholder="Add an athlete who will be there"
+                    emptyText="No names match that search."
+                    onPick={(a) => {
+                      stampPlanAthlete(plan.id, a.id)
+                      onTaskAthletes([a.id])
+                      setAddAthleteQuery('')
+                      setAddAthleteOpen(false)
+                    }}
+                  />
+                </span>
+              )}
             </div>
             <div className="flex min-w-0 gap-2">
               <input
