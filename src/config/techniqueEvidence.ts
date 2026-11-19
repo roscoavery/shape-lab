@@ -321,6 +321,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: 'https://www.instagram.com/reel/Dehbg_fxb78/',
       watchFor: 'Back handspring zombie fall to hollow.',
     },
+    {
+      who: 'NashCamp',
+      url: 'https://www.instagram.com/reel/Df7wL6jpsOw/',
+      creator: 'nashcampofficial',
+    },
   ],
   'cart-full': [
     {
@@ -639,6 +644,11 @@ export const TECHNIQUE_EVIDENCE: Record<string, ProofVideo[]> = {
       url: '/videos/ro-bhs-carpet-foam-transition.mp4',
       watchFor:
         'Adding carpet bonded foam over the mats can be a great way of gradually transitioning back handsprings from softer mat setups to harder surfaces.',
+    },
+    {
+      who: 'NashCamp',
+      url: 'https://www.instagram.com/reel/Df7wL6jpsOw/',
+      creator: 'nashcampofficial',
     },
   ],
   layout: [
