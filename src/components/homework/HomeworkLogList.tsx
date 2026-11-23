@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Athlete, HomeworkItem, HomeworkLog } from '../../types'
 import { homeworkTitle } from '../../lib/homeworkLabel'
+import { holdVariationDisplayName } from '../../lib/holdVariation'
 import { flowIdForHomeworkItem } from '../../lib/homeworkFlow'
 import {
   canEditHomeworkLog,
@@ -32,7 +33,7 @@ type Props = {
 }
 
 function exerciseLabel(log: HomeworkLog, item?: HomeworkItem): string {
-  if (item) return homeworkTitle(item)
+  if (item) return holdVariationDisplayName(log.variation, homeworkTitle(item))
   if (log.sourceLabel?.trim()) return log.sourceLabel.trim()
   return log.shapeId.replace(/^catalog_/, '').replace(/_/g, ' ')
 }

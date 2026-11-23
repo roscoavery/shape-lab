@@ -55,9 +55,11 @@ export function logSessionHold(
     seconds: number
     label: string
     side?: 'left' | 'right'
+    /** Spec the coach picked on the clock (e.g. 'Bent-knee', 'Side support'). */
+    variation?: string
   },
 ): number {
-  const { athleteIds, autoKey, seconds, label, side, lesson, className, meetingId, coachId, coachName, loggedFrom } = args
+  const { athleteIds, autoKey, seconds, label, side, variation, lesson, className, meetingId, coachId, coachName, loggedFrom } = args
   if (!lesson) {
     return logClassHoldForAthletes({
       athleteIds,
@@ -68,6 +70,7 @@ export function logSessionHold(
       className,
       meetingId,
       side,
+      variation,
       coachId,
       coachName,
       loggedFrom,
@@ -89,6 +92,7 @@ export function logSessionHold(
       score: 0,
       method: 'manual',
       ...(side ? { side } : {}),
+      ...(variation ? { variation } : {}),
     })
     if (!row) continue
     n += 1
@@ -146,11 +150,13 @@ export function logSessionExtra(
     reps?: number
     sets?: number
     weightLb?: number
+    /** Spec the coach picked for a hold (e.g. 'On toes' for a wall sit). */
+    variation?: string
   },
 ): number {
-  const { athleteIds, extra, seconds, reps, sets, weightLb, lesson, className, meetingId } = args
+  const { athleteIds, extra, seconds, reps, sets, weightLb, variation, lesson, className, meetingId } = args
   if (!lesson) {
-    return logClassExtraForAthletes({ athleteIds, extra, seconds, reps, sets, className, meetingId, weightLb })
+    return logClassExtraForAthletes({ athleteIds, extra, seconds, reps, sets, className, meetingId, weightLb, variation })
   }
   const hold = extra.trackMode === 'hold'
   let n = 0
@@ -171,6 +177,7 @@ export function logSessionExtra(
         properHoldSeconds: 0,
         score: 0,
         method: 'manual',
+        ...(variation ? { variation } : {}),
       })
       if (!row) continue
       n += 1

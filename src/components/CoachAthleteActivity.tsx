@@ -23,6 +23,8 @@ import {
 import { splitPersonName } from '../lib/classStation'
 import { isShapelabAdmin } from '../lib/profileRole'
 import { HomeworkLogReactions } from './homework/HomeworkLogReactions'
+import { HomeworkLogList } from './homework/HomeworkLogList'
+import { loadAllHomework, loadHomeworkLogs } from '../lib/storage'
 import { canReactToHomeworkLog, isLogToday } from '../lib/homeworkLogView'
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 export function CoachAthleteActivity({ athlete, viewer, athletes, compact = false }: Props) {
   const allowed = canSeePrivateCoaching(viewer, athlete)
   const [, setTick] = useState(0)
+  const [showAllLogs, setShowAllLogs] = useState(false)
   useEffect(() => {
     const bump = () => setTick((n) => n + 1)
     const unsubHw = subscribeHomework(bump)
@@ -86,6 +89,8 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
 
   const coaches = coachesOf(athlete, athletes)
   const logs = allowed ? recentHomeworkLogs(athlete.id, compact ? 6 : 12) : []
+  const allLogs = allowed ? loadHomeworkLogs(athlete.id) : []
+  const allItems = allowed ? loadAllHomework() : []
   const lessons = allowed ? lessonsForAthlete(athlete.id).slice(0, compact ? 4 : 8) : []
   const classes = allowed ? classAttendanceForAthlete(athlete).slice(0, compact ? 4 : 12) : []
   const picked = worksWithCoachIds(athlete).length > 0
@@ -119,6 +124,16 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
           </p>
           {logs.length === 0 ? (
             <p className="mt-1 text-sm text-[var(--muted)]">Nothing logged yet.</p>
+          ) : showAllLogs ? (
+            <div className="mt-2">
+              <HomeworkLogList
+                logs={allLogs}
+                items={allItems}
+                athlete={athlete}
+                viewer={viewer}
+                athletes={athletes}
+              />
+            </div>
           ) : (
             <ul className="mt-1 divide-y divide-white/5">
               {logs.map(({ log, line }) => (
@@ -142,6 +157,15 @@ export function CoachAthleteActivity({ athlete, viewer, athletes, compact = fals
                 </li>
               ))}
             </ul>
+          )}
+          {allLogs.length > logs.length && (
+            <button
+              type="button"
+              onClick={() => setShowAllLogs((o) => !o)}
+              className="mt-2 text-xs font-semibold text-[var(--accent)]"
+            >
+              {showAllLogs ? 'Show less' : `See all · ${allLogs.length}`}
+            </button>
           )}
 
           <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">

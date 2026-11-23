@@ -142,6 +142,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
         coachId: signedIn?.id,
         coachName: signedIn?.name,
         loggedFrom,
+        variation: variationLabel ?? undefined,
       })
       if (lesson && n > 0) onLessonActivity?.()
     }
@@ -173,6 +174,7 @@ export function ContestStopwatch({ athletes, signedIn, className, meetingId, les
         coachId: signedIn?.id,
         coachName: signedIn?.name,
         loggedFrom,
+        variation: variationLabel ?? undefined,
       })
       if (lesson && n > 0) onLessonActivity?.()
     }

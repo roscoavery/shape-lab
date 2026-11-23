@@ -88,7 +88,10 @@ const HOLD_SPECS: Record<string, { id: string; label: string }[]> = {
     { id: 'piked', label: 'Piked' },
   ],
   superman: [{ id: 'bird_dog', label: 'Bird dogs' }],
-  side_plank: [{ id: 'on_knees', label: 'On knees' }],
+  side_plank: [
+    { id: 'on_knees', label: 'On knees' },
+    { id: 'side_support', label: 'Side support' },
+  ],
   wall_sit: [
     { id: 'on_toes', label: 'On toes' },
     { id: 'single_leg', label: 'Single leg' },
@@ -370,6 +373,16 @@ export function ClassStopwatch({
   const activeExtra = (id: string | null): ClassExtraExercise | undefined =>
     extras.find((ex) => ex.id === id)
 
+  /** Variation for the hold currently picked: arms position + spec, if any. */
+  const holdVariation = (): string | undefined => {
+    const drill = CLASS_HOLD_DRILLS.find((d) => d.id === holdId)
+    if (!drill) return undefined
+    const specLabel = HOLD_SPECS[holdId]?.find((s) => s.id === holdSpec)?.label
+    const armsLabel =
+      drill.autoKey === 'hollow' && hollowArms === 'up' ? 'Arms up' : undefined
+    return [armsLabel, specLabel].filter(Boolean).join(' · ') || undefined
+  }
+
   const logHold = () => {
     const secs = Number(manual || offer)
     if (!Number.isFinite(secs) || secs <= 0) {
@@ -417,6 +430,7 @@ export function ClassStopwatch({
       className,
       meetingId: meeting?.id,
       side: drill.autoKey === 'side_plank' ? side : undefined,
+      variation: holdVariation(),
       coachId: signedIn?.id,
       coachName: signedIn?.name,
       loggedFrom: familyMode ? 'family' : undefined,
@@ -574,6 +588,7 @@ export function ClassStopwatch({
         className,
         meetingId: meeting?.id,
         weightLb: weight,
+        variation: specLabel ?? undefined,
       })
       afterLog(n)
       reset()
@@ -1027,6 +1042,7 @@ export function ClassStopwatch({
                       shapeId,
                       label,
                       side: holdId === 'side_plank' && !extra ? side : null,
+                      variation: extra ? undefined : (holdVariation() ?? ''),
                       excludeClassMeetingId: meeting?.id,
                       excludeLessonId: lesson?.lessonId,
                     })

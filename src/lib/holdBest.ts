@@ -38,6 +38,8 @@ export function holdLastAndBest(
     shapeId?: string | null
     label?: string
     side?: string | null
+    /** Variation to match, '' for the plain drill. Undefined keeps the old behavior. */
+    variation?: string
     excludeLessonId?: string
     excludeClassMeetingId?: string
   },
@@ -53,6 +55,7 @@ export function holdLastAndBest(
     if (opts.excludeLessonId && log.lessonId === opts.excludeLessonId) return false
     if (opts.excludeClassMeetingId && log.classMeetingId === opts.excludeClassMeetingId) return false
     if (opts.side && log.side && log.side !== opts.side) return false
+    if (opts.variation !== undefined && (log.variation ?? '') !== opts.variation) return false
     if (shapeId && log.shapeId === shapeId) return true
     const item = items.find((h) => h.id === log.homeworkId)
     const title = `${log.sourceLabel ?? ''} ${item ? homeworkTitle(item) : ''}`.toLowerCase()

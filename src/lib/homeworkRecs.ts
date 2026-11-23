@@ -1,7 +1,8 @@
-import type { Athlete, HomeworkItem } from '../types'
+import type { Athlete, HomeworkItem, HomeworkLog } from '../types'
 import { addHomeworkItem, createId, loadAllHomework, loadHomeworkLogs } from './storage'
 import { FOUNDATION_FACTS_DRAFT } from '../config/foundationFacts'
 import { homeworkTitle } from './homeworkLabel'
+import { holdVariationDisplayName } from './holdVariation'
 
 export type PracticeRec = {
   id: string
@@ -130,17 +131,46 @@ export function rechargeTargetFor(athleteId: string): RechargeTarget | null {
   if (items.length === 0) return null
   const logs = loadHomeworkLogs().filter((l) => l.athleteId === athleteId)
   const now = Date.now()
-  let best: RechargeTarget | null = null
+  const itemById = new Map(items.map((i) => [i.id, i]))
+  // One entry per (homework item, variation): a variation is its own hold
+  // type, so a fresh bent-knee log does not recharge the plain hollow.
+  // Items with no logs at all keep one plain entry.
+  type Group = { label: string; last: HomeworkLog | null; createdAt: string }
+  const groups = new Map<string, Group>()
+  const loggedItemIds = new Set(logs.map((l) => l.homeworkId))
   for (const item of items) {
-    const mine = logs.filter((l) => l.homeworkId === item.id)
-    const last = mine.length > 0 ? mine.reduce((a, b) => ((a.date || '') >= (b.date || '') ? a : b)) : null
+    if (!loggedItemIds.has(item.id)) {
+      groups.set(`${item.id}::`, {
+        label: homeworkTitle(item),
+        last: null,
+        createdAt: item.createdAt || '',
+      })
+    }
+  }
+  for (const log of logs) {
+    const item = itemById.get(log.homeworkId)
+    if (!item) continue
+    const key = `${item.id}::${(log.variation ?? '').trim().toLowerCase()}`
+    const label = holdVariationDisplayName(log.variation, homeworkTitle(item))
+    const group = groups.get(key) ?? {
+      label,
+      last: null,
+      createdAt: item.createdAt || '',
+    }
+    group.label = label
+    if (!group.last || (log.date || '') >= (group.last.date || '')) group.last = log
+    groups.set(key, group)
+  }
+  let best: RechargeTarget | null = null
+  for (const group of groups.values()) {
+    const last = group.last
     const lastT = last ? Date.parse(last.date || '') : NaN
     const days = Number.isFinite(lastT) ? Math.floor((now - lastT) / 86400000) : null
-    const createdT = Date.parse(item.createdAt || '')
+    const createdT = Date.parse(group.createdAt || '')
     const idleDays = days ?? (Number.isFinite(createdT) ? Math.floor((now - createdT) / 86400000) : 9999)
     if (idleDays < 3) continue
     if (!best || idleDays > best.idleDays) {
-      best = { label: homeworkTitle(item), days, lastDate: last?.date ?? null, idleDays }
+      best = { label: group.label, days, lastDate: last?.date ?? null, idleDays }
     }
   }
   return best

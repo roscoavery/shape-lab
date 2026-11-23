@@ -73,7 +73,10 @@ export const CONTEST_HOLD_SPECS: Record<string, { id: string; label: string }[]>
     { id: 'piked', label: 'Piked' },
   ],
   superman: [{ id: 'bird_dog', label: 'Bird dogs' }],
-  side_plank: [{ id: 'on_knees', label: 'On knees' }],
+  side_plank: [
+    { id: 'on_knees', label: 'On knees' },
+    { id: 'side_support', label: 'Side support' },
+  ],
   wall_sit: [
     { id: 'on_toes', label: 'On toes' },
     { id: 'single_leg', label: 'Single leg' },
@@ -132,6 +135,8 @@ export function logClassHoldForAthletes(opts: {
   className?: string
   meetingId?: string
   side?: 'left' | 'right'
+  /** Spec the coach picked on the clock (e.g. 'Bent-knee', 'Side support'). */
+  variation?: string
   performedAt?: string
   coachId?: string
   coachName?: string
@@ -164,6 +169,7 @@ export function logClassHoldForAthletes(opts: {
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
       ...(opts.side ? { side: opts.side } : {}),
+      ...(opts.variation ? { variation: opts.variation } : {}),
       ...(opts.coachId ? { coachId: opts.coachId } : {}),
       ...(opts.coachName ? { coachName: opts.coachName } : {}),
     }
@@ -280,6 +286,8 @@ export function logClassExtraForAthletes(opts: {
   className?: string
   meetingId?: string
   weightLb?: number
+  /** Spec the coach picked for a hold (e.g. 'On toes' for a wall sit). */
+  variation?: string
 }): number {
   let n = 0
   const hold = opts.extra.trackMode === 'hold'
@@ -309,6 +317,7 @@ export function logClassExtraForAthletes(opts: {
       loggedFrom: 'class',
       sourceLabel,
       trackMode: opts.extra.trackMode,
+      ...(opts.variation && hold ? { variation: opts.variation } : {}),
       ...(opts.meetingId ? { classMeetingId: opts.meetingId } : {}),
       ...(opts.className ? { className: opts.className } : {}),
       ...(opts.weightLb != null && Number.isFinite(opts.weightLb) && opts.weightLb > 0

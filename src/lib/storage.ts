@@ -23,6 +23,7 @@ import { dismissHomeworkKey, loadDismissedHomeworkKeys, undismissHomeworkKey } f
 import { catalogIdFromShape } from '../config/homeworkCatalog'
 import { withDefaultGym } from '../config/gyms'
 import { migrateGoalSkillIds } from './skillRegistry'
+import { variationFromSourceLabel } from './holdVariation'
 
 const ATHLETES_KEY = 'shape-lab.athletes.v1'
 const REMOVED_ATHLETES_KEY = 'shape-lab.removedAthletes.v1'
@@ -829,7 +830,51 @@ export function progressHollowHomework(homeworkId: string): HomeworkItem | null 
   return { ...item }
 }
 
+const HOLD_VARIATION_BACKFILL_KEY = 'shape-lab.migrated.holdVariation.v1'
+
+/**
+ * One-time backfill (build 1267): logs written before the variation was
+ * stored on the log carry it only in the sourceLabel ("Lesson · Hollow ·
+ * arms down · Bent-knee"). Stamp it onto the log so the old holds count
+ * as their own type without re-logging. Additive only, idempotent: logs
+ * that already have a variation, or whose label names no known spec, stay
+ * exactly as they are.
+ */
+function backfillHoldVariationsOnce(): void {
+  try {
+    if (localStorage.getItem(HOLD_VARIATION_BACKFILL_KEY)) return
+  } catch {
+    return
+  }
+  const markDone = () => {
+    try {
+      localStorage.setItem(HOLD_VARIATION_BACKFILL_KEY, '1')
+    } catch {}
+  }
+  let changed = 0
+  try {
+    const logs = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, [])
+    const now = new Date().toISOString()
+    const next = logs.map((log) => {
+      if (!log || log.variation || log.kind === 'journal') return log
+      const variation = variationFromSourceLabel(log.sourceLabel ?? '')
+      if (!variation) return log
+      changed += 1
+      return { ...log, variation, updatedAt: now }
+    })
+    if (changed > 0) {
+      writeJson(HOMEWORK_LOGS_KEY, next.slice(0, 1000))
+      emitHomework()
+      pushRosterSoon()
+    }
+  } catch {
+    /* Storage unavailable: leave the logs as they are. */
+  }
+  markDone()
+}
+
 export function loadHomeworkLogs(athleteId?: string): HomeworkLog[] {
+  backfillHoldVariationsOnce()
   const gone = new Set(loadRemovedHomeworkLogIds())
   const all = readJson<HomeworkLog[]>(HOMEWORK_LOGS_KEY, []).filter((l) => l && !gone.has(l.id))
   return athleteId ? all.filter((l) => l.athleteId === athleteId) : all

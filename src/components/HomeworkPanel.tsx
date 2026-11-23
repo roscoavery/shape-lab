@@ -86,6 +86,7 @@ import {
   isSequenceHomework,
 } from '../lib/homeworkLabel'
 import { getHomeworkFlow, overallFlowScore } from '../lib/homeworkFlow'
+import { holdVariationDisplayName } from '../lib/holdVariation'
 import { CollapsibleSection } from './CollapsibleSection'
 import { AthleteName } from './AthleteAvatar'
 import { ExpandableNotes } from './ExpandableNotes'
@@ -238,15 +239,32 @@ function HomeworkProgressStrip({
     total: number
     count: number
   } | null = null
+  // Totals are per (drill, variation): a bent-knee hollow has its own
+  // first, best, and total, separate from the plain hollow.
   for (const item of items) {
     const itemLogs = logsByItem.get(item.id) ?? []
     if (itemLogs.length < 2) continue
-    const first = itemLogs[itemLogs.length - 1]?.totalHoldSeconds ?? 0
-    const best = bestHoldSeconds(itemLogs)
-    const delta = best - first
-    const total = itemLogs.reduce((s, l) => s + (l.totalHoldSeconds ?? 0), 0)
-    if (delta > 0.4 && (!bestJump || delta > bestJump.best - bestJump.first)) {
-      bestJump = { name: homeworkTitle(item), best, first, total, count: itemLogs.length }
+    const byVariation = new Map<string, HomeworkLog[]>()
+    for (const log of itemLogs) {
+      const key = (log.variation ?? '').trim().toLowerCase()
+      if (!byVariation.has(key)) byVariation.set(key, [])
+      byVariation.get(key)!.push(log)
+    }
+    for (const group of byVariation.values()) {
+      if (group.length < 2) continue
+      const first = group[group.length - 1]?.totalHoldSeconds ?? 0
+      const best = bestHoldSeconds(group)
+      const delta = best - first
+      const total = group.reduce((s, l) => s + (l.totalHoldSeconds ?? 0), 0)
+      if (delta > 0.4 && (!bestJump || delta > bestJump.best - bestJump.first)) {
+        bestJump = {
+          name: holdVariationDisplayName(group[0]?.variation, homeworkTitle(item)),
+          best,
+          first,
+          total,
+          count: group.length,
+        }
+      }
     }
   }
   const goalHits = items.filter((item) => {

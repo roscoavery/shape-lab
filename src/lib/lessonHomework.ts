@@ -24,6 +24,8 @@ export function logLessonHoldOnAthleteHomework(args: {
   score: number
   method: 'camera' | 'manual'
   side?: 'left' | 'right'
+  /** Spec the coach picked on the clock (e.g. 'Bent-knee', 'Side support'). */
+  variation?: string
   performedAt?: string
 }): HomeworkLog | null {
   if (!args.athleteId || args.totalHoldSeconds < 0.2) return null
@@ -75,6 +77,7 @@ export function logLessonHoldOnAthleteHomework(args: {
     coachId: args.coachId,
     coachName: args.coachName,
     ...(args.side ? { side: args.side } : {}),
+    ...(args.variation ? { variation: args.variation } : {}),
     sourceLabel: `Lesson · ${args.shapeName}`,
   }
   addHomeworkLog(log)

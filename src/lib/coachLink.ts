@@ -11,6 +11,7 @@ import { namesMatch } from './classStation'
 import { lessonAthleteIds, sessionsForAthlete, sessionsForCoach } from './lessonStore'
 import { listTrainingEvents } from './trainingEvents'
 import { homeworkTitle } from './homeworkLabel'
+import { holdVariationDisplayName } from './holdVariation'
 import { loadAllHomework, loadAthletes, loadHomeworkLogs, saveAthletes } from './storage'
 import { pushNotice } from './notify'
 import { givenName } from './classStation'
@@ -188,7 +189,12 @@ function formatHoldSeconds(s: number): string {
 }
 
 export function formatHomeworkLogLine(log: HomeworkLog, item?: HomeworkItem | null): string {
-  const title = item ? homeworkTitle(item) : log.sourceLabel || log.shapeId
+  // A variation is its own hold type: it leads the drill name ("Bent-knee
+  // Hollow arms down", "Side support"). Without an item the sourceLabel
+  // already carries the variant text, so it stays as-is.
+  const title = item
+    ? holdVariationDisplayName(log.variation, homeworkTitle(item))
+    : log.sourceLabel || log.shapeId
   if (log.kind === 'journal' && log.journal) return `${title}: ${log.journal}`
   if (log.kind === 'reps' || (log.reps && log.reps > 0 && log.kind !== 'hold')) {
     if (log.sets && log.sets > 1) return `${title} · ${log.sets}×${log.reps}`
