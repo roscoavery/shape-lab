@@ -192,6 +192,41 @@ export function loadUpcomingClosedDays(): string[] {
   return loadClosedDays().filter((d) => d >= today)
 }
 
+/** Short "Nov 23" label for a closed-day key. Noon-anchored like the long form. */
+function shortClosedDate(key: string): string {
+  const d = new Date(`${key}T12:00:00`)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/**
+ * One-line summary of the marked closed days, for the quiet line at the
+ * bottom of the brief. A single day names it, one unbroken run names the
+ * span, scattered days just count so the line never implies days are
+ * closed that are not. Empty means nothing is marked yet.
+ */
+export function closedDaysSummary(days: readonly string[]): string {
+  const sorted = [...new Set(days.filter((d) => CLOSED_DAY_RE.test(d)))].sort()
+  if (sorted.length === 0) return 'Mark days with no classes'
+  if (sorted.length === 1) return `No classes ${shortClosedDate(sorted[0])}`
+  const first = new Date(`${sorted[0]}T12:00:00`)
+  const last = new Date(`${sorted[sorted.length - 1]}T12:00:00`)
+  const cur = new Date(first)
+  let run = 1
+  while (cur < last) {
+    cur.setDate(cur.getDate() + 1)
+    run += 1
+  }
+  if (run === sorted.length) {
+    const firstLabel = shortClosedDate(sorted[0])
+    const lastLabel =
+      first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()
+        ? String(last.getDate())
+        : shortClosedDate(sorted[sorted.length - 1])
+    return `No classes ${firstLabel} to ${lastLabel}`
+  }
+  return `No classes on ${sorted.length} days`
+}
+
 /** Mark one day as having no classes. Returns false when the key is bad or already marked. */
 export function markClosedDay(dateKey: string): boolean {
   if (!CLOSED_DAY_RE.test(dateKey)) return false

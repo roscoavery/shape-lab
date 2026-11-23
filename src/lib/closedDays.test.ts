@@ -58,6 +58,7 @@ const {
   isClosedDay,
   loadClosedDays,
   loadUpcomingClosedDays,
+  closedDaysSummary,
   markClosedDay,
   markClosedDaysRange,
   unmarkClosedDay,
@@ -172,5 +173,40 @@ describe('checkAutoClass with closed days and live lessons', () => {
     assert.notEqual(live, null)
     if (live) assert.notEqual(endClassMeeting(live.id), null)
     removeOffering(offering.id)
+  })
+})
+
+describe('closedDaysSummary', () => {
+  it('asks to mark when nothing is marked', () => {
+    assert.equal(closedDaysSummary([]), 'Mark days with no classes')
+  })
+
+  it('names a single day', () => {
+    assert.equal(closedDaysSummary(['2026-11-23']), 'No classes Nov 23')
+  })
+
+  it('names an unbroken run as a span', () => {
+    assert.equal(
+      closedDaysSummary(['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27']),
+      'No classes Nov 23 to 27',
+    )
+  })
+
+  it('keeps the month on the far end across months', () => {
+    assert.equal(
+      closedDaysSummary(['2026-11-30', '2026-12-01', '2026-12-02']),
+      'No classes Nov 30 to Dec 2',
+    )
+  })
+
+  it('counts scattered days instead of implying a span', () => {
+    assert.equal(closedDaysSummary(['2026-11-23', '2026-11-30']), 'No classes on 2 days')
+  })
+
+  it('sorts and dedupes its input', () => {
+    assert.equal(
+      closedDaysSummary(['2026-11-24', '2026-11-23', '2026-11-23']),
+      'No classes Nov 23 to 24',
+    )
   })
 })

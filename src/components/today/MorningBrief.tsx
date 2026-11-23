@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
-import { isClosedDay, loadClosedDays, loadOfferingsForCoach, loadUpcomingClosedDays, markClosedDay, markClosedDaysRange, subscribeCoachClasses, summarizeAttendance, unmarkClosedDay, WEEKDAYS } from '../../lib/coachClasses'
+import { closedDaysSummary, isClosedDay, loadClosedDays, loadOfferingsForCoach, loadUpcomingClosedDays, markClosedDay, markClosedDaysRange, subscribeCoachClasses, summarizeAttendance, unmarkClosedDay, WEEKDAYS } from '../../lib/coachClasses'
 import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, matchCalendarEvent, setCalendarEventType, eventTypeLabel, isNonLessonEventType, type CalendarEventType, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { EventAthletePicker } from '../calendar/EventAthletePicker'
 import { EventTypePicker } from '../calendar/EventTypePicker'
@@ -91,6 +91,9 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
   const [saveSeries, setSaveSeries] = useState(false)
   // Days with no classes: re-read when the coach marks or un-marks one.
   const [closedTick, setClosedTick] = useState(0)
+  // The closed-days manager stays tucked away: one quiet line at the
+  // bottom of the brief, the full manager only after tapping it.
+  const [closedManagerOpen, setClosedManagerOpen] = useState(false)
   const [rangeStart, setRangeStart] = useState(todayKey())
   const [rangeEnd, setRangeEnd] = useState(todayKey())
   const dateKey = todayKey()
@@ -400,69 +403,80 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
           </div>
         )}
 
-        <div className="min-w-0 rounded-xl border border-[var(--panel-border)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Days with no classes
-          </p>
-          {upcomingClosed.length > 0 ? (
-            <div className="mt-2 space-y-1.5">
-              {upcomingClosed.map((d) => (
-                <div
-                  key={d}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
-                >
-                  <span className="text-sm text-[var(--text)]">{formatClosedDate(d)}</span>
-                  <button
-                    type="button"
-                    onClick={() => unmarkClosedDay(d)}
-                    className="shrink-0 text-xs text-[var(--muted)] underline"
-                    aria-label={`Remove ${formatClosedDate(d)} from days with no classes`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1.5 text-sm text-[var(--muted)]">
-              No days marked. Mark a holiday break so classes do not start.
+        <button
+          type="button"
+          onClick={() => setClosedManagerOpen((v) => !v)}
+          aria-expanded={closedManagerOpen}
+          className="w-full py-2 text-left text-xs text-[var(--muted)]"
+        >
+          {closedDaysSummary(upcomingClosed)}
+          {closedManagerOpen ? ' · Hide' : upcomingClosed.length > 0 ? ' · Manage' : ''}
+        </button>
+        {closedManagerOpen && (
+          <div className="min-w-0 rounded-xl border border-[var(--panel-border)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Days with no classes
             </p>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <label className="text-xs text-[var(--muted)]">
-              From
-              <input
-                type="date"
-                value={rangeStart}
-                onChange={(e) => setRangeStart(e.target.value)}
-                className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
-              />
-            </label>
-            <label className="text-xs text-[var(--muted)]">
-              To
-              <input
-                type="date"
-                value={rangeEnd}
-                onChange={(e) => setRangeEnd(e.target.value)}
-                className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                const start = rangeStart <= rangeEnd ? rangeStart : rangeEnd
-                const end = rangeStart <= rangeEnd ? rangeEnd : rangeStart
-                if (markClosedDaysRange(start, end) > 0) {
-                  setRangeStart(dateKey)
-                  setRangeEnd(dateKey)
-                }
-              }}
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
-            >
-              Mark closed
-            </button>
+            {upcomingClosed.length > 0 ? (
+              <div className="mt-2 space-y-1.5">
+                {upcomingClosed.map((d) => (
+                  <div
+                    key={d}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
+                  >
+                    <span className="text-sm text-[var(--text)]">{formatClosedDate(d)}</span>
+                    <button
+                      type="button"
+                      onClick={() => unmarkClosedDay(d)}
+                      className="shrink-0 text-xs text-[var(--muted)] underline"
+                      aria-label={`Remove ${formatClosedDate(d)} from days with no classes`}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-sm text-[var(--muted)]">
+                No days marked. Mark a holiday break so classes do not start.
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <label className="text-xs text-[var(--muted)]">
+                From
+                <input
+                  type="date"
+                  value={rangeStart}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                  className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
+                />
+              </label>
+              <label className="text-xs text-[var(--muted)]">
+                To
+                <input
+                  type="date"
+                  value={rangeEnd}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                  className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const start = rangeStart <= rangeEnd ? rangeStart : rangeEnd
+                  const end = rangeStart <= rangeEnd ? rangeEnd : rangeStart
+                  if (markClosedDaysRange(start, end) > 0) {
+                    setRangeStart(dateKey)
+                    setRangeEnd(dateKey)
+                  }
+                }}
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
+              >
+                Mark closed
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {pickEvent && (
