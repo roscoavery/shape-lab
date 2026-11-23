@@ -1,5 +1,5 @@
 import type { TodayCalendarEvent } from './calendarClient'
-import { WEEKDAYS, parseClassTimeMinutes, type CoachClassOffering } from './coachClasses'
+import { WEEKDAYS, isClosedDay, parseClassTimeMinutes, type CoachClassOffering } from './coachClasses'
 
 /**
  * Calendar-aware glow for the coach Today start buttons.
@@ -93,11 +93,13 @@ export function getSessionGlow(
 /**
  * Which class offering is closest to right now, for guiding the coach on
  * the class picker list. Uses each offering's weekday + time to find the
- * nearest upcoming (or most recently started) class.
+ * nearest upcoming (or most recently started) class. Days in `closedDays`
+ * have no class, so a closed occurrence counts as next week instead.
  */
 export function closestOfferingToNow(
   offerings: CoachClassOffering[],
   now: Date = new Date(),
+  closedDays?: readonly string[],
 ): CoachClassOffering | null {
   if (offerings.length === 0) return null
   const nowDay = now.getDay() // 0 = Sunday, matches WEEKDAYS order
@@ -112,7 +114,21 @@ export function closestOfferingToNow(
     let dayDelta = (dayIdx - nowDay + 7) % 7
     let deltaMinutes = dayDelta * 24 * 60 + (mins - nowMinutes)
     // If today's class already started more than 2 hours ago, count next week.
-    if (deltaMinutes < -120) deltaMinutes += 7 * 24 * 60
+    if (deltaMinutes < -120) {
+      deltaMinutes += 7 * 24 * 60
+      dayDelta += 7
+    }
+    // A closed day has no class: skip that occurrence to next week.
+    if (closedDays && closedDays.length > 0) {
+      let hops = 0
+      while (hops < 8) {
+        const occ = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayDelta)
+        if (!isClosedDay(closedDays, occ)) break
+        dayDelta += 7
+        deltaMinutes += 7 * 24 * 60
+        hops += 1
+      }
+    }
     if (Math.abs(deltaMinutes) < Math.abs(bestDelta)) {
       bestDelta = deltaMinutes
       best = o

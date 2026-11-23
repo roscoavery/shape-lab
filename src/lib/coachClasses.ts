@@ -6,6 +6,7 @@
 import type { Athlete, ClassExtraExercise, LessonNote } from '../types'
 import { normalizeClassExtras } from './classExercises'
 import { createId, loadAthletes } from './storage'
+import { findLiveLesson } from './lessonStore'
 import { displayPersonName, namesMatch, splitPersonName } from './classStation'
 import { isShapelabAdmin } from './profileRole'
 import { RYAN_PROFILE_ID } from './ryanProfile'
@@ -100,6 +101,10 @@ export type CoachClassFile = {
   activeMeetingId: string | null
   removedOfferingIds?: string[]
   removedMeetingIds?: string[]
+  /** Days with no classes, local YYYY-MM-DD keys. Marked by the coach in the brief. */
+  closedDays?: string[]
+  /** Tombstones for un-marked closed days, so a stale device cannot re-add one. */
+  removedClosedDays?: string[]
 }
 
 const KEY = 'shape-lab.coachClasses.v1'
@@ -117,6 +122,8 @@ function emptyFile(): CoachClassFile {
     activeMeetingId: null,
     removedOfferingIds: [],
     removedMeetingIds: [],
+    closedDays: [],
+    removedClosedDays: [],
   }
 }
 
@@ -149,6 +156,100 @@ export function compareOfferingsByWhen(a: CoachClassOffering, b: CoachClassOffer
 function asIdList(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && Boolean(id)))]
+}
+
+const CLOSED_DAY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function asClosedDays(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return [
+    ...new Set(
+      value.filter((d): d is string => typeof d === 'string' && CLOSED_DAY_RE.test(d)),
+    ),
+  ]
+}
+
+/** Local YYYY-MM-DD key for a date (same shape as classPlans todayKey). */
+export function localDateKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Whether the given date (or YYYY-MM-DD key) is marked as having no classes. */
+export function isClosedDay(closedDays: readonly string[] | undefined, at: Date | string): boolean {
+  if (!closedDays || closedDays.length === 0) return false
+  const key = typeof at === 'string' ? at : localDateKey(at)
+  return closedDays.includes(key)
+}
+
+/** All marked closed days, sorted. */
+export function loadClosedDays(): string[] {
+  return asClosedDays(read().closedDays).sort()
+}
+
+/** Marked closed days from today onward, sorted. */
+export function loadUpcomingClosedDays(): string[] {
+  const today = localDateKey()
+  return loadClosedDays().filter((d) => d >= today)
+}
+
+/** Mark one day as having no classes. Returns false when the key is bad or already marked. */
+export function markClosedDay(dateKey: string): boolean {
+  if (!CLOSED_DAY_RE.test(dateKey)) return false
+  const file = read()
+  const closed = new Set(asClosedDays(file.closedDays))
+  if (closed.has(dateKey)) return false
+  closed.add(dateKey)
+  file.closedDays = [...closed].sort()
+  file.removedClosedDays = (file.removedClosedDays ?? []).filter((d) => d !== dateKey)
+  write(file)
+  return true
+}
+
+/**
+ * Mark every day in an inclusive range as having no classes (a holiday
+ * break). Returns how many days were newly marked. Capped at 62 days so
+ * a typo cannot mark years of days.
+ */
+export function markClosedDaysRange(startKey: string, endKey: string): number {
+  if (!CLOSED_DAY_RE.test(startKey) || !CLOSED_DAY_RE.test(endKey)) return 0
+  const start = new Date(`${startKey}T12:00:00`)
+  const end = new Date(`${endKey}T12:00:00`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0
+  const days: string[] = []
+  const cur = new Date(start)
+  while (cur <= end && days.length < 62) {
+    days.push(localDateKey(cur))
+    cur.setDate(cur.getDate() + 1)
+  }
+  const file = read()
+  const closed = new Set(asClosedDays(file.closedDays))
+  const removed = new Set(file.removedClosedDays ?? [])
+  let added = 0
+  for (const d of days) {
+    if (!closed.has(d)) {
+      closed.add(d)
+      added += 1
+    }
+    removed.delete(d)
+  }
+  if (added === 0) return 0
+  file.closedDays = [...closed].sort()
+  file.removedClosedDays = [...removed]
+  write(file)
+  return added
+}
+
+/** Un-mark a closed day. The tombstone keeps a stale device from re-adding it. */
+export function unmarkClosedDay(dateKey: string): boolean {
+  if (!CLOSED_DAY_RE.test(dateKey)) return false
+  const file = read()
+  const closed = new Set(asClosedDays(file.closedDays))
+  if (!closed.has(dateKey)) return false
+  closed.delete(dateKey)
+  file.closedDays = [...closed].sort()
+  file.removedClosedDays = [...new Set([...(file.removedClosedDays ?? []), dateKey])]
+  write(file)
+  return true
 }
 
 function withCoachRoles(raw: Partial<CoachClassOffering>, coachIds: string[]): Pick<
@@ -339,8 +440,10 @@ export function isPastClassHour(offering: CoachClassOffering, at: Date = new Dat
 }
 
 /** Check for auto-start/auto-end. Returns the meeting that was auto-ended, if any. */
-export function checkAutoClass(at: Date = new Date()): ClassMeeting | null {
+export function checkAutoClass(at: Date = new Date(), coachId?: string | null): ClassMeeting | null {
   const file = read()
+  // A day marked as having no classes: nothing auto-starts or auto-ends.
+  if (isClosedDay(file.closedDays, at)) return null
   const offerings = file.offerings
   const scheduled = offeringScheduledAt(offerings, at)
 
@@ -366,6 +469,9 @@ export function checkAutoClass(at: Date = new Date()): ClassMeeting | null {
   if (scheduled) {
     const live = file.meetings.find((m) => m.offeringId === scheduled.id && !m.endedAt)
     if (!live) {
+      // A live lesson wins over a class auto-start. Never start a class
+      // on top of a lesson the coach is already running.
+      if (coachId && findLiveLesson(coachId)) return autoEnded
       startClassMeeting(scheduled)
     }
   }
@@ -405,6 +511,7 @@ function parseFile(raw: string | null): CoachClassFile {
   try {
     const data = JSON.parse(raw) as CoachClassFile
     if (data?.kind !== 'shape-lab-coach-classes') return emptyFile()
+    const removedClosedDays = asClosedDays(data.removedClosedDays)
     return {
       kind: 'shape-lab-coach-classes',
       version: 1,
@@ -414,6 +521,8 @@ function parseFile(raw: string | null): CoachClassFile {
       activeMeetingId: data.activeMeetingId ?? null,
       removedOfferingIds: asIdList(data.removedOfferingIds),
       removedMeetingIds: asIdList(data.removedMeetingIds),
+      closedDays: asClosedDays(data.closedDays).filter((d) => !removedClosedDays.includes(d)),
+      removedClosedDays,
     }
   } catch {
     return emptyFile()
@@ -486,6 +595,10 @@ function read(): CoachClassFile {
     }
   }
   if (memoryFile && memoryFile.offerings.length > 0) {
+    const removedClosedDays = [
+      ...new Set([...asClosedDays(stored.removedClosedDays), ...asClosedDays(memoryFile.removedClosedDays)]),
+    ]
+    const removedClosed = new Set(removedClosedDays)
     return {
       kind: 'shape-lab-coach-classes',
       version: 1,
@@ -499,6 +612,10 @@ function read(): CoachClassFile {
       removedMeetingIds: [
         ...new Set([...(stored.removedMeetingIds ?? []), ...(memoryFile.removedMeetingIds ?? [])]),
       ],
+      closedDays: [
+        ...new Set([...asClosedDays(stored.closedDays), ...asClosedDays(memoryFile.closedDays)]),
+      ].filter((d) => !removedClosed.has(d)),
+      removedClosedDays,
     }
   }
   return stored
@@ -507,8 +624,10 @@ function read(): CoachClassFile {
 function write(file: CoachClassFile, sync = true) {
   const removedOfferingIds = asIdList(file.removedOfferingIds)
   const removedMeetingIds = asIdList(file.removedMeetingIds)
+  const removedClosedDays = asClosedDays(file.removedClosedDays)
   const removed = new Set(removedOfferingIds)
   const droppedMeetings = new Set(removedMeetingIds)
+  const removedClosed = new Set(removedClosedDays)
   const next: CoachClassFile = {
     ...file,
     kind: 'shape-lab-coach-classes',
@@ -522,6 +641,8 @@ function write(file: CoachClassFile, sync = true) {
       .filter((m): m is ClassMeeting => !!m && !droppedMeetings.has(m.id)),
     removedOfferingIds,
     removedMeetingIds,
+    closedDays: asClosedDays(file.closedDays).filter((d) => !removedClosed.has(d)),
+    removedClosedDays,
   }
   memoryFile = next
   try {
@@ -1294,9 +1415,16 @@ export async function hydrateCoachClasses(): Promise<void> {
     const removedMeetingIds = [
       ...new Set([...(local.removedMeetingIds ?? []), ...asIdList(data.removedMeetingIds)]),
     ]
+    const removedClosedDays = [
+      ...new Set([...asClosedDays(local.removedClosedDays), ...asClosedDays(data.removedClosedDays)]),
+    ]
     const removed = new Set(removedOfferingIds)
     const droppedMeetings = new Set(removedMeetingIds)
+    const removedClosed = new Set(removedClosedDays)
     const offerings = mergeOfferings(local.offerings, remoteOfferings).filter((o) => !removed.has(o.id))
+    const closedDays = [
+      ...new Set([...asClosedDays(local.closedDays), ...asClosedDays(data.closedDays)]),
+    ].filter((d) => !removedClosed.has(d))
     const merged = mergeMeetings(
       local.meetings,
       (data.meetings ?? []).map(normalizeMeeting).filter((m): m is ClassMeeting => !!m),
@@ -1305,7 +1433,7 @@ export async function hydrateCoachClasses(): Promise<void> {
     const { meetings } = autoEndStaleMeetings(merged)
     const live = pickLiveMeetingId(meetings, data.activeMeetingId ?? local.activeMeetingId)
     write(
-      { ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds, removedMeetingIds },
+      { ...local, offerings, meetings, activeMeetingId: live, removedOfferingIds, removedMeetingIds, closedDays, removedClosedDays },
       false,
     )
     ensureDefaultClassTypes(RYAN_PROFILE_ID)
@@ -1328,8 +1456,14 @@ export async function hydrateCoachClasses(): Promise<void> {
     const remoteRemoved = asIdList(data.removedOfferingIds)
     const remoteRemovedMeetings = asIdList(data.removedMeetingIds)
     const remoteLive = (data.meetings ?? []).filter((m) => m && !m.endedAt)
+    const remoteClosedDays = asClosedDays(data.closedDays)
+    const remoteRemovedClosedDays = asClosedDays(data.removedClosedDays)
+    const closedPush =
+      (next.closedDays ?? []).some((d) => !remoteClosedDays.includes(d)) ||
+      (next.removedClosedDays ?? []).some((d) => !remoteRemovedClosedDays.includes(d))
     if (
       needPush ||
+      closedPush ||
       next.offerings.length !== remoteOfferings.filter((o) => !removed.has(o.id)).length ||
       (next.removedOfferingIds ?? []).some((id) => !remoteRemoved.includes(id)) ||
       (next.removedMeetingIds ?? []).some((id) => !remoteRemovedMeetings.includes(id)) ||

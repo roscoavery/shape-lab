@@ -892,7 +892,7 @@ export function HomeDashboard({
             }}
             className="h-4 w-4 rounded accent-[var(--accent)]"
           />
-          Auto-start school, camp, and clinic from the calendar
+          Auto-start lessons, school, camp, and clinic from the calendar
         </label>
         <div className="mt-2 grid min-w-0 grid-cols-2 gap-2">
           <button

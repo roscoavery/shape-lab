@@ -24,7 +24,8 @@ mock.module('./shippedRefs.ts', {
   },
 } as Parameters<typeof mock.module>[1])
 
-const { classifySessionEvent, getSessionGlow } = await import('./sessionGlow.ts')
+const { classifySessionEvent, getSessionGlow, closestOfferingToNow } = await import('./sessionGlow.ts')
+import type { CoachClassOffering } from './coachClasses.ts'
 
 function ev(partial: Partial<TodayCalendarEvent>): TodayCalendarEvent {
   return {
@@ -104,5 +105,66 @@ describe('getSessionGlow with a school-typed event', () => {
     )
     assert.equal(glow.glowing.has('school'), true)
     assert.equal(glow.glowing.has('lesson'), false)
+  })
+})
+
+describe('closestOfferingToNow with closed days', () => {
+  // Monday 2026-11-23 and Wednesday 2026-11-25.
+  const connections = (partial?: Partial<CoachClassOffering>): CoachClassOffering => ({
+    id: 'cls_connections',
+    coachId: 'coach_1',
+    name: 'Connections',
+    weekday: 'Monday',
+    time: '5pm',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    rosterIds: [],
+    ...partial,
+  })
+  const elevate = (): CoachClassOffering => ({
+    id: 'cls_elevate',
+    coachId: 'coach_1',
+    name: 'Elevate',
+    weekday: 'Wednesday',
+    time: '4pm',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    rosterIds: [],
+  })
+
+  it('picks the class starting soonest when nothing is closed', () => {
+    const now = new Date(2026, 10, 23, 16, 0)
+    assert.equal(closestOfferingToNow([connections(), elevate()], now)?.id, 'cls_connections')
+  })
+
+  it('skips a closed today and picks the next class instead', () => {
+    const now = new Date(2026, 10, 23, 16, 0)
+    assert.equal(
+      closestOfferingToNow([connections(), elevate()], now, ['2026-11-23'])?.id,
+      'cls_elevate',
+    )
+  })
+
+  it('skips two closed Mondays in a row', () => {
+    const now = new Date(2026, 10, 23, 16, 0)
+    assert.equal(
+      closestOfferingToNow([connections(), elevate()], now, ['2026-11-23', '2026-11-30'])?.id,
+      'cls_elevate',
+    )
+  })
+
+  it('an unrelated closed day changes nothing', () => {
+    const now = new Date(2026, 10, 23, 16, 0)
+    assert.equal(
+      closestOfferingToNow([connections(), elevate()], now, ['2026-11-24'])?.id,
+      'cls_connections',
+    )
+  })
+
+  it('a closed Wednesday pushes Elevate to next week', () => {
+    const now = new Date(2026, 10, 25, 15, 0)
+    assert.equal(closestOfferingToNow([connections(), elevate()], now)?.id, 'cls_elevate')
+    assert.equal(
+      closestOfferingToNow([connections(), elevate()], now, ['2026-11-25'])?.id,
+      'cls_connections',
+    )
   })
 })

@@ -11,6 +11,10 @@ export type DiskCoachClasses = {
   activeMeetingId?: string | null
   removedOfferingIds?: string[]
   removedMeetingIds?: string[]
+  /** Days with no classes, local YYYY-MM-DD keys. */
+  closedDays?: string[]
+  /** Tombstones for un-marked closed days. */
+  removedClosedDays?: string[]
 }
 
 const EMPTY: DiskCoachClasses = {
@@ -22,10 +26,20 @@ const EMPTY: DiskCoachClasses = {
   activeMeetingId: null,
   removedOfferingIds: [],
   removedMeetingIds: [],
+  closedDays: [],
+  removedClosedDays: [],
+}
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function asDateKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter((d): d is string => typeof d === 'string' && DATE_KEY_RE.test(d)))]
 }
 
 function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses {
   if (!data || data.kind !== 'shape-lab-coach-classes') return { ...EMPTY }
+  const removedClosedDays = asDateKeys(data.removedClosedDays)
   return {
     kind: 'shape-lab-coach-classes',
     version: 1,
@@ -39,6 +53,8 @@ function normalize(data: DiskCoachClasses | null | undefined): DiskCoachClasses 
     removedMeetingIds: Array.isArray(data.removedMeetingIds)
       ? data.removedMeetingIds.filter((id): id is string => typeof id === 'string' && Boolean(id))
       : [],
+    closedDays: asDateKeys(data.closedDays).filter((d) => !removedClosedDays.includes(d)),
+    removedClosedDays,
   }
 }
 
@@ -151,8 +167,12 @@ function unionFiles(a: DiskCoachClasses, b: DiskCoachClasses): DiskCoachClasses 
   const removedMeetingIds = [
     ...new Set([...(a.removedMeetingIds ?? []), ...(b.removedMeetingIds ?? [])]),
   ]
+  const removedClosedDays = [
+    ...new Set([...asDateKeys(a.removedClosedDays), ...asDateKeys(b.removedClosedDays)]),
+  ]
   const removed = new Set(removedOfferingIds)
   const droppedMeetings = new Set(removedMeetingIds)
+  const removedClosed = new Set(removedClosedDays)
   return {
     kind: 'shape-lab-coach-classes',
     version: 1,
@@ -170,6 +190,10 @@ function unionFiles(a: DiskCoachClasses, b: DiskCoachClasses): DiskCoachClasses 
     activeMeetingId: a.activeMeetingId ?? b.activeMeetingId ?? null,
     removedOfferingIds,
     removedMeetingIds,
+    closedDays: [...new Set([...asDateKeys(a.closedDays), ...asDateKeys(b.closedDays)])].filter(
+      (d) => !removedClosed.has(d),
+    ),
+    removedClosedDays,
   }
 }
 

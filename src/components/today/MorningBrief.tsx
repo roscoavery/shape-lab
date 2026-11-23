@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Athlete } from '../../types'
 import type { CoachClassOffering } from '../../lib/coachClasses'
-import { loadOfferingsForCoach, summarizeAttendance, WEEKDAYS } from '../../lib/coachClasses'
+import { isClosedDay, loadClosedDays, loadOfferingsForCoach, loadUpcomingClosedDays, markClosedDay, markClosedDaysRange, subscribeCoachClasses, summarizeAttendance, unmarkClosedDay, WEEKDAYS } from '../../lib/coachClasses'
 import { eventAthleteIds, fetchTodayEvents, hasCalendarApiToken, authorizeCalendarFromSession, matchCalendarEvent, setCalendarEventType, eventTypeLabel, isNonLessonEventType, type CalendarEventType, type TodayCalendarEvent } from '../../lib/calendarClient'
 import { EventAthletePicker } from '../calendar/EventAthletePicker'
 import { EventTypePicker } from '../calendar/EventTypePicker'
@@ -43,6 +43,14 @@ type Props = {
   onViewProfile?: (id: string) => void
 }
 
+function formatClosedDate(key: string): string {
+  return new Date(`${key}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 function athleteById(athletes: Athlete[], id: string): Athlete | undefined {
   return athletes.find((a) => a.id === id)
 }
@@ -81,9 +89,14 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
   const [pickSelected, setPickSelected] = useState<string[]>([])
   const [saveTitle, setSaveTitle] = useState(false)
   const [saveSeries, setSaveSeries] = useState(false)
+  // Days with no classes: re-read when the coach marks or un-marks one.
+  const [closedTick, setClosedTick] = useState(0)
+  const [rangeStart, setRangeStart] = useState(todayKey())
+  const [rangeEnd, setRangeEnd] = useState(todayKey())
   const dateKey = todayKey()
 
   useEffect(() => subscribeClassPlans(() => setPlansTick((n) => n + 1)), [])
+  useEffect(() => subscribeCoachClasses(() => setClosedTick((n) => n + 1)), [])
   // Pull fresh plans when the brief opens.
   useEffect(() => {
     void pullClassPlans()
@@ -128,12 +141,27 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
     window.scrollTo(0, scrollYRef.current)
   }, [openOfferingId])
 
-  const offerings = useMemo(() => {
+  // Classes on the weekly schedule for today, before the closed-day
+  // filter. A marked day still counts as a class day for the "No classes
+  // today" state, so the brief can say so and offer the undo.
+  const todaysOfferings = useMemo(() => {
     const weekday = WEEKDAYS[new Date().getDay()]
     return loadOfferingsForCoach(coach.id)
       .filter((o) => o.weekday === weekday)
       .sort((a, b) => a.time.localeCompare(b.time))
-  }, [coach.id])
+  }, [coach.id, closedTick])
+
+  const closedToday = useMemo(
+    () => todaysOfferings.length > 0 && isClosedDay(loadClosedDays(), new Date()),
+    [todaysOfferings, closedTick],
+  )
+
+  const offerings = useMemo(
+    () => (closedToday ? [] : todaysOfferings),
+    [todaysOfferings, closedToday],
+  )
+
+  const upcomingClosed = useMemo(() => loadUpcomingClosedDays(), [closedTick])
 
   const lessons = useMemo(() => {
     return events
@@ -208,7 +236,9 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
     return lastEnd !== null && now > lastEnd
   }, [offerings, lessons, otherSessions, nowTick])
 
-  if (offerings.length === 0 && lessons.length === 0 && otherSessions.length === 0) return null
+  // A closed day with nothing else still renders, so the coach can see
+  // the "No classes today" state and undo it from here.
+  if (!closedToday && offerings.length === 0 && lessons.length === 0 && otherSessions.length === 0) return null
   if (dayDone) return null
 
   return (
@@ -222,6 +252,7 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
             Today you're coaching {totalAthletes} athlete{totalAthletes === 1 ? '' : 's'}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
+            {closedToday && 'No classes today. '}
             {offerings.length > 0 &&
               `${offerings.length} class${offerings.length === 1 ? '' : 'es'}`}
             {offerings.length > 0 && lessons.length > 0 && ' · '}
@@ -230,16 +261,46 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
             {(offerings.length > 0 || lessons.length > 0) && otherSessions.length > 0 && ' · '}
             {otherSessions.length > 0 &&
               `${otherSessions.length} school, camp, or clinic`}
-            {offerings.length > 0 || lessons.length > 0 ? '. Tap a class to plan what each athlete should focus on.' : '.'}
+            {offerings.length > 0
+              ? '. Tap a class to plan what each athlete should focus on.'
+              : lessons.length > 0
+                ? '. Tap a lesson to plan it.'
+                : '.'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onOpenChecklist}
-          className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
-        >
-          Athlete checklist
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {closedToday ? (
+            <>
+              <span className="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">
+                No classes today
+              </span>
+              <button
+                type="button"
+                onClick={() => unmarkClosedDay(dateKey)}
+                className="rounded-xl border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold text-[var(--text)]"
+              >
+                Undo
+              </button>
+            </>
+          ) : (
+            todaysOfferings.length > 0 && (
+              <button
+                type="button"
+                onClick={() => markClosedDay(dateKey)}
+                className="rounded-xl border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold text-[var(--text)]"
+              >
+                No classes today
+              </button>
+            )
+          )}
+          <button
+            type="button"
+            onClick={onOpenChecklist}
+            className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)]"
+          >
+            Athlete checklist
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3">
@@ -338,6 +399,70 @@ export function MorningBrief({ coach, athletes, onOpenChecklist, onViewProfile }
             </div>
           </div>
         )}
+
+        <div className="min-w-0 rounded-xl border border-[var(--panel-border)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Days with no classes
+          </p>
+          {upcomingClosed.length > 0 ? (
+            <div className="mt-2 space-y-1.5">
+              {upcomingClosed.map((d) => (
+                <div
+                  key={d}
+                  className="flex items-center justify-between gap-2 rounded-lg bg-[#121820] px-3 py-2"
+                >
+                  <span className="text-sm text-[var(--text)]">{formatClosedDate(d)}</span>
+                  <button
+                    type="button"
+                    onClick={() => unmarkClosedDay(d)}
+                    className="shrink-0 text-xs text-[var(--muted)] underline"
+                    aria-label={`Remove ${formatClosedDate(d)} from days with no classes`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1.5 text-sm text-[var(--muted)]">
+              No days marked. Mark a holiday break so classes do not start.
+            </p>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label className="text-xs text-[var(--muted)]">
+              From
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+                className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
+              />
+            </label>
+            <label className="text-xs text-[var(--muted)]">
+              To
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+                className="ml-1.5 rounded-lg border border-[var(--panel-border)] bg-[#0d1218] px-2 py-1.5 text-sm text-[var(--text)]"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const start = rangeStart <= rangeEnd ? rangeStart : rangeEnd
+                const end = rangeStart <= rangeEnd ? rangeEnd : rangeStart
+                if (markClosedDaysRange(start, end) > 0) {
+                  setRangeStart(dateKey)
+                  setRangeEnd(dateKey)
+                }
+              }}
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--on-accent)]"
+            >
+              Mark closed
+            </button>
+          </div>
+        </div>
       </div>
 
       {pickEvent && (

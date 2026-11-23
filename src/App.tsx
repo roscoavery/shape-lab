@@ -225,6 +225,7 @@ import {
   getActiveMeeting,
   getOffering,
   hydrateCoachClasses,
+  loadClosedDays,
   loadMeetings,
   loadOfferingsForCoach,
   logMeetingAttendance,
@@ -636,12 +637,13 @@ export default function App() {
     if (authStatus !== 'in') return
     const run = () => {
       try {
+        const coach = activeProfileRef.current
         // Hydrate first: a client with a stale local copy (e.g. a phone that
         // was backgrounded through the scheduled start) must see the server's
         // live meeting before deciding to auto-start, or it spawns duplicates.
         void hydrateCoachClasses().then(() => {
           try {
-            checkAutoClass()
+            checkAutoClass(new Date(), coach && isCoachProfile(coach) ? coach.id : null)
             const pending = pendingAutoEndPrompt()
             if (pending) setAutoEndMeetingId(pending)
           } catch {
@@ -652,7 +654,6 @@ export default function App() {
         // the calendar end time, on any tab. (The old check lived in the
         // Today view and never ran while he was on the calendar.)
         if (getAutoStartSessions()) {
-          const coach = activeProfileRef.current
           if (coach && isCoachProfile(coach)) {
             try {
               const endedId = checkLessonAutoEnd(coach.id)
@@ -3187,7 +3188,7 @@ export default function App() {
         onViewProfile={openProfile}
         onClose={() => setClassSessionOpen(false)}
         highlightOfferingId={
-          closestOfferingToNow(loadOfferingsForCoach(activeProfile.id))?.id ?? null
+          closestOfferingToNow(loadOfferingsForCoach(activeProfile.id), new Date(), loadClosedDays())?.id ?? null
         }
         onOpenStation={() => {
           setClassSessionOpen(false)
