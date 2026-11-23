@@ -338,20 +338,37 @@ export function LessonPlanCard({
   return (
     <div className="min-w-0 rounded-lg bg-[#121820] px-3 py-2">
       <div className="flex w-full min-w-0 items-center gap-2">
-        {athlete && onViewProfile && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onViewProfile(athlete.id)
-            }}
-            className="shrink-0 rounded-full"
-            aria-label={`View ${athlete.firstName || athlete.name}'s profile`}
-          >
-            <AthleteAvatar athlete={athlete} size="sm" />
-          </button>
+        {people.length > 0 && (
+          <span className="flex shrink-0 items-center">
+            {people.map((p, i) =>
+              onViewProfile ? (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onViewProfile(p.id)
+                  }}
+                  className={`shrink-0 rounded-full ${i > 0 ? '-ml-2' : ''}`}
+                  aria-label={`View ${p.firstName || p.name}'s profile`}
+                >
+                  <AthleteAvatar
+                    athlete={p}
+                    size="sm"
+                    className={i > 0 ? 'ring-2 ring-[#121820]' : ''}
+                  />
+                </button>
+              ) : (
+                <AthleteAvatar
+                  key={p.id}
+                  athlete={p}
+                  size="sm"
+                  className={i > 0 ? '-ml-2 ring-2 ring-[#121820]' : ''}
+                />
+              ),
+            )}
+          </span>
         )}
-        {athlete && !onViewProfile && <AthleteAvatar athlete={athlete} size="sm" />}
         <button
           type="button"
           className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
