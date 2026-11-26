@@ -10,6 +10,7 @@ import {
   subscribeCoachHours,
 } from '../../lib/coachHours'
 import { fetchCalendarRange, type TodayCalendarEvent } from '../../lib/calendarClient'
+import { AthleteAvatar } from '../AthleteAvatar'
 import { parseAcuityNotes } from '../../lib/acuityNotes'
 import { classLabel, classMemberIds, getOffering, loadMeetings } from '../../lib/coachClasses'
 import { lessonAthleteIds, loadLessonSessions } from '../../lib/lessonStore'
@@ -325,6 +326,7 @@ export function CoachReminderBanners({
   onAthletesChange,
   onJumpToRecaps,
   onPlanLesson,
+  onViewProfile,
 }: {
   coachId: string
   coach: Athlete
@@ -332,6 +334,7 @@ export function CoachReminderBanners({
   onAthletesChange: (next: Athlete[]) => void
   onJumpToRecaps: () => void
   onPlanLesson?: (ev: TodayCalendarEvent) => void
+  onViewProfile?: (id: string) => void
 }) {
   const [tick, setTick] = useState(0)
   const [calEvents, setCalEvents] = useState<TodayCalendarEvent[]>([])
@@ -428,7 +431,23 @@ export function CoachReminderBanners({
                 <div className="mt-2 space-y-2">
                   {worked.map((a) => (
                     <div key={a.id} className="rounded-xl bg-black/25 p-2.5">
-                      <p className="mb-1.5 text-sm font-semibold text-[var(--text)]">{a.name}</p>
+                      <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                        {onViewProfile ? (
+                          <button
+                            type="button"
+                            onClick={() => onViewProfile(a.id)}
+                            className="shrink-0 rounded-full"
+                            aria-label={`View ${a.firstName || a.name}'s profile`}
+                          >
+                            <AthleteAvatar athlete={a} size="sm" />
+                          </button>
+                        ) : (
+                          <AthleteAvatar athlete={a} size="sm" />
+                        )}
+                        <p className="min-w-0 truncate text-sm font-semibold text-[var(--text)]">
+                          {a.name}
+                        </p>
+                      </div>
                       {winDone[a.id] ? (
                         <p className="text-xs font-semibold text-[var(--accent)]">
                           Win posted ✓

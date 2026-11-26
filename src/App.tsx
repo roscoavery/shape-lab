@@ -1733,6 +1733,7 @@ export default function App() {
                 document.getElementById('today-recaps')?.scrollIntoView({ behavior: 'smooth' })
               }
               onPlanLesson={(ev) => setPlanModalEvent(ev)}
+              onViewProfile={openProfile}
             />
             </div>
           )}
