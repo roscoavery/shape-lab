@@ -158,6 +158,7 @@ import {
   handleShareFolderZip,
 } from './shareFolder.ts'
 import { authorizeRosterWrite, presentRosterForViewer } from './auth/rosterAccess.ts'
+import { ensureParentDataRepair } from './auth/parentRepair.ts'
 import {
   applyConsentPatch,
   athletesViewerMayConsent,
@@ -1388,6 +1389,11 @@ export async function handleShapeLabApi(
   }
   if (path === '/api/roster') {
     if (req.method === 'GET') {
+      // One-time parent-account repair (build 1270): the first roster read
+      // after server start merges duplicate parent rows and re-points
+      // parent accounts at their own par_ row, so the fix lands without
+      // waiting for a roster edit.
+      await ensureParentDataRepair()
       const roster = await readRosterFile()
       const presented = await presentRosterForViewer(viewer, roster)
       await writeAudit('roster.view', viewer, { detail: `athletes:${Array.isArray(presented.athletes) ? presented.athletes.length : 0}` })
@@ -1395,6 +1401,7 @@ export async function handleShapeLabApi(
       return true
     }
     if (req.method === 'PUT') {
+      await ensureParentDataRepair()
       try {
         const body = await readRequestBody(req)
         const incoming = JSON.parse(body) as { athletes?: unknown[] }

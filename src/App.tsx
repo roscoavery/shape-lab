@@ -271,6 +271,7 @@ import {
   markSessionPresent,
   sessionIsAdmin,
   sessionIsKiosk,
+  sessionProfileId,
   SESSION_LOST_EVENT,
   type AuthSessionUser,
   type SessionRole,
@@ -520,6 +521,8 @@ export default function App() {
   }, [])
   const authStatusRef = useRef(authStatus)
   authStatusRef.current = authStatus
+  const authUserRef = useRef(authUser)
+  authUserRef.current = authUser
   // Latest coach profile + lesson starter for the every-minute session clock,
   // which is defined before them in this file.
   const activeProfileRef = useRef<Athlete | null>(null)
@@ -564,6 +567,19 @@ export default function App() {
           markSessionPresent()
           setAuthUser(me.user)
           setAuthStatus('in')
+          // Derive the opening profile from the session, not the device-local
+          // value: a stale remembered id is how a parent's phone kept
+          // greeting her as Ryan. When the session names no profile that
+          // exists on this device yet, the boot effect picks it up once the
+          // roster arrives.
+          const sessionId = sessionProfileId(me.user, loadAthletes())
+          if (sessionId) {
+            markProfileUnlocked(sessionId)
+            setActiveAthleteId(sessionId)
+          } else if (me.user.role === 'parent') {
+            lockAllProfiles()
+            setActiveAthleteId(null)
+          }
         } else {
           setAuthUser(null)
           setAuthStatus('out')
@@ -579,6 +595,18 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  // A parent account whose own row arrives after boot (the server backfill
+  // creates it on the first roster push) picks it up without a refresh.
+  // This only fills a missing profile, it never moves an active one.
+  useEffect(() => {
+    if (!authUser || authUser.role !== 'parent' || activeAthleteId) return
+    const own = `par_${authUser.accountId}`
+    if (athletes.some((a) => a.id === own)) {
+      markProfileUnlocked(own)
+      setActiveAthleteId(own)
+    }
+  }, [authUser, athletes, activeAthleteId])
 
   // Gym owners see their own gym. Loads once per login.
   useEffect(() => {
@@ -840,13 +868,27 @@ export default function App() {
           photoDataUrl: a.photoDataUrl || prev.find((p) => p.id === a.id)?.photoDataUrl,
         })),
       )
-      const remembered = unlockedProfileId() || loadActiveAthleteId()
-      if (remembered && next.some((a) => a.id === remembered)) {
-        markProfileUnlocked(remembered)
-        setActiveAthleteId(remembered)
-      } else {
+      // The session decides the opening profile. A parent account never
+      // boots onto a stale device-local id (that is how Lauren's phone
+      // kept greeting her as Ryan). Other roles keep the remembered id
+      // when the session names none.
+      const sessionId = sessionProfileId(authUserRef.current, next)
+      if (sessionId && next.some((a) => a.id === sessionId)) {
+        markProfileUnlocked(sessionId)
+        setActiveAthleteId(sessionId)
+      } else if (authUserRef.current?.role === 'parent') {
+        lockAllProfiles()
         setActiveAthleteId(null)
         setAthleteGate(null)
+      } else {
+        const remembered = unlockedProfileId() || loadActiveAthleteId()
+        if (remembered && next.some((a) => a.id === remembered)) {
+          markProfileUnlocked(remembered)
+          setActiveAthleteId(remembered)
+        } else {
+          setActiveAthleteId(null)
+          setAthleteGate(null)
+        }
       }
       return next
     }
@@ -1471,12 +1513,13 @@ export default function App() {
           markSessionPresent()
           setAuthUser(user)
           setAuthStatus('in')
-          if (sessionIsAdmin(user)) {
-            markProfileUnlocked('ath_ryan')
-            setActiveAthleteId('ath_ryan')
-          } else if (user.rosterProfileId) {
-            markProfileUnlocked(user.rosterProfileId)
-            setActiveAthleteId(user.rosterProfileId)
+          const sessionId = sessionProfileId(user, loadAthletes())
+          if (sessionId) {
+            markProfileUnlocked(sessionId)
+            setActiveAthleteId(sessionId)
+          } else if (user.role === 'parent') {
+            lockAllProfiles()
+            setActiveAthleteId(null)
           }
           setGymBootTick((n) => n + 1)
         }}

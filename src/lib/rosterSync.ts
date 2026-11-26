@@ -518,9 +518,15 @@ function scheduleRosterPushRetry(delayMs: number): void {
   }, Math.max(250, delayMs))
 }
 
-async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
+/**
+ * Push the local roster to the gym server. Returns 'ok' when the server
+ * accepted it, 'retry' when the PUT failed for a transient reason (the
+ * caller schedules another try), and 'stop' when the server told us to
+ * stop writing (401/403/429) or pushes are disabled.
+ */
+async function putRosterNow(snapshot?: RosterBackup): Promise<'ok' | 'retry' | 'stop'> {
   const body = snapshot ?? localRosterSnapshot()
-  if (!shouldPushRoster(body.athletes.length)) return false
+  if (!shouldPushRoster(body.athletes.length)) return 'stop'
   const photos = photosFromSnapshot(body.athletes)
   const slim: RosterBackup = {
     ...body,
@@ -536,7 +542,7 @@ async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
         body: JSON.stringify(slim),
       })
       if (!res.ok) {
-        if (isStopWriteStatus(res.status)) return false
+        if (isStopWriteStatus(res.status)) return 'stop'
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
         continue
       }
@@ -552,12 +558,12 @@ async function putRosterNow(snapshot?: RosterBackup): Promise<boolean> {
           saveAthletes(attachPhotos(loadAthletes(), nextUrls, true))
         }
       }
-      return true
+      return 'ok'
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
     }
   }
-  return false
+  return 'retry'
 }
 
 export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean> {
@@ -578,12 +584,16 @@ export async function pushServerRoster(snapshot?: RosterBackup): Promise<boolean
         scheduleRosterPushRetry(gymWriteHoldRemainingMs() + 500)
         return false
       }
-      const ok = await putRosterNow(next)
-      if (!ok) {
-        // Keep the pending flag: a newer snapshot arrived while this PUT was
-        // in flight (or the hold started mid-loop). Retry with the latest
-        // local snapshot instead of dropping the change.
-        if (rosterPushAgain) scheduleRosterPushRetry(1500)
+      const result = await putRosterNow(next)
+      if (result === 'stop') {
+        return false
+      }
+      if (result === 'retry') {
+        // The PUT failed after four tries (gym unreachable, transient
+        // server error). Retry with the latest local snapshot instead of
+        // dropping the change: a delete lives only in that snapshot until
+        // the PUT lands, and nothing else re-triggers a push.
+        scheduleRosterPushRetry(5000)
         return false
       }
       if (!rosterPushAgain) return true

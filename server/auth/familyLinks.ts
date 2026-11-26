@@ -84,6 +84,11 @@ export async function ensureParentRosterProfile(opts: {
   const id = `par_${opts.accountId}`
   const roster = await readRosterFile()
   const athletes = Array.isArray(roster.athletes) ? roster.athletes : []
+  // A tombstoned id was merged away as a duplicate (build 1270 repair) or
+  // deleted. Never recreate it: the merge would drop the new row on write
+  // and the account would point at a row that does not exist.
+  const removed = new Set(Array.isArray(roster.removedAthleteIds) ? roster.removedAthleteIds : [])
+  if (removed.has(id)) return null
   const byId = new Map(
     athletes.map((row) => {
       const r = row as Record<string, unknown>
@@ -125,6 +130,35 @@ export async function ensureParentRosterProfile(opts: {
   }
   await writeRosterFile({ ...roster, athletes: [...athletes, row] })
   return { id }
+}
+
+/**
+ * Parent bootstrap for admin account creation and edits (build 1270).
+ * Invite redemption already calls ensureParentRosterProfile, but an
+ * account created or edited from the Accounts desk never did, so a parent
+ * account could end up with no par_ row at all (or linked to someone
+ * else's row, usually ath_ryan). This is the same row, created exactly
+ * once: when the row already exists it is returned as-is, even when the
+ * account has no linked athletes yet, because the row is the parent's
+ * identity and the account must point at it.
+ */
+export async function ensureParentAccountRow(opts: {
+  accountId: string
+  displayName: string
+  linkedAthleteIds: string[]
+}): Promise<{ id: string } | null> {
+  const id = `par_${opts.accountId}`
+  const roster = await readRosterFile()
+  const athletes = Array.isArray(roster.athletes) ? roster.athletes : []
+  const existing = athletes.find(
+    (row) => (row as Record<string, unknown>).id === id,
+  ) as Record<string, unknown> | undefined
+  if (existing && existing.role === 'parent') {
+    if (!asIds(opts.linkedAthleteIds).length) return { id }
+    return ensureParentRosterProfile(opts)
+  }
+  if (existing) return null
+  return ensureParentRosterProfile(opts)
 }
 
 /**

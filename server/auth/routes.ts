@@ -21,7 +21,8 @@ import {
 } from './accounts.ts'
 import { clampMaxDevices } from './types.ts'
 import { readAudit, writeAudit } from './audit.ts'
-import { stampGuardianLinks, ensureParentRosterProfile, ensureCoachRosterProfile } from './familyLinks.ts'
+import { stampGuardianLinks, ensureParentRosterProfile, ensureCoachRosterProfile, ensureParentAccountRow } from './familyLinks.ts'
+import { ensureParentDataRepair } from './parentRepair.ts'
 import {
   createInvite,
   peekInvite,
@@ -60,6 +61,31 @@ function denyAuthWriteFlood(res: ServerResponse, user: { accountId: string }): b
     return true
   }
   return false
+}
+
+/**
+ * A parent account must point at its own par_ row (build 1270). Creates
+ * the row when it is missing and re-points a stray link, for example
+ * ath_ryan, at it. Returns the profile id the account should point at.
+ */
+async function ensureParentAccountLink(account: {
+  id: string
+  displayName: string
+  role: string
+  rosterProfileId?: string
+  linkedAthleteIds?: string[]
+}): Promise<string | undefined> {
+  const row = await ensureParentAccountRow({
+    accountId: account.id,
+    displayName: account.displayName,
+    linkedAthleteIds: account.linkedAthleteIds ?? [],
+  })
+  if (!row) return account.rosterProfileId
+  if (account.rosterProfileId !== row.id) {
+    const saved = await updateAccount(account.id, { rosterProfileId: row.id })
+    return saved.rosterProfileId
+  }
+  return row.id
 }
 
 export async function handleAuthRoutes(
@@ -265,11 +291,23 @@ export async function handleAuthRoutes(
           linkedAthleteIds: body.linkedAthleteIds,
         })
         if (created.role === 'parent') {
-          await stampGuardianLinks({
-            accountId: created.accountId,
+          // Parent bootstrap (build 1270): an admin-created parent account
+          // gets its own par_ row here, same as invite redemption, and
+          // never points at someone else's row (ath_ryan).
+          const profileId = await ensureParentAccountLink({
+            id: created.accountId,
+            displayName: created.displayName,
+            role: created.role,
             rosterProfileId: created.rosterProfileId,
             linkedAthleteIds: created.linkedAthleteIds,
           })
+          created.rosterProfileId = profileId
+          await stampGuardianLinks({
+            accountId: created.accountId,
+            rosterProfileId: profileId,
+            linkedAthleteIds: created.linkedAthleteIds,
+          })
+          await ensureParentDataRepair()
         }
         if (created.role === 'coach' && !created.rosterProfileId) {
           // Coach bootstrap (build 1236): an admin-created coach account
@@ -337,11 +375,22 @@ export async function handleAuthRoutes(
           linkedAthleteIds: body.linkedAthleteIds,
         })
         if (saved.role === 'parent') {
-          await stampGuardianLinks({
-            accountId: saved.id,
+          // Parent bootstrap (build 1270): a parent account edited from the
+          // desk keeps its own par_ row and never points at another row.
+          const profileId = await ensureParentAccountLink({
+            id: saved.id,
+            displayName: saved.displayName,
+            role: saved.role,
             rosterProfileId: saved.rosterProfileId,
             linkedAthleteIds: saved.linkedAthleteIds,
           })
+          saved.rosterProfileId = profileId
+          await stampGuardianLinks({
+            accountId: saved.id,
+            rosterProfileId: profileId,
+            linkedAthleteIds: saved.linkedAthleteIds,
+          })
+          await ensureParentDataRepair()
         }
         await writeAudit('role.change', user, {
           detail: `${saved.email} ${saved.role} ${saved.rosterProfileId ?? ''}`,

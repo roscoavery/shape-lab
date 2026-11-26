@@ -352,24 +352,32 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
                 ))}
               </select>
             </label>
-            <label className="sm:col-span-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                Linked profile
-              </span>
-              <select
-                value={rosterProfileId}
-                onChange={(e) => setRosterProfileId(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
-              >
-                <option value="">No roster profile yet</option>
-                {sortedAthletes.map((athlete) => (
-                  <option key={athlete.id} value={athlete.id}>
-                    {athlete.name}
-                    {athlete.role ? ` · ${athlete.role}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {role !== 'parent' && (
+              <label className="sm:col-span-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Linked profile
+                </span>
+                <select
+                  value={rosterProfileId}
+                  onChange={(e) => setRosterProfileId(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-[var(--panel-border)] bg-[#0d1218] px-3 py-2 text-sm text-[var(--text)]"
+                >
+                  <option value="">No roster profile yet</option>
+                  {sortedAthletes.map((athlete) => (
+                    <option key={athlete.id} value={athlete.id}>
+                      {athlete.name}
+                      {athlete.role ? ` · ${athlete.role}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {role === 'parent' && (
+              <p className="text-xs text-[var(--muted)] sm:col-span-2">
+                A parent account gets its own parent profile automatically. It is
+                never linked to another profile.
+              </p>
+            )}
             {role === 'gymOwner' && user.role === 'admin' && (
               <>
                 <label className="sm:col-span-2">
@@ -488,7 +496,9 @@ export function AccountsDesk({ user, athletes, onUser, onLock, deskPreview, onDe
                   password: createPassword || undefined,
                   role,
                   displayName: displayName || email,
-                  rosterProfileId: rosterProfileId || undefined,
+                  // A parent account never picks a linked profile here; the
+                  // server creates its own parent profile instead.
+                  rosterProfileId: role === 'parent' ? undefined : rosterProfileId || undefined,
                   linkedAthleteIds: parentChildIds.length ? parentChildIds : undefined,
                   gymId: resolvedGymId,
                   sendEmail: mailEnabled && emailNewLogin && !createPassword,
@@ -631,37 +641,44 @@ function AccountRow({
             : ''}
         </p>
       )}
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <select
-          value={profileId}
-          onChange={(e) => setProfileId(e.target.value)}
-          className="w-full rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)]"
-        >
-          <option value="">No roster profile</option>
-          {athletes.map((athlete) => (
-            <option key={athlete.id} value={athlete.id}>
-              {athlete.name}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true)
-            void patchGymAccount({
-              id: account.id,
-              rosterProfileId: profileId || null,
-            })
-              .then(() => onSaved(`Linked ${account.displayName}.`))
-              .catch((err) => onError(err instanceof Error ? err.message : 'Could not link that profile.'))
-              .finally(() => setBusy(false))
-          }}
-          className="rounded-full border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold"
-        >
-          Save link
-        </button>
-      </div>
+      {account.role === 'parent' ? (
+        <p className="mt-3 text-xs text-[var(--muted)]">
+          Parent profile: {linked ? linked.name : 'not created yet, one is made automatically'}.
+          A parent account is never linked to another profile.
+        </p>
+      ) : (
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <select
+            value={profileId}
+            onChange={(e) => setProfileId(e.target.value)}
+            className="w-full rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--text)]"
+          >
+            <option value="">No roster profile</option>
+            {athletes.map((athlete) => (
+              <option key={athlete.id} value={athlete.id}>
+                {athlete.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void patchGymAccount({
+                id: account.id,
+                rosterProfileId: profileId || null,
+              })
+                .then(() => onSaved(`Linked ${account.displayName}.`))
+                .catch((err) => onError(err instanceof Error ? err.message : 'Could not link that profile.'))
+                .finally(() => setBusy(false))
+            }}
+            className="rounded-full border border-[var(--panel-border)] px-3 py-2 text-xs font-semibold"
+          >
+            Save link
+          </button>
+        </div>
+      )}
       {account.role === 'parent' && (
         <div className="mt-3">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">

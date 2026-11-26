@@ -3,6 +3,8 @@
  * The 4-digit profile PIN is not used here — the cookie is the real login.
  */
 import { clearParentPin } from './parentPin'
+import { profileRole } from './profileRole'
+import type { Athlete } from '../types'
 
 export type SessionRole = 'admin' | 'coach' | 'athlete' | 'parent' | 'gymOwner'
 
@@ -93,6 +95,31 @@ export function sessionIsKiosk(user: AuthSessionUser | null | undefined): boolea
 export function sessionIsAdmin(user: AuthSessionUser | null | undefined): boolean {
   if (sessionIsKiosk(user)) return false
   return user?.role === 'admin' || user?.role === 'gymOwner'
+}
+
+/**
+ * The roster profile id a signed-in session should open onto, derived from
+ * the session itself instead of the device-local value. A parent account
+ * always lands on its own par_ row, never on a stale remembered id (that
+ * is how Lauren's phone kept greeting her as Ryan). Returns null when the
+ * session names no profile that exists on this device yet, so the caller
+ * can wait for the roster to arrive instead of guessing.
+ */
+export function sessionProfileId(
+  user: AuthSessionUser | null | undefined,
+  athletes: Athlete[],
+): string | null {
+  if (!user) return null
+  if (sessionIsAdmin(user)) return 'ath_ryan'
+  if (user.role === 'parent') {
+    const own = `par_${user.accountId}`
+    if (athletes.some((a) => a.id === own)) return own
+    const linked = user.rosterProfileId
+    const row = linked ? athletes.find((a) => a.id === linked) : undefined
+    if (row && profileRole(row) === 'parent') return linked ?? null
+    return null
+  }
+  return user.rosterProfileId ?? null
 }
 
 export async function saveMaxDevices(maxDevices: number): Promise<AuthMeResponse> {

@@ -132,7 +132,12 @@ export function saveAthletes(athletes: Athlete[]) {
 export function loadRemovedAthleteIds(): string[] {
   const raw = readJson<unknown>(REMOVED_ATHLETES_KEY, [])
   if (!Array.isArray(raw)) return []
-  return raw.filter((id): id is string => typeof id === 'string' && id.startsWith('ath_'))
+  // Keep tombstones for every profile id except ath_ryan. The old ath_
+  // prefix filter silently dropped par_ and coa_ ids on the next read, so
+  // a deleted parent profile reappeared on the next revision poll.
+  return raw.filter(
+    (id): id is string => typeof id === 'string' && id.length > 0 && id !== 'ath_ryan',
+  )
 }
 
 export function saveRemovedAthleteIds(ids: string[]) {
